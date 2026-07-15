@@ -47,8 +47,11 @@ export interface UsuarioAdminRow {
   activo: boolean;
 }
 
-export async function fetchUsuariosAdmin(opts: { search?: string; page: number; limit: number }): Promise<{ data: UsuarioAdminRow[]; count: number }> {
-  let q = supabase.from('profiles').select('id, full_name, last_name, phone, city, status, created_at, roles(name)', { count: 'exact' }).order('created_at', { ascending: false });
+export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: string; page: number; limit: number }): Promise<{ data: UsuarioAdminRow[]; count: number }> {
+  let q = opts.soloRol
+    ? supabase.from('profiles').select('id, full_name, last_name, phone, city, status, created_at, roles!inner(name)', { count: 'exact' }).eq('roles.name', opts.soloRol)
+    : supabase.from('profiles').select('id, full_name, last_name, phone, city, status, created_at, roles(name)', { count: 'exact' });
+  q = q.order('created_at', { ascending: false });
   if (opts.search && opts.search.trim()) {
     const s = opts.search.trim();
     q = q.or(`full_name.ilike.%${s}%,last_name.ilike.%${s}%,phone.ilike.%${s}%,referral_code.ilike.%${s}%`);
