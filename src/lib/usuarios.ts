@@ -11,13 +11,21 @@ export interface DataUserCompleto {
   direccion: string | null;
   ciudad: string | null;
   email: string | null;
+  rolname: string;
+}
+
+// roles.name usa nombres nuevos ('admin'); el resto de la app compara contra el nombre viejo
+// ('administrador') -- mismo unico punto de traduccion que legacyRoleName en usuarios.service.ts.
+function legacyRoleName(name: string): string {
+  return name === 'admin' ? 'administrador' : name;
 }
 
 export async function fetchDataUserCompleto(userId: string): Promise<DataUserCompleto> {
   const [{ data: profile }, { data: userAuth }] = await Promise.all([
-    supabase.from('profiles').select('full_name, last_name, phone, city, address').eq('id', userId).maybeSingle(),
+    supabase.from('profiles').select('full_name, last_name, phone, city, address, roles(name)').eq('id', userId).maybeSingle(),
     supabase.auth.getUser(),
   ]);
+  const rolRow = profile?.roles as unknown as { name: string } | null;
   return {
     id: userId,
     nombre: profile?.full_name ?? null,
@@ -26,6 +34,7 @@ export async function fetchDataUserCompleto(userId: string): Promise<DataUserCom
     direccion: profile?.address ?? null,
     ciudad: profile?.city ?? null,
     email: userAuth?.user?.email ?? null,
+    rolname: rolRow ? legacyRoleName(rolRow.name) : 'vendedor',
   };
 }
 
