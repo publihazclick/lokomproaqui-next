@@ -1,0 +1,290 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import {
+  Menu, X, ShoppingCart, User, Home, LayoutGrid, Tag, Store, ClipboardCheck, History,
+  Wallet, Users, UserPlus, Package, Truck, Warehouse, Landmark, RefreshCw, Settings,
+  GraduationCap, LogOut, UserCog, Trash2,
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
+
+// Port FIEL del header real de Angular (src/app/extra/header) -- a diferencia del SiteHeader
+// simplificado de Fase 2 (paginas publicas), Fase 3 en adelante el usuario pidio que se vea
+// IDENTICO al original porque ya se grabaron tutoriales con esa interfaz (ver memoria
+// lokomproaqui-nextjs-migration). Reemplaza a SiteHeader en el layout raiz -- se usa en TODO
+// el sitio de aca en mas, no solo en las paginas nuevas.
+//
+// Alcance reducido a proposito (documentado, no silencioso): no incluye el drawer de
+// notificaciones (polling cada 50s + badges de pendientes por modulo) del original -- es
+// contenido secundario que no aparece en un tutorial tipico de "como vender/comprar". El
+// menu, el carrito y la barra superior si son fieles.
+
+// Mismas rutas donde Angular oculta el header (header.component.html: routName !== 'login' &&
+// !== 'singUp'), mas /mvid8x2qz1 que nunca vivio bajo TiendaComponent.
+const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1'];
+
+type Rol = 'visitante' | 'vendedor' | 'proveedor' | 'lider' | 'subAdministrador' | 'administrador' | 'mentor';
+
+interface MenuItem {
+  Icon: typeof Home;
+  nombre: string;
+  href: string;
+  mostrar: (rol: Rol) => boolean;
+}
+
+const MENUS: MenuItem[] = [
+  { Icon: Home, nombre: 'Inicio', href: '/articulo', mostrar: (r) => r !== 'visitante' },
+  { Icon: LayoutGrid, nombre: 'Productos', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: Tag, nombre: 'Realizar Venta', href: '/realizarventa', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: Wallet, nombre: 'Mis Cobros', href: '/config/cobros', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r !== 'administrador' && r !== 'visitante' },
+  { Icon: Users, nombre: 'Ventas de Subvendedor', href: '/config/ventasLider', mostrar: (r) => r !== 'administrador' && r !== 'visitante' },
+  { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => !['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
+  { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
+  { Icon: Truck, nombre: 'Activar Transportadoras', href: '/config/listaPlatform', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
+  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/controlInventario', mostrar: (r) => r !== 'administrador' && r !== 'vendedor' },
+  { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
+  { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r !== 'vendedor' },
+  { Icon: RefreshCw, nombre: 'Integración WooCommerce', href: '/config/woocommerce', mostrar: (r) => r !== 'vendedor' },
+  { Icon: Store, nombre: 'Mis Órdenes', href: '/config/misDespacho', mostrar: (r) => r !== 'proveedor' },
+  { Icon: Settings, nombre: 'Edición Productos', href: '/config/productos', mostrar: (r) => r !== 'proveedor' },
+  { Icon: User, nombre: 'Mi Cuenta', href: '/config/perfil', mostrar: (r) => r !== 'visitante' },
+  { Icon: Settings, nombre: 'Configuración', href: '/config/configuracion', mostrar: (r) => r === 'administrador' },
+  { Icon: GraduationCap, nombre: 'Cursos / Ayuda', href: '/acelerador', mostrar: () => true },
+];
+
+const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar'; mostrar: (r: Rol) => boolean }[] = [
+  { Icon: User, nombre: 'Iniciar Sesión', accion: 'login', mostrar: (r) => r === 'visitante' },
+  { Icon: UserPlus, nombre: 'Regístrate', accion: 'registrar', mostrar: (r) => r === 'visitante' },
+  { Icon: Wallet, nombre: 'Recargar Saldo', accion: 'recargar', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
+  { Icon: LogOut, nombre: 'Salir', accion: 'salir', mostrar: (r) => r !== 'visitante' },
+];
+
+export function RealHeader() {
+  const pathname = usePathname();
+  const { cart, eliminar } = useCart();
+
+  const [rol, setRol] = useState<Rol>('visitante');
+  const [nombre, setNombre] = useState<string | null>(null);
+  const [logo, setLogo] = useState('/assets/logo.svg');
+  const [balance, setBalance] = useState<number | null>(null);
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const [submenuAbierto, setSubmenuAbierto] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    async function cargar() {
+      const { data } = await supabase.auth.getSession();
+      if (!activo) return;
+      if (!data.session) {
+        setRol('visitante');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, roles(name)')
+        .eq('id', data.session.user.id)
+        .single();
+      if (!activo || !profile) return;
+      const rolReal = ((profile.roles as unknown as { name: string } | null)?.name ?? 'vendedor') as Rol;
+      setRol(rolReal);
+      setNombre(profile.full_name);
+      if (profile.avatar_url) setLogo(profile.avatar_url);
+
+      const { data: wallet } = await supabase
+        .from('wallet_balances')
+        .select('balance')
+        .eq('profile_id', data.session.user.id)
+        .eq('wallet_type', 'referral')
+        .maybeSingle();
+      setBalance(wallet?.balance ?? 0);
+    }
+    cargar();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => cargar());
+    return () => {
+      activo = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuAbierto || carritoAbierto ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuAbierto, carritoAbierto]);
+
+  const menusVisibles = useMemo(() => MENUS.filter((m) => m.mostrar(rol)), [rol]);
+  const menusPieVisibles = useMemo(() => MENUS_PIE.filter((m) => m.mostrar(rol)), [rol]);
+
+  async function salir() {
+    await supabase.auth.signOut();
+    window.location.href = '/info';
+  }
+
+  function accionPie(accion: string) {
+    if (accion === 'login') window.location.href = '/login';
+    if (accion === 'registrar') window.location.href = '/singUp/vendedor/3213692393';
+    if (accion === 'salir') salir();
+    if (accion === 'recargar') window.location.href = '/config/recharge';
+  }
+
+  const total = cart.reduce((acc, item) => acc + (item.loVendio || 0), 0);
+
+  if (RUTAS_SIN_HEADER.some((r) => pathname === r || pathname.startsWith(`${r}/`))) return null;
+
+  return (
+    <>
+      <header className="sticky top-0 z-50 bg-[#02a0e3] shadow-md">
+        <div className="flex h-[74px] items-center gap-2 px-3 sm:px-4">
+          <button type="button" onClick={() => setMenuAbierto(true)} className="rounded p-2 text-white hover:bg-white/10" aria-label="Abrir menú">
+            <Menu className="h-6 w-6" />
+          </button>
+
+          <a href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
+            <img src={logo} alt="LokomproAqui" className="h-[55px] w-auto max-w-full" style={{ width: 177 }} />
+          </a>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {rol === 'visitante' ? (
+              <>
+                <a href="/login" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
+                  Iniciar Sesion
+                </a>
+                <a href="/singUp" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
+                  Registrarse
+                </a>
+              </>
+            ) : (
+              <>
+                {balance !== null && (
+                  <a
+                    href={rol === 'proveedor' ? '/config/bank/index' : '/config/cobros'}
+                    className="hidden text-sm font-semibold text-white sm:inline"
+                  >
+                    ${formatCOP(balance)}
+                  </a>
+                )}
+                {rol !== 'proveedor' && (
+                  <button type="button" onClick={() => setCarritoAbierto(true)} className="relative rounded p-2 text-white hover:bg-white/10" aria-label="Carrito">
+                    <ShoppingCart className="h-5 w-5" />
+                    {cart.length > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                        {cart.length}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <a href="/config/perfil" className="rounded p-2 text-white hover:bg-white/10" aria-label="Mi cuenta">
+                  <User className="h-5 w-5" />
+                </a>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Menu lateral (hamburguesa) */}
+      {menuAbierto && (
+        <div className="fixed inset-0 z-[100] flex">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMenuAbierto(false)} />
+          <nav className="relative flex h-full w-[280px] flex-col bg-[#7386d5] text-white shadow-xl">
+            <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
+              <a href={rol === 'visitante' ? '/info' : '/articulo'}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
+                <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
+              </a>
+              <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-2 py-3">
+              <ul className="flex flex-col gap-0.5">
+                {menusVisibles.map((item) => (
+                  <li key={item.nombre}>
+                    <a
+                      href={item.href}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === item.href ? 'bg-white/15' : ''}`}
+                    >
+                      <item.Icon className="h-[18px] w-[18px] shrink-0" />
+                      {item.nombre}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="my-3 border-t border-white/15" />
+
+              <ul className="flex flex-col gap-0.5">
+                {menusPieVisibles.map((item) => (
+                  <li key={item.nombre}>
+                    <button
+                      type="button"
+                      onClick={() => accionPie(item.accion)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium hover:bg-white/10"
+                    >
+                      <item.Icon className="h-[18px] w-[18px] shrink-0" />
+                      {item.nombre}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {/* Carrito */}
+      {carritoAbierto && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setCarritoAbierto(false)} />
+          <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <h2 className="font-bold text-gray-900">Productos Seleccionados</h2>
+              <button type="button" onClick={() => setCarritoAbierto(false)} className="rounded p-1.5 text-gray-400 hover:bg-gray-100" aria-label="Cerrar carrito">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 && <p className="text-center text-sm text-gray-400">Tu carrito está vacío.</p>}
+              <ul className="flex flex-col gap-3">
+                {cart.map((item: CartItem, idx: number) => (
+                  <li key={String(item.id)} className="flex items-center gap-3 rounded-xl border border-gray-100 p-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto, Supabase Storage */}
+                    <img src={(item.foto as string) || '/assets/producto.jpg'} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-800">{item.titulo}</p>
+                      <p className="text-xs text-gray-500">Cantidad: {item.cantidad ?? 1}</p>
+                      <p className="text-xs text-gray-500">Precio: ${formatCOP(item.costoTotal)} COP</p>
+                    </div>
+                    <button type="button" onClick={() => eliminar(item.id)} className="shrink-0 rounded-full p-1.5 text-red-500 hover:bg-red-50" aria-label="Quitar">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="border-t border-gray-100 p-4">
+              <p className="text-center text-sm font-semibold text-gray-700">Valor a pagar: ${formatCOP(total)}</p>
+              <a
+                href="/pedidos"
+                className="mt-3 block rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] py-3 text-center text-sm font-bold text-white shadow-md"
+              >
+                Agregar más productos
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
