@@ -22,8 +22,9 @@ import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
 // menu, el carrito y la barra superior si son fieles.
 
 // Mismas rutas donde Angular oculta el header (header.component.html: routName !== 'login' &&
-// !== 'singUp'), mas /mvid8x2qz1 que nunca vivio bajo TiendaComponent.
-const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1'];
+// !== 'singUp'), mas /mvid8x2qz1, /introduccion y /imprimirTarjeta, que viven en app-routing.module.ts
+// a nivel raiz (nunca bajo TiendaComponent, por lo tanto sin el header compartido).
+const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta'];
 
 type Rol = 'visitante' | 'vendedor' | 'proveedor' | 'lider' | 'subAdministrador' | 'administrador' | 'mentor';
 
