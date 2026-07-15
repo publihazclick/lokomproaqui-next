@@ -395,11 +395,14 @@
 /* Empuja la imagen al fondo de la caja (margin-top:auto) para que las 3 cajas siempre queden con
    la misma altura visual pareja aunque cada imagen tenga un tamaño natural distinto -- antes
    quedaba un hueco blanco feo debajo de la caja mas corta. */
+/* object-fit:cover + altura FIJA (no max-height) para que las 3 imagenes (con relaciones de
+   aspecto bien distintas entre si) siempre rellenen el mismo rectangulo parejo -- con
+   object-fit:contain quedaban "recortadas" de forma dispareja entre las 3 cajas. */
 .registroBoxImg {
   margin-top: auto;
   width: 100%;
-  max-height: 220px;
-  object-fit: contain;
+  height: 220px;
+  object-fit: cover;
 }
 
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
