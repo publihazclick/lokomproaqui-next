@@ -1,0 +1,30 @@
+import { supabase } from '@/lib/supabase';
+import { TutorialesClient } from './TutorialesClient';
+import type { CategoriaConVideos, CursoVideo } from './types';
+
+export const metadata = {
+  title: 'Tutoriales | LokomproAqui',
+  description: 'Aprende a usar LokomproAqui paso a paso: como vender, como comprar, como despachar y mucho mas.',
+};
+
+// El admin edita los tutoriales desde /config/cursos (todavia en Angular) sin volver a
+// deployar Next.js -- sin esto, Next.js prerenderiza la pagina UNA vez en el build y un
+// video nuevo no aparece hasta el proximo deploy. Con revalidate, se refresca solo cada 60s.
+export const revalidate = 60;
+
+// Migrado 1:1 desde src/app/components/tutoriales (Angular) -- ver memoria
+// lokomproaqui-nextjs-migration, Fase 1. Misma tabla `courses` (categorias = parent_id null,
+// videos = parent_id de la categoria), misma URL /tutoriales. A diferencia del original
+// Angular (que pedia los datos en el cliente y mostraba un spinner), esto corre en el
+// servidor: la pagina llega con el contenido ya adentro, sin "Cargando tutoriales...".
+export default async function TutorialesPage() {
+  const { data } = await supabase.from('courses').select('*').order('sort_order');
+  const todos = (data ?? []) as CursoVideo[];
+
+  const categorias: CategoriaConVideos[] = todos
+    .filter((c) => !c.parent_id)
+    .map((cat) => ({ ...cat, videos: todos.filter((v) => v.parent_id === cat.id) }))
+    .filter((cat) => cat.videos.length > 0);
+
+  return <TutorialesClient categorias={categorias} />;
+}
