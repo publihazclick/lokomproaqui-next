@@ -1,22 +1,26 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { MessageCircle, PlayCircle, MapPin, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-export const metadata = {
-  title: 'Testimonios | LokomproAqui',
-  description: 'Lo que dicen quienes ya venden y ganan con LokomproAqui.',
-};
-
 // Port desde src/app/components/testimonios (Angular): la version original era un HTML
-// standalone con Bootstrap 3 + Font Awesome via CDN, totalmente desconectado del resto del
-// sitio (ver feedback_lokomproaqui_unicornio -- se reconstruye con el mismo lenguaje visual
-// del resto de las paginas migradas, no se porta el look viejo).
+// standalone con Bootstrap 3 + Font Awesome via CDN, desconectado del resto del sitio -- se
+// reconstruye con el mismo lenguaje visual de las demas paginas migradas (ver
+// feedback_lokomproaqui_unicornio).
 //
-// Bug real encontrado y corregido de paso: TestimoniosService.get() (Angular) mapea
-// `usuario: t.profile_id` -- un simple UUID, no el perfil completo -- pero el template viejo
-// leia `item.usuario.usu_nombre` como si fuera un objeto. En produccion eso mostraba nombre/
-// foto/ciudad en blanco (no se nota hoy porque la tabla esta vacia). Aca se hace el join real
-// con `profiles` para traer nombre/foto/ciudad/telefono de verdad.
-export const revalidate = 60;
+// GuestGuard (decision del usuario 2026-07-14): en Angular esta ruta exige sesion (pedido
+// explicito 2026-07-10 para no dejar saltear el embudo de /info) -- se replica el mismo
+// comportamiento aca. Como este proyecto no tiene sesion server-side (el JWT vive en
+// localStorage, solo lo ve el browser), el chequeo y el fetch de datos son client-side: recien
+// se pide `testimonials` despues de confirmar sesion, para no filtrar contenido en el HTML de
+// un visitante sin loguear (equivalente en espiritu al guard de Angular, que tampoco monta el
+// componente hasta que el guard resuelve).
+//
+// Bug real encontrado y corregido de paso: TestimoniosService.get() (Angular) mapeaba
+// `usuario: t.profile_id` -- un UUID plano -- pero el template leia `item.usuario.usu_nombre`
+// como objeto. En produccion eso mostraba nombre/foto/ciudad en blanco (no se nota hoy, la
+// tabla testimonials esta vacia). Aca se hace el join real con profiles.
 
 interface Testimonial {
   id: number;
@@ -24,15 +28,31 @@ interface Testimonial {
   profiles: { full_name: string | null; avatar_url: string | null; city: string | null; phone: string | null } | null;
 }
 
-export default async function TestimonioPage() {
-  const { data } = await supabase
-    .from('testimonials')
-    .select('id, description, profiles(full_name, avatar_url, city, phone)')
-    .eq('status', 0)
-    .order('created_at', { ascending: false })
-    .limit(15);
+export default function TestimonioPage() {
+  const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
+  const [listRow, setListRow] = useState<Testimonial[]>([]);
 
-  const listRow = (data ?? []) as unknown as Testimonial[];
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = '/info';
+        return;
+      }
+      setEstado('cargando');
+      supabase
+        .from('testimonials')
+        .select('id, description, profiles(full_name, avatar_url, city, phone)')
+        .eq('status', 0)
+        .order('created_at', { ascending: false })
+        .limit(15)
+        .then(({ data: rows }) => {
+          setListRow((rows ?? []) as unknown as Testimonial[]);
+          setEstado('listo');
+        });
+    });
+  }, []);
+
+  if (estado !== 'listo') return null;
 
   return (
     <div>
