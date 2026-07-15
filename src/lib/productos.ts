@@ -39,6 +39,7 @@ export interface ProductoLegacy {
   pro_categoria: { id: number; cat_nombre: string } | null;
   pro_codigo: string;
   pro_uni_venta: number;
+  pro_vendedor: number | null; // precio a distribuidor (distributor_price)
   listColor: ProductoColor[];
   listComment: ProductoComentario[];
   checkMayor: boolean;
@@ -76,6 +77,7 @@ export function mapProductToLegacy(product: any, computedPrice?: number): Produc
     pro_categoria: product.categories ? { id: product.categories.id, cat_nombre: product.categories.name } : null,
     pro_codigo: product.code,
     pro_uni_venta: computedPrice != null ? computedPrice : product.client_sale_price,
+    pro_vendedor: product.distributor_price,
     listColor: Object.values(variantsByColor),
     listComment: [],
     checkMayor: !!product.wholesale_enabled,
@@ -114,9 +116,75 @@ export async function fetchProductoById(id: string | number): Promise<ProductoLe
   return mapped;
 }
 
+// Equivalente a ProductoService.get({ where: { pro_categoria, user, idPrice }, page, limit }) para
+// listados/catalogo (PedidosComponent, ListArticleStoreComponent): productos activos paginados,
+// con precio propio (price_overrides) del usuario logueado si ya reselleo alguno.
+export async function fetchProductos(opts: {
+  categoriaId?: number | string;
+  ownerProfileId?: string;
+  userId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ data: ProductoLegacy[]; count: number }> {
+  const page = opts.page ?? 0;
+  const limit = opts.limit ?? 54;
+
+  let q = supabase.from('products').select(PRODUCT_SELECT, { count: 'exact' }).eq('active', true).order('position', { ascending: true });
+  if (opts.categoriaId) q = q.eq('category_id', opts.categoriaId);
+  if (opts.ownerProfileId) q = q.eq('owner_profile_id', opts.ownerProfileId);
+  q = q.range(page * limit, page * limit + limit - 1);
+
+  const { data, error, count } = await q;
+  if (error || !data) return { data: [], count: 0 };
+
+  let overrides: any[] = [];
+  if (opts.userId) {
+    const { data: po } = await supabase.from('price_overrides').select('*').eq('profile_id', opts.userId).eq('active', true);
+    overrides = po || [];
+  }
+
+  const mapped = data.map((p: any) => {
+    const override = overrides.find((o: any) => o.product_id === p.id);
+    return mapProductToLegacy(p, override ? override.price : undefined);
+  });
+
+  return { data: mapped, count: count ?? mapped.length };
+}
+
 // Genera el mismo tipo de id "aleatorio corto" que ProductoViewComponent.codigo() (Angular) para
 // identificar items del carrito -- no necesita ser criptograficamente unico, solo no colisionar
 // dentro del mismo carrito.
 export function codigoCarrito(): string {
   return (Date.now().toString(20).substring(2, 5) + Math.random().toString(20).substring(2, 5)).toUpperCase();
+}
+
+// Equivalente a ProductoService.getPrice({ where: { article, user, state: 0 } }): el price_override
+// activo de este usuario para este producto, si ya lo agrego a su tienda ("revender con mi precio").
+export async function fetchPriceOverride(productId: number, userId: string): Promise<{ id: number; price: number } | null> {
+  const { data } = await supabase
+    .from('price_overrides')
+    .select('id, price')
+    .eq('product_id', productId)
+    .eq('profile_id', userId)
+    .eq('active', true)
+    .maybeSingle();
+  return data ? { id: data.id, price: data.price } : null;
+}
+
+// Equivalente a ProductoService.createPrice: agrega/reactiva el producto en la tienda propia del usuario.
+export async function guardarPriceOverride(productId: number, userId: string, price: number): Promise<boolean> {
+  const existing = await fetchPriceOverride(productId, userId);
+  if (existing) {
+    const { error } = await supabase.from('price_overrides').update({ price, active: true }).eq('id', existing.id);
+    return !error;
+  }
+  const { error } = await supabase.from('price_overrides').insert({ product_id: productId, profile_id: userId, price, active: true });
+  return !error;
+}
+
+// Equivalente a ProductoService.updatePriceArticle({ id, state: 1 }): saca el producto de la tienda
+// propia (soft-delete, active=false) sin borrar el registro.
+export async function quitarPriceOverride(id: number): Promise<boolean> {
+  const { error } = await supabase.from('price_overrides').update({ active: false }).eq('id', id);
+  return !error;
 }
