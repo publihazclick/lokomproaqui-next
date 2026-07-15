@@ -34,7 +34,14 @@ function subirArchivoConProgreso(
   return new Promise(async (resolve) => {
     const ext = (file.name || 'bin').split('.').pop();
     const path = `${carpeta}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { data: sessionData } = await supabase.auth.getSession();
+    // getSession() deberia refrescar sola un token vencido, pero un video pesado puede tardar
+    // minutos en subir -- se fuerza un refresh explicito aca para no arriesgarse a mandar un
+    // access_token viejo y que Postgres rechace el insert por RLS (auth.role() != 'authenticated').
+    let { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed.session) sessionData = refreshed;
+    }
     const token = sessionData.session ? sessionData.session.access_token : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     const xhr = new XMLHttpRequest();
