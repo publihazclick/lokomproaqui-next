@@ -117,7 +117,7 @@ export default async function InfoPage() {
               </div>
               <div className={styles.frame33} style={{ margin: 'auto' }}>
                 <a href="/singUp/vendedor/3213692393" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
-                  Regístrate Gratis
+                  Regístrate gratis
                 </a>
               </div>
             </div>
@@ -152,7 +152,7 @@ export default async function InfoPage() {
                 <ul>
                   {QUE_HACEMOS.map((texto) => (
                     <li key={texto}>
-                      <i className={`material-icons ${styles.checkIcon}`} aria-hidden="true">
+                      <i className="material-icons" aria-hidden="true">
                         check_circle
                       </i>
                       <p>{texto}</p>
@@ -180,7 +180,7 @@ export default async function InfoPage() {
                 <ul>
                   {POR_QUE.map((texto) => (
                     <li key={texto}>
-                      <i className={`material-icons ${styles.checkIcon}`} aria-hidden="true">
+                      <i className="material-icons" aria-hidden="true">
                         check_circle
                       </i>
                       <p>{texto}</p>

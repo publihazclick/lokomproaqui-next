@@ -262,30 +262,50 @@
   }
 }
 
+/* ul/li: mismo reset GLOBAL (no comentado) del info.component.scss original (ul{list-style:none}
+   li{display:inline}) -- se escapo con .infoPage para no filtrar a otras paginas. El resto
+   (`.contenido-caja ul{width:60%}`) tambien es real. `<p>` sigue siendo block por defecto del
+   navegador (Angular no tiene ningun reset tipo Tailwind preflight que lo anule), asi que cada
+   item igual queda en su propia linea aunque el <li> sea inline -- eso ya lo hace el navegador
+   solo, no hace falta forzarlo con flex (esa era mi propia invencion, no estaba en el original). */
+.infoPage :global(ul) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.infoPage :global(li) {
+  display: inline;
+  margin-right: 10px;
+}
+
 .contenidoCaja ul {
   width: 60%;
   margin: auto;
   padding: 2px;
-  list-style: none;
 }
 
-.contenidoCaja li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  text-align: left;
-  margin-bottom: 4px;
+/* h1/h2 SIN tamano propio: en el Angular real esa regla estaba COMENTADA
+   (`/*h1{font-size:24px}*\/`), nunca se aplico -- el titulo usa el tamano GRANDE por defecto del
+   navegador. Tailwind (preflight) resetea eso a texto chico en este proyecto, asi que hay que
+   restaurar el default real del navegador a mano para que se vea igual que en Angular. */
+.infoPage :global(h1) {
+  display: block;
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
 }
 
-.contenidoCaja h1 {
-  font-size: 24px;
-  margin: 10px 0;
+.infoPage :global(h2) {
+  display: block;
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.83em 0;
 }
 
-.checkIcon {
-  color: #02a0e3;
-  flex-shrink: 0;
-  margin-top: 2px;
+.infoPage :global(p) {
+  display: block;
+  margin: 1em 0;
 }
 
 .customButton {
