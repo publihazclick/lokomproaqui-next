@@ -36,14 +36,21 @@ export function ContadorShipping() {
   }, []);
 
   return (
-    <section className="grid grid-cols-2 gap-3 bg-[#f2f2f2] p-3 md:flex md:flex-wrap md:justify-between md:gap-0 md:p-5">
-      {SECUENCIA.map(({ key, titulo, Icon }) => (
-        <div key={key} className="box-border rounded-md border border-gray-200 bg-white p-4 text-center md:m-2.5 md:flex-1 md:basis-1/5 md:p-5">
-          <Icon className="mx-auto mb-2 h-9 w-9 text-[#02a0e3]" />
-          <h1 className="font-bold text-[#757575]">+{valores[key].toLocaleString('es-CO')}</h1>
-          <p className="text-sm">{titulo}</p>
-        </div>
-      ))}
+    <section className="bg-[#f7f9fb] px-3 py-8 sm:px-6">
+      <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {SECUENCIA.map(({ key, titulo, Icon }) => (
+          <div
+            key={key}
+            className="group rounded-2xl border border-gray-100 bg-white p-5 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+          >
+            <span className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#0177a8]/10 to-[#02a0e3]/10 text-[#0177a8] transition-colors duration-200 group-hover:from-[#0177a8] group-hover:to-[#02a0e3] group-hover:text-white">
+              <Icon className="h-6 w-6" strokeWidth={1.75} />
+            </span>
+            <h1 className="text-xl font-extrabold text-gray-800 sm:text-2xl">+{valores[key].toLocaleString('es-CO')}</h1>
+            <p className="mt-1 text-xs font-semibold text-gray-500 sm:text-sm">{titulo}</p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
