@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshCw, MessageCircle, Trash2 } from 'lucide-react';
+import { RefreshCw, MessageCircle, Trash2, Gift, Eye } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, fetchVendedores, type DataUserCompleto, type VendedorBasico } from '@/lib/usuarios';
 import { fetchVentas, refreshTracking, eliminarVenta, VENTA_ESTADOS, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
 import { useToast, Toast } from '@/components/Toast';
+import { FormPuntosModal } from '@/components/FormPuntosModal';
+import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 
 // Port desde src/app/dashboard-config/components/ventas (Angular, VentasComponent) -- historial de
 // pedidos/ventas. Ver src/lib/ventas.ts para el detalle completo de los bugs reales encontrados y
@@ -49,6 +51,8 @@ export default function VentasPage() {
   const [actualizandoTracking, setActualizandoTracking] = useState<Record<number, boolean>>({});
   const [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set());
   const [eliminando, setEliminando] = useState(false);
+  const [mostrarPuntos, setMostrarPuntos] = useState(false);
+  const [ventaAbierta, setVentaAbierta] = useState<number | null>(null);
 
   const dataUserRef = useRef<DataUserCompleto | null>(null);
 
@@ -211,6 +215,11 @@ export default function VentasPage() {
           <button onClick={borrarFiltros} className="rounded-full bg-[#dc3545] px-4 py-2 text-xs font-bold text-white hover:opacity-90">
             Borrar Filtros
           </button>
+          {esAdmin && (
+            <button onClick={() => setMostrarPuntos(true)} className="flex items-center gap-1 rounded-full bg-[#0d6efd] px-4 py-2 text-xs font-bold text-white hover:opacity-90">
+              <Gift className="h-3.5 w-3.5" /> Dar puntos
+            </button>
+          )}
           {seleccionadas.size > 0 && (
             <button onClick={eliminarSeleccionadas} disabled={eliminando} className="flex items-center gap-1 rounded-full bg-[#dc3545] px-4 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-60">
               <Trash2 className="h-3.5 w-3.5" /> Eliminar ({seleccionadas.size})
@@ -243,6 +252,9 @@ export default function VentasPage() {
                       <input type="checkbox" checked={seleccionadas.has(row.id)} onChange={() => toggleSeleccion(row.id)} />
                     </td>
                     <td className="space-y-1 py-2 pr-3">
+                      <button onClick={() => setVentaAbierta(row.id)} className="flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-medium text-white">
+                        <Eye className="h-3 w-3" /> Ver
+                      </button>
                       {!row.numeroGuia && <p className="text-xs text-amber-600">Debes generar la guía</p>}
                       {row.numeroGuia && (
                         <button
@@ -302,6 +314,17 @@ export default function VentasPage() {
       </div>
 
       <Toast mensaje={mensaje} />
+
+      {mostrarPuntos && <FormPuntosModal onClose={() => setMostrarPuntos(false)} />}
+
+      {ventaAbierta != null && (
+        <FormVentaDetalleModal
+          orderId={ventaAbierta}
+          esAdmin={esAdmin}
+          onClose={() => setVentaAbierta(null)}
+          onCambio={() => cargar(0, true)}
+        />
+      )}
     </div>
   );
 }

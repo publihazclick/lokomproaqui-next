@@ -116,6 +116,23 @@ export async function marcarPedidoEnPreparacion(orderId: number): Promise<boolea
   return !error;
 }
 
+// approve_order: paga las comisiones multinivel de referidos y proveedores -- equivalente al caso
+// ven_estado===1 de VentasService.update() (Angular).
+export async function aprobarPedido(orderId: number): Promise<boolean> {
+  const { error } = await supabase.rpc('approve_order', { p_order_id: orderId });
+  return !error;
+}
+
+// Cambia el estado de una venta desde el dialogo de detalle (0 Pendiente, 6 Preparacion,
+// 3 Despachado, 1 Venta exitosa -> approve_order, 2 Devolucion -> reject_order). Mismo mapeo que
+// VentasService.update() en Angular.
+export async function cambiarEstadoVenta(orderId: number, estadoLegacy: number): Promise<boolean> {
+  if (estadoLegacy === 1) return aprobarPedido(orderId);
+  if (estadoLegacy === 2) return cancelarPedido(orderId);
+  const { error } = await supabase.from('orders').update({ status: LEGACY_TO_STATUS[estadoLegacy] || 'pending' }).eq('id', orderId);
+  return !error;
+}
+
 export async function cotizarFlete(orderId: number, codeCiudad: string): Promise<CotizacionFlete[]> {
   const { data: resp, error } = await supabase.functions.invoke('mipaquete-quote', { body: { order_id: orderId, destino_dane_code: codeCiudad } });
   if (error || !resp || resp.error) return [];
@@ -266,4 +283,67 @@ export async function eliminarVenta(orderId: number): Promise<{ success: boolean
   }
   const { error } = await supabase.from('orders').update({ status: 'deleted' }).eq('id', orderId);
   return { success: !error };
+}
+
+// ── Detalle de una venta (FormventasComponent, version simplificada -- ver nota en el componente
+// React sobre por que se dejo afuera la cotizacion vieja de Coordinadora) ──────────────────────
+
+export interface VentaItem {
+  id: number;
+  titulo: string | null;
+  cantidad: number;
+  talla: string | null;
+  color: string | null;
+  costoTotal: number | null;
+}
+
+export interface VentaDetalle {
+  id: number;
+  estado: number;
+  nombreCliente: string | null;
+  telefonoCliente: string | null;
+  direccionCliente: string | null;
+  ciudad: string | null;
+  barrio: string | null;
+  numeroGuia: string | null;
+  transportadora: string | null;
+  precioTotal: number | null;
+  gananciaTotal: number | null;
+  vendedorNombre: string | null;
+  vendedorTelefono: string | null;
+  vendedorCiudad: string | null;
+  items: VentaItem[];
+}
+
+export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle | null> {
+  const [{ data: order, error }, { data: items }] = await Promise.all([
+    supabase.from('orders').select('*, profiles!orders_seller_id_fkey(full_name, phone, city)').eq('id', orderId).maybeSingle(),
+    supabase.from('order_items').select('*').eq('order_id', orderId),
+  ]);
+  if (error || !order) return null;
+
+  return {
+    id: order.id,
+    estado: STATUS_TO_LEGACY[order.status] ?? 0,
+    nombreCliente: order.buyer_name,
+    telefonoCliente: order.buyer_phone,
+    direccionCliente: order.buyer_address,
+    ciudad: order.buyer_city,
+    barrio: order.buyer_neighborhood,
+    numeroGuia: order.tracking_number,
+    transportadora: order.carrier,
+    precioTotal: order.price_total,
+    gananciaTotal: order.earnings_total,
+    vendedorNombre: order.profiles ? order.profiles.full_name : null,
+    vendedorTelefono: order.profiles ? order.profiles.phone : null,
+    vendedorCiudad: order.profiles ? order.profiles.city : null,
+    items: (items || []).map((i: any) => ({
+      id: i.id,
+      titulo: i.title,
+      cantidad: i.quantity,
+      talla: i.size,
+      color: i.color,
+      costoTotal: i.total_cost,
+    })),
+  };
 }

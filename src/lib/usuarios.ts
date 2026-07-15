@@ -77,3 +77,31 @@ export async function fetchPerfilPorReferralCode(referralCode: string): Promise<
     usu_imagen: data.avatar_url,
   };
 }
+
+// Busqueda simple para el panel admin (FormpuntosComponent en Angular buscaba por email, algo que
+// no es posible desde el cliente sin service_role -- el correo vive en auth.users, no en
+// `profiles`, y UsuariosService.get() nunca soporto ese filtro tampoco). Se busca por telefono o
+// nombre de tienda, los dos identificadores reales que si existen en `profiles`.
+export interface UsuarioBusqueda {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  usuUsuario: string | null;
+}
+
+export async function buscarUsuarioPorTelefonoOTienda(termino: string): Promise<UsuarioBusqueda | null> {
+  const t = termino.trim();
+  if (!t) return null;
+  const { data, error } = await supabase.from('profiles').select('id, full_name, last_name, phone, referral_code').or(`phone.eq.${t},referral_code.eq.${t}`).maybeSingle();
+  if (error || !data) return null;
+  return { id: data.id, nombre: [data.full_name, data.last_name].filter(Boolean).join(' ') || '(sin nombre)', telefono: data.phone, usuUsuario: data.referral_code };
+}
+
+// Equivalente a UsuariosService.darPuntos: bonificacion manual de puntos/ganancias del admin,
+// acreditada directo a la billetera 'referral' del usuario.
+export async function otorgarPuntos(userId: string, monto: number): Promise<boolean> {
+  // Mismos parametros que UsuariosService.darPuntos (Angular): sin p_kind, se apoya en el default
+  // de la funcion RPC (el llamado original tampoco lo pasa).
+  const { error } = await supabase.rpc('credit_wallet', { p_profile_id: userId, p_wallet_type: 'referral', p_amount: monto, p_order_id: null, p_pct: null });
+  return !error;
+}
