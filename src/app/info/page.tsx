@@ -240,7 +240,7 @@ export default async function InfoPage() {
                 </h2>
                 <section style={{ width: '100%', maxWidth: '376px', fontSize: '25px', height: '70px', display: 'inline-block', boxSizing: 'border-box' }}>
                   <a href="/singUp/vendedor/3213692393" className={`${styles.btn} ${styles.btnDark} ${styles.customButton}`} style={{ textDecoration: 'none' }}>
-                    Regístrate Gratis
+                    Regístrate gratis
                   </a>
                 </section>
               </div>
