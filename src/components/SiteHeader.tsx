@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+// Rutas donde Angular oculta el header real (header.component.html: routName !== 'login' &&
+// routName !== 'singUp') -- se replica igual aca, son pantallas de embudo propias sin nav.
+const RUTAS_SIN_HEADER = ['/login', '/singUp'];
 
 type SessionState = 'loading' | 'logged-out' | { email: string };
 
@@ -39,6 +44,7 @@ const BTN_GHOST =
 // app Next.js y mostraria un 404 -- un <a> fuerza una navegacion real de navegador, que vuelve
 // a pasar por el rewrite de Vercel y llega bien. `NAV_LINKS[].migrated` decide cual usar.
 export function SiteHeader() {
+  const pathname = usePathname();
   const [session, setSession] = useState<SessionState>('loading');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -77,6 +83,8 @@ export function SiteHeader() {
     await supabase.auth.signOut();
     window.location.href = '/info';
   };
+
+  if (RUTAS_SIN_HEADER.some((r) => pathname === r || pathname.startsWith(`${r}/`))) return null;
 
   const logueado = typeof session === 'object';
 
