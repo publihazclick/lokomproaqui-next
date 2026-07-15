@@ -51,6 +51,20 @@ export interface PerfilTienda {
   usu_imagen: string | null;
 }
 
+// Equivalente a UsuariosService.getOn({ where: {} }): directorio simple de usuarios, usado por el
+// autocompletar "Vendedor" del filtro admin de /config/ventas.
+export interface VendedorBasico {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+}
+
+export async function fetchVendedores(): Promise<VendedorBasico[]> {
+  const { data, error } = await supabase.from('profiles').select('id, full_name, last_name, phone').limit(2000);
+  if (error || !data) return [];
+  return data.map((p) => ({ id: p.id, nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)', telefono: p.phone }));
+}
+
 export async function fetchPerfilPorReferralCode(referralCode: string): Promise<PerfilTienda | null> {
   const { data, error } = await supabase.from('profiles').select('id, referral_code, phone, city, avatar_url').eq('referral_code', referralCode).maybeSingle();
   if (error || !data) return null;

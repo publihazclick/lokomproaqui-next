@@ -140,3 +140,130 @@ export async function buscarCiudadesMipaquete(q: string): Promise<CiudadMipaquet
   if (error || !resp || !resp.success) return [];
   return (resp.data || []).map((c: any) => ({ name: c.name, code: c.code }));
 }
+
+// ── Listado de ventas (VentasComponent, "/config/ventas") ──────────────────────────────────────
+//
+// BUGS REALES encontrados y corregidos aca (no replicados, mismo criterio que perfil/referidos):
+// 1) VentasComponent arma su filtro por defecto como `ven_estado: { '!=': [4, 2] }` (excluir
+//    estados) pero VentasService.get() (Angular) solo reconoce `where.ven_estado` cuando es un
+//    NUMERO plano (`typeof where.ven_estado === 'number'`) -- un objeto `{'!=':[...]}` no matchea
+//    esa condicion y el filtro se ignora COMPLETO. En produccion HOY la pantalla de Ventas no
+//    excluye nada por defecto (ni eliminados, ni facturados) a pesar de que el codigo intenta
+//    hacerlo. Mismo problema con `ven_sw_eliminado`, `ven_retiro` y el rango de fechas
+//    (`createdAt >=/<=`): ninguno de los tres esta implementado en get(), se ignoran en silencio.
+// 2) `mapOrderToLegacy` mapea `usu_clave_int: order.seller_id` -- un UUID plano, no un objeto --
+//    pero la plantilla lee `row.usu_clave_int?.usu_nombre/usu_telefono/usu_ciudad` como si fuera
+//    un perfil embebido. Esas 3 columnas estan siempre vacias hoy (solo visibles para admin,
+//    viendo ventas de otros vendedores). Se resuelve aca con un join real a `profiles`.
+// 3) La plantilla lee `row['ven_retirado']` (con D) para la columna "Pagado", pero el campo real
+//    mapeado es `ven_retiro` (sin D) -- un typo que deja esa columna siempre vacia. Se usa el campo
+//    real (`orders.withdrawn`).
+//
+// Alcance recortado y documentado: el dialogo "Ver detalle" (FormventasComponent, abre con el
+// icono de ojo en cada fila) y "Dar puntos" (FormpuntosComponent, bono manual del admin) no se
+// portan en esta pieza -- son sus propios formularios grandes, quedan para una proxima pieza
+// dedicada. Tambien se omite la columna "Evidencia Entrega"/"lista para cobrar": dependen de
+// `ven_imagen_tiket`, un campo que nunca se mapeo desde la migracion a Supabase (no existe
+// contraparte en `orders`) -- no hay ningun dato real que mostrar ahi todavia.
+
+export const VENTA_ESTADOS: { value: string; label: string }[] = [
+  { value: 'todos', label: 'Todos' },
+  { value: '0', label: 'Pendiente' },
+  { value: '1', label: 'Venta exitosa' },
+  { value: '2', label: 'Rechazada' },
+  { value: '3', label: 'Despachado' },
+  { value: 'pagado', label: 'Pagado y completado' },
+];
+
+const STATUS_TO_LEGACY: Record<string, number> = { pending: 0, success: 1, rejected: 2, dispatched: 3, invoiced: 4, deleted: 5, preparing: 6 };
+const LEGACY_TO_STATUS: Record<number, string> = { 0: 'pending', 1: 'success', 2: 'rejected', 3: 'dispatched', 4: 'invoiced', 5: 'deleted', 6: 'preparing' };
+export const VENTA_ESTADO_LABEL: Record<number, string> = { 0: 'Pendiente', 1: 'Exitosa', 2: 'Rechazada', 3: 'Despachado', 4: 'Facturado', 5: 'Eliminado', 6: 'Preparación' };
+
+export interface VentaRow {
+  id: number;
+  estado: number;
+  numeroGuia: string | null;
+  transportadora: string | null;
+  nombreCliente: string | null;
+  telefonoCliente: string | null;
+  fecha: string;
+  trackingStatus: string | null;
+  trackingSyncedAt: string | null;
+  retirado: boolean;
+  motivoRechazo: string | null;
+  vendedorNombre: string | null;
+  vendedorTelefono: string | null;
+  vendedorCiudad: string | null;
+}
+
+function mapVentaRow(o: any): VentaRow {
+  return {
+    id: o.id,
+    estado: STATUS_TO_LEGACY[o.status] ?? 0,
+    numeroGuia: o.tracking_number,
+    transportadora: o.carrier,
+    nombreCliente: o.buyer_name,
+    telefonoCliente: o.buyer_phone,
+    fecha: o.created_at,
+    trackingStatus: o.tracking_status,
+    trackingSyncedAt: o.tracking_synced_at,
+    retirado: !!o.withdrawn,
+    motivoRechazo: o.rejection_reason ?? null,
+    vendedorNombre: o.profiles ? o.profiles.full_name : null,
+    vendedorTelefono: o.profiles ? o.profiles.phone : null,
+    vendedorCiudad: o.profiles ? o.profiles.city : null,
+  };
+}
+
+export async function fetchVentas(opts: {
+  sellerId?: string;
+  estadoFiltro?: string; // 'todos' | '0'..'3' | 'pagado'
+  fechaInicio?: string;
+  fechaFinal?: string;
+  search?: string;
+  page: number;
+  limit: number;
+}): Promise<{ data: VentaRow[]; count: number }> {
+  let q = supabase.from('orders').select('*, profiles!orders_seller_id_fkey(full_name, phone, city)', { count: 'exact' });
+
+  if (opts.sellerId) q = q.eq('seller_id', opts.sellerId);
+
+  if (!opts.estadoFiltro || opts.estadoFiltro === 'todos') {
+    q = q.not('status', 'in', '(invoiced,rejected,deleted)');
+  } else if (opts.estadoFiltro === 'pagado') {
+    q = q.eq('withdrawn', true);
+  } else {
+    q = q.eq('status', LEGACY_TO_STATUS[Number(opts.estadoFiltro)] || 'pending');
+  }
+
+  if (opts.fechaInicio) q = q.gte('created_at', opts.fechaInicio);
+  if (opts.fechaFinal) q = q.lte('created_at', opts.fechaFinal);
+
+  if (opts.search && opts.search.trim()) {
+    const term = opts.search.trim();
+    const parts = [`buyer_phone.ilike.%${term}%`, `tracking_number.ilike.%${term}%`];
+    if (/^\d+$/.test(term)) parts.push(`id.eq.${term}`);
+    q = q.or(parts.join(','));
+  }
+
+  q = q.order('created_at', { ascending: false }).range(opts.page * opts.limit, opts.page * opts.limit + opts.limit - 1);
+
+  const { data, error, count } = await q;
+  if (error || !data) return { data: [], count: 0 };
+  return { data: data.map(mapVentaRow), count: count ?? data.length };
+}
+
+export async function refreshTracking(orderId: number): Promise<{ success: boolean; message?: string; estado?: string | null }> {
+  const { data: resp, error } = await supabase.functions.invoke('mipaquete-track', { body: { order_id: orderId } });
+  if (error || !resp || resp.error) return { success: false, message: (resp && resp.error) || 'No pudimos actualizar el estado' };
+  return { success: true, estado: resp.estado_actual || null };
+}
+
+export async function eliminarVenta(orderId: number): Promise<{ success: boolean; message?: string }> {
+  const { data: existing } = await supabase.from('orders').select('status').eq('id', orderId).maybeSingle();
+  if (existing && ['success', 'rejected', 'dispatched', 'invoiced'].includes(existing.status)) {
+    return { success: false, message: 'Error no puedes Eliminar esta venta por tener datos de despachado' };
+  }
+  const { error } = await supabase.from('orders').update({ status: 'deleted' }).eq('id', orderId);
+  return { success: !error };
+}
