@@ -344,6 +344,48 @@
   }
 }
 
+/* ── 3 cajas de registro (Registro Proveedor / Registro Vendedor / Contactar Asesor) ────────
+   Este bloque esta comentado en el HTML fuente que se reviso, pero la version REAL desplegada en
+   produccion (confirmado con captura de pantalla 2026-07-15) lo tiene activo en vez de la grilla
+   de 3 fotos -- el repo local no esta 100% sincronizado con lo que esta en vivo. Se reemplaza la
+   grilla de fotos por este bloque real (mismo .colorFondo4 del SCSS original). */
+.colorFondo4 {
+  background: #02a0e3;
+  color: white;
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.registroBoxTitle {
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.registroBoxSubtitle {
+  margin: 0 0 20px;
+  font-size: 16px;
+  color: #f0f9ff;
+}
+
+.registroBoxButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #1e1e1e;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 30px;
+  font-size: 15px;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.registroBoxButton:hover {
+  transform: translateY(-2px);
+}
+
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
 
 .colorFondo5 {

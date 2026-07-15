@@ -192,33 +192,33 @@ export default async function InfoPage() {
           </section>
         </div>
 
-        <div className={`${styles.col12} ${styles.row}`} style={{ margin: '5px' }}>
+        <div className={`${styles.col12} ${styles.row}`}>
           <div className={styles.colSm4}>
-            <div className={styles.card}>
-              <a href="/singUp/proveedor/3213692393">
-                {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-                <img src="/assets/imagenes/foto1.jpeg" className={`${styles.cardImgTop} ${styles.pointer}`} alt="..." />
+            <div className={styles.colorFondo4}>
+              <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
+              <p className={styles.registroBoxSubtitle}>Empieza con tu red de ventas</p>
+              <a href="/singUp/proveedor/3213692393" className={styles.registroBoxButton}>
+                Registrarme →
               </a>
             </div>
-            <br />
           </div>
           <div className={styles.colSm4}>
-            <div className={styles.card}>
-              <a href="/singUp/vendedor/3213692393">
-                {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-                <img src="/assets/imagenes/foto2.jpeg" className={`${styles.cardImgTop} ${styles.pointer}`} alt="..." />
+            <div className={styles.colorFondo4}>
+              <h3 className={styles.registroBoxTitle}>Registro Vendedor</h3>
+              <p className={styles.registroBoxSubtitle}>Empieza a generar venta sin invertir</p>
+              <a href="/singUp/vendedor/3213692393" className={styles.registroBoxButton}>
+                Registrarme →
               </a>
             </div>
-            <br />
           </div>
           <div className={styles.colSm4}>
-            <div className={styles.card}>
-              <a href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola Servicio al cliente')}`} target="_blank" rel="noreferrer">
-                {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-                <img src="/assets/imagenes/foto3.jpeg" className={`${styles.cardImgTop} ${styles.pointer}`} alt="..." />
+            <div className={styles.colorFondo4}>
+              <h3 className={styles.registroBoxTitle}>Contactar Asesor</h3>
+              <p className={styles.registroBoxSubtitle}>La información que necesitas a un click</p>
+              <a href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola Servicio al cliente')}`} target="_blank" rel="noreferrer" className={styles.registroBoxButton}>
+                Registrarme →
               </a>
             </div>
-            <br />
           </div>
         </div>
 
