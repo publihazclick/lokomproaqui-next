@@ -185,8 +185,8 @@ export default async function InfoPage() {
         </div>
 
         <div className={styles.col12}>
-        <div className={styles.rowSinGutter}>
-          <div className={styles.colSm4SinGutter}>
+        <div className={styles.row}>
+          <div className={styles.colSm4}>
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza con tu red de ventas</p>
@@ -198,7 +198,7 @@ export default async function InfoPage() {
               <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" className={styles.registroBoxImg} />
             </div>
           </div>
-          <div className={styles.colSm4SinGutter}>
+          <div className={styles.colSm4}>
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Vendedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza a generar venta sin invertir</p>
@@ -210,7 +210,7 @@ export default async function InfoPage() {
               <img src="/assets/imagenes/REGISTROVENDEDOR.png" alt="" className={styles.registroBoxImg} />
             </div>
           </div>
-          <div className={styles.colSm4SinGutter}>
+          <div className={styles.colSm4}>
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Contactar Asesor</h3>
               <p className={styles.registroBoxSubtitle}>La información que necesitas a un click</p>

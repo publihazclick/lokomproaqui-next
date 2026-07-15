@@ -348,28 +348,9 @@
    Este bloque esta comentado en el HTML fuente que se reviso, pero la version REAL desplegada en
    produccion (confirmado con captura de pantalla 2026-07-15) lo tiene activo en vez de la grilla
    de 3 fotos -- el repo local no esta 100% sincronizado con lo que esta en vivo. Se reemplaza la
-   grilla de fotos por este bloque real (mismo .colorFondo4 del SCSS original).
-   SIN gutter (a diferencia de .row/.colSm4 genericos de arriba): confirmado con captura que las 3
-   cajas quedan pegadas entre si, sin espacio blanco -- .row/.colSm4 normales dejarian 30px de hueco
-   entre cada una (el padding+margin negativo de Bootstrap), asi que esta seccion usa su propia
-   variante sin padding/margin. */
-.rowSinGutter {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.colSm4SinGutter {
-  flex: 0 0 100%;
-  max-width: 100%;
-}
-
-@media (min-width: 576px) {
-  .colSm4SinGutter {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
-  }
-}
-
+   grilla de fotos por este bloque real (mismo .colorFondo4 del SCSS original). Usa el .row/.colSm4
+   genericos de arriba (CON el gutter normal de Bootstrap entre cada caja, confirmado con captura
+   que si debe haber espacio -- se probo sacarlo por error y se corrigio). */
 .colorFondo4 {
   background: #02a0e3;
   color: white;
