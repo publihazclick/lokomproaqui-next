@@ -308,6 +308,72 @@ export async function fetchMontosVenta(sellerId: string, estadoFiltro: string): 
   return data.reduce((sum, r: any) => sum + (Number(r.earnings_total) || 0), 0);
 }
 
+// ── Tabla export completa (VentastableComponent, "/config/tablaventas") ────────────────────────
+//
+// Mismo `usu_clave_int` (UUID plano leido como objeto embebido) de siempre, resuelto aca con el
+// join real a `profiles`. Se omiten 3 columnas del original que nunca tuvieron datos reales:
+// "Cedula Cliente" (`cob_num_cedula_cliente` -- no existe campo equivalente en `orders`, el
+// documento del comprador nunca se capturo), "Talla" (`ven_tallas` -- vive por item en
+// `order_items`, no por pedido; esta vista es una fila por pedido) y "Email Vendedor" (el email
+// vive en `auth.users`, no en `profiles`, no se puede leer desde el cliente). El resto de columnas
+// (incluyendo "Porcentaje Ganancias" -> `profiles.commission_pct`) si tienen dato real.
+
+export interface TablaVentaRow {
+  id: number;
+  numeroGuia: string | null;
+  barrio: string | null;
+  ciudad: string | null;
+  direccionCliente: string | null;
+  nombreCliente: string | null;
+  telefonoCliente: string | null;
+  tipo: string | null;
+  fecha: string;
+  ganancias: number;
+  cantidad: number;
+  precio: number;
+  total: number;
+  vendedorNombre: string | null;
+  vendedorApellido: string | null;
+  vendedorCiudad: string | null;
+  vendedorDireccion: string | null;
+  vendedorTelefono: string | null;
+  porcentaje: number | null;
+}
+
+export async function fetchTablaVentas(sellerId?: string): Promise<TablaVentaRow[]> {
+  let q = supabase
+    .from('orders')
+    .select('*, profiles!orders_seller_id_fkey(full_name, last_name, city, address, phone, commission_pct)')
+    .not('status', 'in', '(invoiced,deleted)')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (sellerId) q = q.eq('seller_id', sellerId);
+
+  const { data, error } = await q;
+  if (error || !data) return [];
+  return data.map((o: any) => ({
+    id: o.id,
+    numeroGuia: o.tracking_number,
+    barrio: o.buyer_neighborhood,
+    ciudad: o.buyer_city,
+    direccionCliente: o.buyer_address,
+    nombreCliente: o.buyer_name,
+    telefonoCliente: o.buyer_phone,
+    tipo: o.order_type,
+    fecha: o.created_at,
+    ganancias: Number(o.earnings_total) || 0,
+    cantidad: o.quantity_total,
+    precio: Number(o.price_total) || 0,
+    total: Number(o.price_total) || 0,
+    vendedorNombre: o.profiles ? o.profiles.full_name : null,
+    vendedorApellido: o.profiles ? o.profiles.last_name : null,
+    vendedorCiudad: o.profiles ? o.profiles.city : null,
+    vendedorDireccion: o.profiles ? o.profiles.address : null,
+    vendedorTelefono: o.profiles ? o.profiles.phone : null,
+    porcentaje: o.profiles ? Number(o.profiles.commission_pct) : null,
+  }));
+}
+
 export async function refreshTracking(orderId: number): Promise<{ success: boolean; message?: string; estado?: string | null }> {
   const { data: resp, error } = await supabase.functions.invoke('mipaquete-track', { body: { order_id: orderId } });
   if (error || !resp || resp.error) return { success: false, message: (resp && resp.error) || 'No pudimos actualizar el estado' };
