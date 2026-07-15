@@ -270,6 +270,26 @@ export async function fetchVentas(opts: {
   return { data: data.map(mapVentaRow), count: count ?? data.length };
 }
 
+// ── Listado "Ventas Proveedor" (VentasProveedorComponent, "/config/ventasProveedor") ───────────
+//
+// Casi todo el componente original (buscar, buscarEstado, validandoFecha, borrarFiltro, crear,
+// darPuntos, btndelete, getValorVenta) esta comentado en el codigo fuente -- es codigo muerto que
+// nunca se ejecuta. El unico metodo real que corre (ngOnInit) llama a
+// `VentasService.getVentasProveedores({where:{ven_estado:0}})`, pero esa funcion (ya verificada
+// arriba en este archivo, Supabase) ignora por completo el argumento `where` -- siempre devuelve
+// hasta 200 pedidos no eliminados, sin filtrar por estado. Se replica ese mismo comportamiento real
+// tal cual (no el filtro que el codigo aparenta tener pero nunca aplico).
+export async function fetchVentasProveedor(): Promise<VentaRow[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, profiles!orders_seller_id_fkey(full_name, phone, city)')
+    .neq('status', 'deleted')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error || !data) return [];
+  return data.map(mapVentaRow);
+}
+
 export async function refreshTracking(orderId: number): Promise<{ success: boolean; message?: string; estado?: string | null }> {
   const { data: resp, error } = await supabase.functions.invoke('mipaquete-track', { body: { order_id: orderId } });
   if (error || !resp || resp.error) return { success: false, message: (resp && resp.error) || 'No pudimos actualizar el estado' };
