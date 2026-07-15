@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Tag, Store, ClipboardCheck, History,
   Wallet, Users, UserPlus, Package, Truck, Warehouse, Landmark, RefreshCw, Settings,
-  GraduationCap, LogOut, UserCog, Trash2,
+  GraduationCap, LogOut, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
@@ -34,32 +34,40 @@ interface MenuItem {
   mostrar: (rol: Rol) => boolean;
 }
 
+// OJO -- nombre confuso pero verificado en el codigo real (header.component.ts, listMenus()):
+// el campo se llama "disable" pero en realidad significa "mostrar" (`_.filter(menus, row =>
+// row.disable)` se queda solo con los truthy). Cada condicion de abajo es la traduccion
+// EXACTA de `disable: <condicion>` del original -- primer intento de este archivo la invirtio
+// por error de lectura, esta version quedo verificada linea por linea contra el original.
 const MENUS: MenuItem[] = [
   { Icon: Home, nombre: 'Inicio', href: '/articulo', mostrar: (r) => r !== 'visitante' },
   { Icon: LayoutGrid, nombre: 'Productos', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: ShoppingCart, nombre: 'Hacer Compra', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Tag, nombre: 'Realizar Venta', href: '/realizarventa', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Wallet, nombre: 'Mis Cobros', href: '/config/cobros', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
-  { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r !== 'administrador' && r !== 'visitante' },
-  { Icon: Users, nombre: 'Ventas de Subvendedor', href: '/config/ventasLider', mostrar: (r) => r !== 'administrador' && r !== 'visitante' },
-  { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => !['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
-  { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
-  { Icon: Truck, nombre: 'Activar Transportadoras', href: '/config/listaPlatform', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
-  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/controlInventario', mostrar: (r) => r !== 'administrador' && r !== 'vendedor' },
-  { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r !== 'administrador' && r !== 'proveedor' },
-  { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r !== 'vendedor' },
-  { Icon: RefreshCw, nombre: 'Integración WooCommerce', href: '/config/woocommerce', mostrar: (r) => r !== 'vendedor' },
-  { Icon: Store, nombre: 'Mis Órdenes', href: '/config/misDespacho', mostrar: (r) => r !== 'proveedor' },
-  { Icon: Settings, nombre: 'Edición Productos', href: '/config/productos', mostrar: (r) => r !== 'proveedor' },
+  { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
+  { Icon: Users, nombre: 'Ventas de Subvendedor', href: '/config/ventasLider', mostrar: (r) => r === 'administrador' },
+  { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
+  { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
+  { Icon: Truck, nombre: 'Activar Transportadoras', href: '/config/listaPlatform', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
+  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
+  { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
+  { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r === 'vendedor' },
+  { Icon: RefreshCw, nombre: 'Integración WooCommerce', href: '/config/woocommerce', mostrar: (r) => r === 'vendedor' },
+  { Icon: Store, nombre: 'Mis Órdenes', href: '/config/misDespacho', mostrar: (r) => r === 'proveedor' },
+  { Icon: Settings, nombre: 'Edición Productos', href: '/config/productos', mostrar: (r) => r === 'proveedor' },
   { Icon: User, nombre: 'Mi Cuenta', href: '/config/perfil', mostrar: (r) => r !== 'visitante' },
   { Icon: Settings, nombre: 'Configuración', href: '/config/configuracion', mostrar: (r) => r === 'administrador' },
   { Icon: GraduationCap, nombre: 'Cursos / Ayuda', href: '/acelerador', mostrar: () => true },
 ];
 
-const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar'; mostrar: (r: Rol) => boolean }[] = [
+const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar' | 'compartir'; mostrar: (r: Rol) => boolean }[] = [
   { Icon: User, nombre: 'Iniciar Sesión', accion: 'login', mostrar: (r) => r === 'visitante' },
   { Icon: UserPlus, nombre: 'Regístrate', accion: 'registrar', mostrar: (r) => r === 'visitante' },
+  { Icon: LogOut, nombre: 'Compartir mi tienda', accion: 'compartir', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: Wallet, nombre: 'Recargar Saldo', accion: 'recargar', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: LogOut, nombre: 'Salir', accion: 'salir', mostrar: (r) => r !== 'visitante' },
 ];
@@ -69,12 +77,12 @@ export function RealHeader() {
   const { cart, eliminar } = useCart();
 
   const [rol, setRol] = useState<Rol>('visitante');
-  const [nombre, setNombre] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [telefono, setTelefono] = useState<string | null>(null);
   const [logo, setLogo] = useState('/assets/logo.svg');
   const [balance, setBalance] = useState<number | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
-  const [submenuAbierto, setSubmenuAbierto] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -87,13 +95,14 @@ export function RealHeader() {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url, roles(name)')
+        .select('phone, avatar_url, roles(name)')
         .eq('id', data.session.user.id)
         .single();
       if (!activo || !profile) return;
       const rolReal = ((profile.roles as unknown as { name: string } | null)?.name ?? 'vendedor') as Rol;
       setRol(rolReal);
-      setNombre(profile.full_name);
+      setUserId(data.session.user.id);
+      setTelefono(profile.phone);
       if (profile.avatar_url) setLogo(profile.avatar_url);
 
       const { data: wallet } = await supabase
@@ -132,6 +141,10 @@ export function RealHeader() {
     if (accion === 'registrar') window.location.href = '/singUp/vendedor/3213692393';
     if (accion === 'salir') salir();
     if (accion === 'recargar') window.location.href = '/config/recharge';
+    if (accion === 'compartir') {
+      const url = `${window.location.origin}/front/index/${telefono || ''}`;
+      navigator.clipboard.writeText(url).then(() => alert(`Copiado: ${url}`));
+    }
   }
 
   const total = cart.reduce((acc, item) => acc + (item.loVendio || 0), 0);
@@ -207,17 +220,20 @@ export function RealHeader() {
 
             <div className="flex-1 overflow-y-auto px-2 py-3">
               <ul className="flex flex-col gap-0.5">
-                {menusVisibles.map((item) => (
-                  <li key={item.nombre}>
-                    <a
-                      href={item.href}
-                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === item.href ? 'bg-white/15' : ''}`}
-                    >
-                      <item.Icon className="h-[18px] w-[18px] shrink-0" />
-                      {item.nombre}
-                    </a>
-                  </li>
-                ))}
+                {menusVisibles.map((item) => {
+                  const href = item.href === '/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
+                  return (
+                    <li key={item.nombre}>
+                      <a
+                        href={href}
+                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === href ? 'bg-white/15' : ''}`}
+                      >
+                        <item.Icon className="h-[18px] w-[18px] shrink-0" />
+                        {item.nombre}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
 
               <div className="my-3 border-t border-white/15" />
