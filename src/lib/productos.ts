@@ -123,6 +123,7 @@ export async function fetchProductos(opts: {
   categoriaId?: number | string;
   ownerProfileId?: string;
   userId?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }): Promise<{ data: ProductoLegacy[]; count: number }> {
@@ -132,6 +133,7 @@ export async function fetchProductos(opts: {
   let q = supabase.from('products').select(PRODUCT_SELECT, { count: 'exact' }).eq('active', true).order('position', { ascending: true });
   if (opts.categoriaId) q = q.eq('category_id', opts.categoriaId);
   if (opts.ownerProfileId) q = q.eq('owner_profile_id', opts.ownerProfileId);
+  if (opts.search && opts.search.trim()) q = q.or(`name.ilike.%${opts.search.trim()}%,code.ilike.%${opts.search.trim()}%`);
   q = q.range(page * limit, page * limit + limit - 1);
 
   const { data, error, count } = await q;
@@ -187,4 +189,21 @@ export async function guardarPriceOverride(productId: number, userId: string, pr
 export async function quitarPriceOverride(id: number): Promise<boolean> {
   const { error } = await supabase.from('price_overrides').update({ active: false }).eq('id', id);
   return !error;
+}
+
+// Equivalente a ProductoService.createPriceArticleFull: agrega de una vez TODOS los productos
+// activos de una bodega/proveedor a la tienda propia del usuario, saltando los que ya tiene.
+export async function agregarTodosLosProductosDeBodega(ownerProfileId: string, userId: string): Promise<boolean> {
+  const { data: products } = await supabase.from('products').select('id, client_sale_price').eq('owner_profile_id', ownerProfileId).eq('active', true);
+  if (!products || !products.length) return true;
+
+  const { data: existing } = await supabase.from('price_overrides').select('product_id').eq('profile_id', userId).in('product_id', products.map((p) => p.id));
+  const existingIds = new Set((existing || []).map((e) => e.product_id));
+
+  const rows = products.filter((p) => !existingIds.has(p.id)).map((p) => ({ product_id: p.id, profile_id: userId, price: p.client_sale_price || 0, active: true }));
+  if (rows.length) {
+    const { error } = await supabase.from('price_overrides').insert(rows);
+    return !error;
+  }
+  return true;
 }
