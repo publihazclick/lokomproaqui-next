@@ -184,6 +184,7 @@ export default async function InfoPage() {
           </section>
         </div>
 
+        <div className={styles.col12}>
         <div className={styles.rowSinGutter}>
           <div className={styles.colSm4SinGutter}>
             <div className={styles.colorFondo4}>
@@ -221,6 +222,7 @@ export default async function InfoPage() {
               <img src="/assets/imagenes/CONTACTARASESOR.png" alt="" className={styles.registroBoxImg} />
             </div>
           </div>
+        </div>
         </div>
 
         <div className={`${styles.col12} ${styles.row} ${styles.colorFondo5}`} style={{ margin: '0 -1px' }}>
