@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
+import { InfoMenuPills } from '@/components/InfoMenuPills';
 import styles from './info.module.css';
 
 export const metadata = {
@@ -50,6 +51,8 @@ export default async function InfoPage() {
     <div className={styles.infoPage}>
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
+
+      <InfoMenuPills />
 
       <div className={styles.row} style={{ margin: '5px' }}>
         {video1 && (
