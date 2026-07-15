@@ -51,3 +51,38 @@ export async function getTopupStatus(code: string): Promise<{ status: number } |
   if (error || !data) return null;
   return { status: data.status };
 }
+
+// Port de RechargeService.get() -- paquetes de recarga fijos configurados por el admin.
+export interface PaqueteRecarga {
+  id: number;
+  titulo: string;
+  precio: number;
+}
+
+export async function fetchPaquetesRecarga(): Promise<PaqueteRecarga[]> {
+  const { data, error } = await supabase.from('recharge_products').select('id, title, price').eq('status', 1).order('id');
+  if (error || !data) return [];
+  return data.map((r) => ({ id: r.id, titulo: r.title, precio: r.price }));
+}
+
+// Port de WalletService.getLedger -- historial SOLO de la billetera 'dropshipper' (fletes), nunca
+// ganancias/comisiones (esas viven en 'referral'/'supplier').
+export interface MovimientoLedger {
+  id: number;
+  kind: string | null;
+  direction: number;
+  amount: number;
+  createdAt: string;
+}
+
+export async function fetchLedgerDropshipper(profileId: string): Promise<MovimientoLedger[]> {
+  const { data, error } = await supabase
+    .from('wallet_ledger')
+    .select('id, kind, direction, amount, created_at')
+    .eq('profile_id', profileId)
+    .eq('wallet_type', 'dropshipper')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error || !data) return [];
+  return data.map((m: any) => ({ id: m.id, kind: m.kind, direction: m.direction, amount: m.amount, createdAt: m.created_at }));
+}
