@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const BUCKET = 'acelerador-videos';
 const THUMB_BUCKET = 'lokomproaqui-media';
 // Mismo limite que en Angular: el proyecto de Supabase acepta hasta 500MB por archivo (ver
 // memoria lokomproaqui_project, arreglo de subida del mentor de hoy mismo).
@@ -21,22 +20,9 @@ export interface Leccion {
   duration_seconds: number | null;
 }
 
-// Decodifica el payload de un JWT (sin verificar firma, solo para diagnostico en el mensaje
-// de error -- nunca se usa esto para autorizar nada, solo para saber que "role"/"exp" trae el
-// token que se esta mandando de verdad).
-function decodificarJwt(token: string): { role?: string; exp?: number } | null {
-  try {
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-  } catch {
-    return null;
-  }
-}
-
-// Sube un archivo al bucket privado via XHR directo al endpoint REST de Storage (no
-// supabase-js): la unica forma de tener eventos de progreso reales para un video de varios
-// cientos de MB -- exactamente el mismo patron ya construido y probado hoy para la version
-// Angular (ver archivos.service.ts, uploadPrivateVideoConProgreso).
+// Sube un archivo PUBLICO (miniaturas, bucket lokomproaqui-media) via XHR directo al endpoint
+// REST de Storage -- unica forma de tener progreso real. Este bucket nunca tuvo el bug de
+// abajo (su policy no depende de auth.uid()/auth.role()).
 function subirArchivoConProgreso(
   file: File,
   bucket: string,
@@ -46,19 +32,8 @@ function subirArchivoConProgreso(
   return new Promise(async (resolve) => {
     const ext = (file.name || 'bin').split('.').pop();
     const path = `${carpeta}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    // getSession() deberia refrescar sola un token vencido, pero un video pesado puede tardar
-    // minutos en subir -- se fuerza un refresh explicito aca para no arriesgarse a mandar un
-    // access_token viejo y que Postgres rechace el insert por RLS (auth.role() != 'authenticated').
-    let { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
-      const { data: refreshed } = await supabase.auth.refreshSession();
-      if (refreshed.session) sessionData = refreshed;
-    }
+    const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session ? sessionData.session.access_token : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const diag = decodificarJwt(token);
-    const diagTxt = diag
-      ? `role=${diag.role ?? '?'} exp=${diag.exp ? new Date(diag.exp * 1000).toLocaleTimeString() : '?'} ahora=${new Date().toLocaleTimeString()}`
-      : 'token no decodificable';
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${bucket}/${path}`);
@@ -81,7 +56,58 @@ function subirArchivoConProgreso(
         } catch {
           /* respuesta no era JSON */
         }
-        resolve({ success: false, message: `${message} [diag: status=${xhr.status} ${diagTxt}]` });
+        resolve({ success: false, message });
+      }
+    };
+    xhr.onerror = () => resolve({ success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' });
+    xhr.send(file);
+  });
+}
+
+// Sube el video al bucket PRIVADO via URL de subida firmada (Edge Function
+// acelerador-signed-upload), no via XHR directo con el JWT del mentor. Motivo real (encontrado
+// y confirmado el 2026-07-15, ver memoria lokomproaqui-nextjs-migration): el servicio de
+// Storage de Supabase en este proyecto NO reconoce la sesion del usuario para buckets privados
+// (auth.uid()/auth.role() vuelven null ahi, aunque la MISMA sesion funciona perfecto via
+// /rest/v1/rpc -- confirmado con pruebas directas por curl). Una URL firmada evita el problema
+// por completo: la autorizacion real (solo mentores) queda del lado de la Edge Function
+// (que SI verifica bien la sesion), y la subida en si usa un token de un solo uso que no
+// depende de esa verificacion rota.
+async function subirVideoConProgreso(
+  file: File,
+  onProgress: (pct: number) => void
+): Promise<{ success: boolean; path?: string; message?: string }> {
+  const ext = (file.name || 'mp4').split('.').pop();
+  const path = `lecciones/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { data: signData, error: signError } = await supabase.functions.invoke('acelerador-signed-upload', {
+    body: { path },
+  });
+  if (signError || !signData?.signedUrl) {
+    return { success: false, message: (signData && signData.error) || signError?.message || 'No se pudo iniciar la subida. Intenta de nuevo.' };
+  }
+
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', signData.signedUrl);
+    xhr.setRequestHeader('apikey', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    xhr.setRequestHeader('x-upsert', 'true');
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve({ success: true, path });
+      } else {
+        let message = 'Error subiendo el video. Intenta de nuevo.';
+        try {
+          message = JSON.parse(xhr.responseText).message || message;
+        } catch {
+          /* respuesta no era JSON */
+        }
+        resolve({ success: false, message });
       }
     };
     xhr.onerror = () => resolve({ success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' });
@@ -134,7 +160,7 @@ export function LeccionForm({
   async function subirVideo(file: File) {
     setSubiendoVideo(true);
     setProgresoVideo(0);
-    const res = await subirArchivoConProgreso(file, BUCKET, 'lecciones', setProgresoVideo);
+    const res = await subirVideoConProgreso(file, setProgresoVideo);
     setSubiendoVideo(false);
     if (!res.success) {
       setVideoError(res.message || 'Error subiendo el video. Intenta de nuevo.');
