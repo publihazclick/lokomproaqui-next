@@ -48,8 +48,6 @@ export default async function InfoPage() {
 
   return (
     <div className={styles.infoPage}>
-      {/* eslint-disable-next-line @next/next/no-page-custom-font -- material-icons, igual que el original Angular (check_circle) */}
-      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
@@ -152,9 +150,6 @@ export default async function InfoPage() {
                 <ul>
                   {QUE_HACEMOS.map((texto) => (
                     <li key={texto}>
-                      <i className="material-icons" aria-hidden="true">
-                        check_circle
-                      </i>
                       <p>{texto}</p>
                     </li>
                   ))}
@@ -180,9 +175,6 @@ export default async function InfoPage() {
                 <ul>
                   {POR_QUE.map((texto) => (
                     <li key={texto}>
-                      <i className="material-icons" aria-hidden="true">
-                        check_circle
-                      </i>
                       <p>{texto}</p>
                     </li>
                   ))}
