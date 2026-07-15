@@ -121,6 +121,31 @@ export async function aprobarPagoProveedor(payoutId: number, fotoComprobante: st
   return { success: true };
 }
 
+// ── Vista admin (VendorPaymentsComponent, "/config/adminF/vendorpayment") ──────────────────────
+// Mismos datos que fetchPagosProveedor, con el proveedor y su cuenta bancaria unidos para mostrar
+// en la tabla admin. El selector de proveedor/busqueda del original (getSeller/handleSelectShop)
+// es codigo muerto -- los handlers estan vacios en el Angular original (solo un console.log
+// comentado), no se porta.
+
+export interface PagoProveedorAdmin extends PagoProveedor {
+  proveedorNombre: string | null;
+  bancoNombre: string | null;
+  bancoNumeroCuenta: string | null;
+}
+
+export async function fetchPagosProveedorAdmin(estado?: number): Promise<PagoProveedorAdmin[]> {
+  let q = supabase.from('supplier_payouts').select('*, profiles(full_name), banks(bank_name, account_number)').order('created_at', { ascending: false }).limit(200);
+  if (estado !== undefined) q = q.eq('state', estado);
+  const { data, error } = await q;
+  if (error || !data) return [];
+  return data.map((p: any) => ({
+    ...mapPago(p),
+    proveedorNombre: p.profiles ? p.profiles.full_name : null,
+    bancoNombre: p.banks ? p.banks.bank_name : null,
+    bancoNumeroCuenta: p.banks ? p.banks.account_number : null,
+  }));
+}
+
 export async function subirComprobantePago(file: File): Promise<string | null> {
   const ext = (file.name || 'jpg').split('.').pop();
   const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
