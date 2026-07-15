@@ -44,11 +44,10 @@ export default async function InfoPage() {
 
   return (
     <div>
-      {/* Anuncio del curso Acelerador de Ventas -- el boton "Suscribirme" y las miniaturas NO
-          incluyen el flujo de pago real (ePayco + creacion de cuenta anonima, ver
-          AceleradorCheckoutComponent en Angular): eso queda para la Fase 4 del plan
-          (lokomproaqui-nextjs-migration), que es justamente "dinero real". Por ahora el CTA
-          lleva a /acelerador, donde ese flujo real sigue funcionando intacto en Angular. */}
+      {/* Anuncio del curso Acelerador de Ventas -- Fase 4 ya porto el flujo de pago real
+          (ePayco + creacion de cuenta anonima, AceleradorCheckout.tsx) a /acelerador. El CTA
+          lleva con ?checkout=1 para abrir el pago de una vez, mismo comportamiento que el
+          Angular original (AceleradorComponent lee ese query param). */}
       {video1 && (
         <section className="relative mx-3 my-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#04628f] via-[#02a0e3] to-[#5fd0f7] p-6 text-white shadow-[0_20px_50px_-15px_rgba(2,160,227,0.55)] sm:mx-6 sm:p-10 md:mx-auto md:max-w-5xl">
           <span className="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-sm">
@@ -78,7 +77,7 @@ export default async function InfoPage() {
                 Tan solo <strong className="text-lg">$35 USD</strong> al mes
               </span>
               <a
-                href="/acelerador"
+                href="/acelerador?checkout=1"
                 className="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-bold text-[#0177a8] shadow-md transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg"
               >
                 Suscribirme
