@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase';
 
 // Rutas donde Angular oculta el header real (header.component.html: routName !== 'login' &&
 // routName !== 'singUp') -- se replica igual aca, son pantallas de embudo propias sin nav.
-const RUTAS_SIN_HEADER = ['/login', '/singUp'];
+// /mvid8x2qz1 (registro/panel del mentor) tampoco vive bajo TiendaComponent en Angular --
+// nunca tuvo el header ni el menu general, es una seccion aislada a proposito.
+const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1'];
 
 type SessionState = 'loading' | 'logged-out' | { email: string };
 
