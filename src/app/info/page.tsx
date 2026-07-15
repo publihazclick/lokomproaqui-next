@@ -200,6 +200,9 @@ export default async function InfoPage() {
               <a href="/singUp/proveedor/3213692393" className={styles.registroBoxButton}>
                 Registrarme →
               </a>
+              <br />
+              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
+              <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" style={{ width: '100%' }} />
             </div>
           </div>
           <div className={styles.colSm4}>
@@ -209,6 +212,9 @@ export default async function InfoPage() {
               <a href="/singUp/vendedor/3213692393" className={styles.registroBoxButton}>
                 Registrarme →
               </a>
+              <br />
+              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
+              <img src="/assets/imagenes/REGISTROVENDEDOR.png" alt="" style={{ width: '100%' }} />
             </div>
           </div>
           <div className={styles.colSm4}>
@@ -218,6 +224,9 @@ export default async function InfoPage() {
               <a href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola Servicio al cliente')}`} target="_blank" rel="noreferrer" className={styles.registroBoxButton}>
                 Registrarme →
               </a>
+              <br />
+              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
+              <img src="/assets/imagenes/CONTACTARASESOR.png" alt="" style={{ width: '100%' }} />
             </div>
           </div>
         </div>
