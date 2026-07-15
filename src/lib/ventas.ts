@@ -290,6 +290,24 @@ export async function fetchVentasProveedor(): Promise<VentaRow[]> {
   return data.map(mapVentaRow);
 }
 
+// ── "Posibles Ventas" (VentasClienteComponent, "/config/ventasPosibles") ───────────────────────
+//
+// Vista historicamente separada de VentasComponent, sobre los mismos datos (VentasService.get(),
+// aca `getPossibleSales` es literalmente un alias de `get()` en el Angular original) pero con
+// alcance mas chico: filtro de vendedor + estado (por defecto "Pendiente"), y una caja de "Total
+// Utilidad de venta" real (getMontos, suma earnings_total del vendedor/estado filtrados). Se
+// reusa fetchVentas para el listado (misma fuente, mismos bugs ya corregidos) y se agrega
+// fetchMontosVenta para la caja de totales.
+export async function fetchMontosVenta(sellerId: string, estadoFiltro: string): Promise<number> {
+  let q = supabase.from('orders').select('earnings_total').eq('seller_id', sellerId);
+  if (estadoFiltro && estadoFiltro !== 'todos' && estadoFiltro !== 'pagado') {
+    q = q.eq('status', LEGACY_TO_STATUS[Number(estadoFiltro)] || 'pending');
+  }
+  const { data, error } = await q;
+  if (error || !data) return 0;
+  return data.reduce((sum, r: any) => sum + (Number(r.earnings_total) || 0), 0);
+}
+
 export async function refreshTracking(orderId: number): Promise<{ success: boolean; message?: string; estado?: string | null }> {
   const { data: resp, error } = await supabase.functions.invoke('mipaquete-track', { body: { order_id: orderId } });
   if (error || !resp || resp.error) return { success: false, message: (resp && resp.error) || 'No pudimos actualizar el estado' };
