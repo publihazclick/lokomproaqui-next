@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
+import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
 
@@ -89,7 +90,7 @@ function ProductoCardMini({ item, onClick }: { item: ProductoLegacy; onClick: ()
 
 export default function ArticuloPage() {
   const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
-  const [dataUser, setDataUser] = useState<DataUserBasico | null>(null);
+  const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
   const [listProductos, setListProductos] = useState<ProductoLegacy[]>([]);
   const [count, setCount] = useState(0);
@@ -101,7 +102,7 @@ export default function ArticuloPage() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const limit = 54;
 
-  const cargarPagina = useCallback(async (usuario: DataUserBasico | null, pageToLoad: number) => {
+  const cargarPagina = useCallback(async (usuario: DataUserCompleto | null, pageToLoad: number) => {
     const res = await fetchProductos({ userId: usuario?.id, page: pageToLoad, limit });
     setCount(res.count);
     setListProductos((prev) => {
@@ -118,8 +119,7 @@ export default function ArticuloPage() {
         return;
       }
       const uid = sessionData.session.user.id;
-      const { data: profile } = await supabase.from('profiles').select('phone').eq('id', uid).maybeSingle();
-      const usuario = { id: uid, telefono: profile?.phone ?? null };
+      const usuario = await fetchDataUserCompleto(uid);
       setDataUser(usuario);
       setEstado('cargando');
 

@@ -14,6 +14,9 @@ import {
 } from '@/lib/productos';
 import { useCart, formatCOP } from '@/lib/cartStore';
 import { useToast, Toast } from '@/components/Toast';
+import { type DataUserCompleto } from '@/lib/usuarios';
+import { getBalanceDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
+import { DropshippingCheckoutModal } from '@/components/DropshippingCheckoutModal';
 
 // Port 1:1 desde src/app/components/view-productos (Angular) -- el dialogo real de "ver
 // producto/agregar al carrito" que abren tanto PedidosComponent (`/articulo`) como
@@ -21,10 +24,6 @@ import { useToast, Toast } from '@/components/Toast';
 // Fidelidad visual identica al original (Fase 3), no modernizada.
 //
 // ALCANCE RECORTADO A PROPOSITO (documentado, no silencioso):
-// - "Hacer Dropshipping" / "Pedir muestra" (abrirDropshipping): abren otro dialogo de 549 lineas
-//   (DropshippingCheckoutComponent) que crea ordenes reales, debita la billetera 'dropshipper' y
-//   genera guia con Mipaquete -- dinero real de por medio. Se deja como proxima pieza dedicada en
-//   vez de portarlo a medias aca. Los botones no se muestran todavia.
 // - "Piezas graficas" (openUrl -> data.urlMedios) y "Descargar fotos" (descargarFoto): el primero
 //   ya esta muerto en produccion (ProductoService no llena `urlMedios`, el boton abriria about:blank);
 //   el segundo ni siquiera tiene boton en el HTML actual (metodo sin ningun (click) que lo dispare).
@@ -41,14 +40,9 @@ import { useToast, Toast } from '@/components/Toast';
 // Bug real corregido de paso: el campo `talla` (vs `tallaSelect`) que SI usaba correctamente esta
 // pagina (a diferencia de ProductoViewComponent, ver /productos/[id]) se mantiene tal cual.
 
-interface DataUserBasico {
-  id: string;
-  telefono?: string | null;
-}
-
 interface ViewProductosModalProps {
   producto: ProductoLegacy;
-  dataUser: DataUserBasico | null;
+  dataUser: DataUserCompleto | null;
   initialView?: 'store';
   onClose: () => void;
 }
@@ -82,6 +76,8 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
   const [idMyProduct, setIdMyProduct] = useState<number | null>(null);
   const [idPrice, setIdPrice] = useState<number | ''>('');
   const [guardando, setGuardando] = useState(false);
+  const [verificandoSaldo, setVerificandoSaldo] = useState(false);
+  const [checkoutAbierto, setCheckoutAbierto] = useState<'dropshipping' | 'muestra' | null>(null);
 
   useEffect(() => {
     if (!dataUser?.id) return;
@@ -223,6 +219,33 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     }
   }
 
+  // Equivalente a ViewProductosComponent.abrirDropshipping: valida sesion + color/talla, y el
+  // piso operativo de saldo (SALDO_MINIMO_DROPSHIPPING) ANTES de abrir el checkout -- ese dialogo
+  // hace ademas su propio chequeo contra el costo real del flete una vez cotizado.
+  async function abrirDropshipping(mode: 'dropshipping' | 'muestra') {
+    if (!dataUser?.id) {
+      mostrar('Debes iniciar sesión para continuar');
+      return;
+    }
+    if (!colorSel || colorSel === 'null') {
+      mostrar('Primero debes seleccionar talla y color');
+      return;
+    }
+    const necesitaTalla = !!seleccionoColor?.tallaSelect[0]?.tal_descripcion;
+    if (necesitaTalla && !tallaSel) {
+      mostrar('Primero debes seleccionar talla y color');
+      return;
+    }
+    setVerificandoSaldo(true);
+    const saldo = await getBalanceDropshipper(dataUser.id);
+    setVerificandoSaldo(false);
+    if (saldo < SALDO_MINIMO_DROPSHIPPING) {
+      mostrar(`Necesitas mínimo $ ${formatCOP(SALDO_MINIMO_DROPSHIPPING)} en tu billetera para generar pedidos. Recárgala en Mi Cuenta.`);
+      return;
+    }
+    setCheckoutAbierto(mode);
+  }
+
   const puedeMostrarGanancia = false; // ver nota de alcance recortado arriba
 
   return (
@@ -361,6 +384,25 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
               <h3 className="text-sm font-bold text-gray-700">DESCRIPCION:</h3>
               <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: producto.pro_descripcion || '' }} />
             </div>
+
+            {dataUser?.id && (
+              <div className="mt-3 flex justify-center gap-2 border-t border-gray-100 pt-3">
+                <button
+                  onClick={() => abrirDropshipping('dropshipping')}
+                  disabled={verificandoSaldo}
+                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  Hacer Dropshipping
+                </button>
+                <button
+                  onClick={() => abrirDropshipping('muestra')}
+                  disabled={verificandoSaldo}
+                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  Pedir muestra
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -383,6 +425,18 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       </div>
 
       <Toast mensaje={mensaje} />
+
+      {checkoutAbierto && dataUser && (
+        <DropshippingCheckoutModal
+          mode={checkoutAbierto}
+          producto={producto}
+          colorSeleccionado={colorSel !== 'null' ? colorSel : ''}
+          tallaSeleccionada={tallaSel}
+          cantidadAdquirir={cantidadAdquirir}
+          dataUser={dataUser}
+          onClose={() => setCheckoutAbierto(null)}
+        />
+      )}
     </div>
   );
 }
