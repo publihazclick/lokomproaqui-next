@@ -21,6 +21,18 @@ export interface Leccion {
   duration_seconds: number | null;
 }
 
+// Decodifica el payload de un JWT (sin verificar firma, solo para diagnostico en el mensaje
+// de error -- nunca se usa esto para autorizar nada, solo para saber que "role"/"exp" trae el
+// token que se esta mandando de verdad).
+function decodificarJwt(token: string): { role?: string; exp?: number } | null {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
+
 // Sube un archivo al bucket privado via XHR directo al endpoint REST de Storage (no
 // supabase-js): la unica forma de tener eventos de progreso reales para un video de varios
 // cientos de MB -- exactamente el mismo patron ya construido y probado hoy para la version
@@ -43,6 +55,10 @@ function subirArchivoConProgreso(
       if (refreshed.session) sessionData = refreshed;
     }
     const token = sessionData.session ? sessionData.session.access_token : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const diag = decodificarJwt(token);
+    const diagTxt = diag
+      ? `role=${diag.role ?? '?'} exp=${diag.exp ? new Date(diag.exp * 1000).toLocaleTimeString() : '?'} ahora=${new Date().toLocaleTimeString()}`
+      : 'token no decodificable';
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${bucket}/${path}`);
@@ -65,7 +81,7 @@ function subirArchivoConProgreso(
         } catch {
           /* respuesta no era JSON */
         }
-        resolve({ success: false, message });
+        resolve({ success: false, message: `${message} [diag: status=${xhr.status} ${diagTxt}]` });
       }
     };
     xhr.onerror = () => resolve({ success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' });
