@@ -402,16 +402,6 @@
   object-fit: contain;
 }
 
-/* Solo la imagen de "Registro Proveedor" (handshake): a diferencia de las otras 2, con
-   object-fit:contain dejaba un escalon de azul solido visible debajo -- se corrige SOLO esta,
-   sin tocar las otras 2 que ya se ven bien. */
-.registroBoxImgProveedor {
-  margin-top: auto;
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-}
-
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
 
 .colorFondo5 {

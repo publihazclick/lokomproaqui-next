@@ -195,7 +195,7 @@ export default async function InfoPage() {
               </a>
               <br />
               {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-              <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" className={styles.registroBoxImgProveedor} />
+              <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" className={styles.registroBoxImg} />
             </div>
           </div>
           <div className={styles.colSm4}>
