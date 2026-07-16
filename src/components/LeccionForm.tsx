@@ -2,7 +2,33 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+// El cliente de Supabase (functions-js) oculta el mensaje real de la Edge Function detras de un
+// generico "Edge Function returned a non-2xx status code" -- el cuerpo real de la respuesta
+// queda en error.context (el Response crudo, todavia sin leer) y hay que parsearlo a mano.
+// Encontrado 2026-07-16 investigando un reporte real de un mentor al que no le dejaba subir
+// cursos: la funcion en si funcionaba bien (probado con una cuenta de prueba real), pero el
+// usuario solo veia el mensaje generico sin ninguna pista de la causa real (sesion vencida,
+// sin permiso, etc.) -- este helper hace que el motivo real siempre se vea.
+const MENSAJES_CONOCIDOS: Record<string, string> = {
+  'No autenticado': 'Tu sesión expiró. Cierra sesión, vuelve a entrar y prueba de nuevo.',
+  'No autorizado': 'Tu cuenta no tiene permiso de mentor para subir cursos.',
+  'path invalido': 'Ocurrió un error interno subiendo el video. Intenta de nuevo.',
+};
+
+async function mensajeRealDeErrorEdge(error: unknown, fallback: string): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return MENSAJES_CONOCIDOS[body.error] || body.error;
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+  }
+  return fallback;
+}
 
 const THUMB_BUCKET = 'lokomproaqui-media';
 // Mismo limite que en Angular: el proyecto de Supabase acepta hasta 500MB por archivo (ver
@@ -84,7 +110,8 @@ async function subirVideoConProgreso(
     body: { path },
   });
   if (signError || !signData?.signedUrl) {
-    return { success: false, message: (signData && signData.error) || signError?.message || 'No se pudo iniciar la subida. Intenta de nuevo.' };
+    const message = await mensajeRealDeErrorEdge(signError, 'No se pudo iniciar la subida. Intenta de nuevo.');
+    return { success: false, message };
   }
 
   return new Promise((resolve) => {
