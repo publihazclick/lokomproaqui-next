@@ -40,6 +40,7 @@ function AceleradorPageInterna() {
   const [verificandoAcceso, setVerificandoAcceso] = useState(true);
   const [tieneAcceso, setTieneAcceso] = useState(false);
   const [modulos, setModulos] = useState<ModuloConLecciones[]>([]);
+  const [abrirPagoTrigger, setAbrirPagoTrigger] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -82,25 +83,44 @@ function AceleradorPageInterna() {
       {!tieneAcceso ? (
         <div className="mt-6">
           <div className="text-center">
-            <AceleradorCheckout buttonLabel="Pagar Suscripcion" abrirCheckoutInicial={abrirCheckoutInicial} onActivada={onSuscripcionActivada} />
+            <AceleradorCheckout
+              buttonLabel="Pagar Suscripcion"
+              abrirCheckoutInicial={abrirCheckoutInicial}
+              abrirTrigger={abrirPagoTrigger}
+              onActivada={onSuscripcionActivada}
+            />
           </div>
 
           <div className="mt-8">
             <h4 className="text-center text-xl font-bold text-gray-800">Contenido del curso</h4>
-            {modulos.length === 0 ? (
+            {modulos.every((m) => m.lecciones.length === 0) ? (
               <p className="py-10 text-center text-gray-500">Todavia no hay contenido cargado. Muy pronto vas a encontrar aca todo el contenido del curso.</p>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {modulos.map((m) => (
-                  <div key={m.id} className="rounded-xl border border-gray-100 p-4 shadow-sm">
-                    <h5 className="font-semibold text-gray-800">{m.titulo}</h5>
-                    {m.lecciones.map((l) => (
-                      <p key={l.id} className="mt-1 text-sm text-gray-500">
-                        {l.titulo}
-                      </p>
-                    ))}
-                  </div>
-                ))}
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {modulos.flatMap((m) =>
+                  m.lecciones.map((l) => (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setAbrirPagoTrigger((n) => n + 1)}
+                      className="flex flex-col overflow-hidden rounded-xl border border-gray-100 text-left shadow-sm transition hover:shadow-md"
+                    >
+                      {l.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
+                        <img src={l.thumbnailUrl} alt="" className="h-36 w-full object-cover" />
+                      ) : (
+                        <div className="flex h-36 w-full items-center justify-center bg-gray-100">
+                          <PlayCircle className="h-8 w-8 text-gray-300" />
+                        </div>
+                      )}
+                      <div className="flex flex-1 flex-col p-4">
+                        <h5 className="font-semibold text-gray-800">{l.titulo}</h5>
+                        {l.descripcion && <p className="mt-1 flex-1 text-sm text-gray-500">{l.descripcion}</p>}
+                        <span className="mt-3 inline-block self-start rounded-full bg-green-600 px-4 py-1.5 text-xs font-bold text-white">VER MÓDULO</span>
+                      </div>
+                    </button>
+                  )),
+                )}
               </div>
             )}
           </div>

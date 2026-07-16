@@ -38,11 +38,16 @@ export function AceleradorCheckout({
   buttonClass = 'rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90',
   buttonLabel = 'Suscribirme',
   abrirCheckoutInicial = false,
+  abrirTrigger = 0,
   onActivada,
 }: {
   buttonClass?: string;
   buttonLabel?: string;
   abrirCheckoutInicial?: boolean;
+  // Se incrementa desde afuera (ej. al hacer click en una tarjeta de leccion de la vitrina) para
+  // abrir el mismo flujo de pago sin montar una segunda instancia (evita duplicar el script de
+  // ePayco y el polling). El primer valor (montaje) se ignora, solo importan los cambios.
+  abrirTrigger?: number;
   onActivada: () => void;
 }) {
   const [dataUser, setDataUser] = useState<DataUserPago | null>(null);
@@ -89,6 +94,22 @@ export function AceleradorCheckout({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sesionResuelta]);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const primerTriggerRef = useRef(true);
+  useEffect(() => {
+    if (primerTriggerRef.current) {
+      primerTriggerRef.current = false;
+      return;
+    }
+    if (sesionResuelta) {
+      onClickPrincipal();
+      // El boton que disparo esto pudo estar mas abajo en la pagina (tarjeta de leccion en la
+      // vitrina) -- sin esto el formulario/boton de pago cambia de estado fuera de la vista.
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirTrigger]);
 
   function onClickPrincipal() {
     if (dataUser) suscribirme(dataUser);
@@ -217,7 +238,7 @@ export function AceleradorCheckout({
   }
 
   return (
-    <>
+    <div ref={containerRef}>
       <Script src="https://checkout.epayco.co/checkout.js" strategy="lazyOnload" />
       {!mostrarFormAnon ? (
         <button onClick={onClickPrincipal} disabled={procesandoPago} className={`${buttonClass} disabled:opacity-60`}>
@@ -267,6 +288,6 @@ export function AceleradorCheckout({
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
