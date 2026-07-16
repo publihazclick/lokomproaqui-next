@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchSaldoProveedor, fetchCuentasBancarias, type CuentaBancaria } from '@/lib/bank';
@@ -77,9 +78,9 @@ export default function BankIndexPage() {
       </div>
 
       <div className="mt-4">
-        <a href="/config/bank/listPayment" className="text-sm text-[#0d6efd] hover:underline">
+        <Link href="/config/bank/listPayment" className="text-sm text-[#0d6efd] hover:underline">
           Ver historial de pagos →
-        </a>
+        </Link>
       </div>
 
       <Toast mensaje={mensaje} />

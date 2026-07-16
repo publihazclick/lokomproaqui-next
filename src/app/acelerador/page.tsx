@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PlayCircle, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -119,11 +120,11 @@ function AceleradorPageInterna() {
                   <h5 className="font-semibold text-gray-800">{m.titulo}</h5>
                   <div className="mt-2 space-y-1">
                     {m.lecciones.map((l) => (
-                      <a key={l.id} href={`/acelerador/leccion/${l.id}`} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link key={l.id} href={`/acelerador/leccion/${l.id}`} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                         <PlayCircle className="h-4 w-4 text-gray-400" />
                         <span className="flex-1">{l.titulo}</span>
                         {l.duracionSegundos != null && <span className="text-xs text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>

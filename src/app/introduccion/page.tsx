@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 // Port de IntroduccionComponent (Angular, "/introduccion") -- wizard de bienvenida con 3 videos +
 // paso final de registro. Los 3 videos son URLs fijas hardcodeadas en el Angular original (no
@@ -57,9 +58,9 @@ export default function IntroduccionPage() {
       ) : (
         <div className="mt-6 text-center">
           <h3 className="text-xl font-semibold text-gray-700">Únete a nosotros</h3>
-          <a href="/registro" className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
+          <Link href="/registro" className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
             Registrarme
-          </a>
+          </Link>
           <div className="mt-4">
             <button onClick={() => setPaso(paso - 1)} className="rounded bg-[#dc3545] px-4 py-2 text-sm font-medium text-white">
               Atras

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
@@ -137,10 +138,10 @@ export default function RegistroPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0177a8] to-[#02a0e3] px-4 py-12">
       <div className="mx-auto w-full max-w-2xl">
-        <a href="/info" className="mb-8 flex justify-center">
+        <Link href="/info" className="mb-8 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
           <img src="/assets/logo.svg" alt="LokomproAqui" className="h-14 w-auto drop-shadow-md" />
-        </a>
+        </Link>
 
         <div className="rounded-3xl bg-white p-8 shadow-2xl sm:p-10">
           <h1 className="text-center text-2xl font-extrabold text-gray-900">Registro de Proveedor</h1>
@@ -309,9 +310,9 @@ export default function RegistroPage() {
 
           <p className="mt-6 text-center text-sm text-gray-500">
             ¿Ya tienes una cuenta?{' '}
-            <a href="/login" className="font-semibold text-[#02a0e3] hover:underline">
+            <Link href="/login" className="font-semibold text-[#02a0e3] hover:underline">
               Iniciar Sesión
-            </a>
+            </Link>
           </p>
         </div>
       </div>

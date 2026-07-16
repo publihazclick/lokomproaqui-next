@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { FrontHeader } from '@/components/FrontHeader';
 import { resolverTiendaPorTelefono, fetchCategoriasFront, fetchProductosTienda, type TiendaFront, type CategoriaFront } from '@/lib/front';
 import { formatCOP } from '@/lib/cartStore';
@@ -126,12 +127,12 @@ export default function FrontProductosPage({ params }: { params: Promise<{ slug?
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {productos.map((p) => (
-            <a key={p.id} href={`/front/productosView/${p.id}/${tienda!.telefono}`} className="rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
+            <Link key={p.id} href={`/front/productosView/${p.id}/${tienda!.telefono}`} className="rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
               <img src={p.foto} alt={p.pro_nombre} className="h-28 w-full rounded object-cover" />
               <p className="mt-1 truncate text-xs font-medium text-gray-800">{p.pro_nombre.slice(0, 20)}</p>
               <p className="text-xs text-gray-500">$ {formatCOP(p.pro_uni_venta)}</p>
-            </a>
+            </Link>
           ))}
         </div>
         {productos.length === 0 && <p className="py-10 text-center text-gray-500">No hay productos para mostrar.</p>}

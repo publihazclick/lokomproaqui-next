@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { FrontHeader } from '@/components/FrontHeader';
 import { leerCarritoFront, leerVendedorCarritoFront, resolverTiendaPorTelefono, crearPedidoCarrito, vaciarCarritoFront, type ItemCarritoFront, type TiendaFront } from '@/lib/front';
 import { departamento } from '@/lib/departamentos';
@@ -86,9 +87,9 @@ export default function FrontChecktPage() {
           <div className="rounded-xl bg-white p-8 text-center shadow-sm">
             <h3 className="text-xl font-bold text-green-700">¡Pedido confirmado!</h3>
             <p className="mt-2 text-sm text-gray-600">Un asesor se pondra en contacto contigo pronto.</p>
-            <a href={tienda ? `/front/${tienda.telefono}` : '/info'} className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-2.5 text-sm font-bold text-white">
+            <Link href={tienda ? `/front/${tienda.telefono}` : '/info'} className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-2.5 text-sm font-bold text-white">
               Seguir comprando
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="rounded-xl bg-white p-5 shadow-sm">

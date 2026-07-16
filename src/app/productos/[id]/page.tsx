@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchProductoById, codigoCarrito, type ProductoLegacy } from '@/lib/productos';
 import { useCart, formatCOP } from '@/lib/cartStore';
@@ -66,9 +67,9 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
     return (
       <div className="mx-auto max-w-xl px-4 py-16 text-center">
         <p className="text-gray-500">Este producto ya no esta disponible.</p>
-        <a href="/pedidos" className="mt-3 inline-block text-[#0d6efd] hover:underline">
+        <Link href="/pedidos" className="mt-3 inline-block text-[#0d6efd] hover:underline">
           Volver Productos
-        </a>
+        </Link>
       </div>
     );
   }
@@ -114,9 +115,9 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
   return (
     <div className="mx-auto w-full max-w-[540px] px-3 py-8 sm:max-w-[720px] md:max-w-[960px] lg:max-w-[1140px] xl:max-w-[1320px]">
       <p className="text-left">
-        <a href="/pedidos" className="text-[#0d6efd] hover:underline">
+        <Link href="/pedidos" className="text-[#0d6efd] hover:underline">
           Volver Productos
-        </a>
+        </Link>
       </p>
 
       <div className="mt-3 flex flex-wrap">

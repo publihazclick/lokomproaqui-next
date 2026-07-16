@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Eye, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
@@ -92,14 +93,15 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
             <div key={m.id} className="mb-3">
               <div className="px-2 py-1 text-xs font-bold uppercase text-gray-500">{m.titulo}</div>
               {m.lecciones.map((l) => (
-                <a
+                <Link
                   key={l.id}
                   href={`/acelerador/leccion/${l.id}`}
+                  onClick={() => setSidebarAbierto(false)}
                   className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm ${l.id === leccionId ? 'bg-green-50 font-medium text-green-700' : 'text-gray-700 hover:bg-gray-50'}`}
                 >
                   <span className="flex-1">{l.titulo}</span>
                   {l.duracionSegundos != null && <span className="text-xs text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
-                </a>
+                </Link>
               ))}
             </div>
           ))}
@@ -138,16 +140,16 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
 
         <div className="mt-4 flex items-center justify-between">
           {leccionAnterior ? (
-            <a href={`/acelerador/leccion/${leccionAnterior.id}`} className="flex items-center gap-1 rounded border border-gray-300 px-3 py-2 text-sm text-gray-700">
+            <Link href={`/acelerador/leccion/${leccionAnterior.id}`} className="flex items-center gap-1 rounded border border-gray-300 px-3 py-2 text-sm text-gray-700">
               <ArrowLeft className="h-4 w-4" /> {leccionAnterior.titulo}
-            </a>
+            </Link>
           ) : (
             <span />
           )}
           {leccionSiguiente && (
-            <a href={`/acelerador/leccion/${leccionSiguiente.id}`} className="flex items-center gap-1 rounded bg-[#0d6efd] px-3 py-2 text-sm text-white">
+            <Link href={`/acelerador/leccion/${leccionSiguiente.id}`} className="flex items-center gap-1 rounded bg-[#0d6efd] px-3 py-2 text-sm text-white">
               {leccionSiguiente.titulo} <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           )}
         </div>
       </main>

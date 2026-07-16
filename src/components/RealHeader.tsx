@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Tag, Store, ClipboardCheck, History,
@@ -94,24 +95,17 @@ export function RealHeader() {
         setRol('visitante');
         return;
       }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('phone, avatar_url, roles(name)')
-        .eq('id', data.session.user.id)
-        .single();
+      const userId = data.session.user.id;
+      const [{ data: profile }, { data: wallet }] = await Promise.all([
+        supabase.from('profiles').select('phone, avatar_url, roles(name)').eq('id', userId).single(),
+        supabase.from('wallet_balances').select('balance').eq('profile_id', userId).eq('wallet_type', 'referral').maybeSingle(),
+      ]);
       if (!activo || !profile) return;
       const rolReal = ((profile.roles as unknown as { name: string } | null)?.name ?? 'vendedor') as Rol;
       setRol(rolReal);
-      setUserId(data.session.user.id);
+      setUserId(userId);
       setTelefono(profile.phone);
       if (profile.avatar_url) setLogo(profile.avatar_url);
-
-      const { data: wallet } = await supabase
-        .from('wallet_balances')
-        .select('balance')
-        .eq('profile_id', data.session.user.id)
-        .eq('wallet_type', 'referral')
-        .maybeSingle();
       setBalance(wallet?.balance ?? 0);
     }
     cargar();
@@ -160,30 +154,30 @@ export function RealHeader() {
             <Menu className="h-6 w-6" />
           </button>
 
-          <a href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
+          <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
             {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
             <img src={logo} alt="LokomproAqui" className="h-[55px] w-auto max-w-full" style={{ width: 177 }} />
-          </a>
+          </Link>
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
             {rol === 'visitante' ? (
               <>
-                <a href="/login" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
+                <Link href="/login" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
                   Iniciar Sesion
-                </a>
-                <a href="/singUp" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
+                </Link>
+                <Link href="/singUp" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
                   Registrarse
-                </a>
+                </Link>
               </>
             ) : (
               <>
                 {balance !== null && (
-                  <a
+                  <Link
                     href={rol === 'proveedor' ? '/config/bank/index' : '/config/cobros'}
                     className="hidden text-sm font-semibold text-white sm:inline"
                   >
                     ${formatCOP(balance)}
-                  </a>
+                  </Link>
                 )}
                 {rol !== 'proveedor' && (
                   <button type="button" onClick={() => setCarritoAbierto(true)} className="relative rounded p-2 text-white hover:bg-white/10" aria-label="Carrito">
@@ -195,9 +189,9 @@ export function RealHeader() {
                     )}
                   </button>
                 )}
-                <a href="/config/perfil" className="rounded p-2 text-white hover:bg-white/10" aria-label="Mi cuenta">
+                <Link href="/config/perfil" className="rounded p-2 text-white hover:bg-white/10" aria-label="Mi cuenta">
                   <User className="h-5 w-5" />
-                </a>
+                </Link>
               </>
             )}
           </div>
@@ -210,10 +204,10 @@ export function RealHeader() {
           <div className="absolute inset-0 bg-black/60" onClick={() => setMenuAbierto(false)} />
           <nav className="relative flex h-full w-[280px] flex-col bg-[#7386d5] text-white shadow-xl">
             <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
-              <a href={rol === 'visitante' ? '/info' : '/articulo'}>
+              <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
                 <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
-              </a>
+              </Link>
               <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
                 <X className="h-5 w-5" />
               </button>
@@ -225,13 +219,14 @@ export function RealHeader() {
                   const href = item.href === '/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
                   return (
                     <li key={item.nombre}>
-                      <a
+                      <Link
                         href={href}
+                        onClick={() => setMenuAbierto(false)}
                         className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === href ? 'bg-white/15' : ''}`}
                       >
                         <item.Icon className="h-[18px] w-[18px] shrink-0" />
                         {item.nombre}
-                      </a>
+                      </Link>
                     </li>
                   );
                 })}
@@ -292,12 +287,13 @@ export function RealHeader() {
 
             <div className="border-t border-gray-100 p-4">
               <p className="text-center text-sm font-semibold text-gray-700">Valor a pagar: ${formatCOP(total)}</p>
-              <a
+              <Link
                 href="/pedidos"
+                onClick={() => setCarritoAbierto(false)}
                 className="mt-3 block rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] py-3 text-center text-sm font-bold text-white shadow-md"
               >
                 Agregar más productos
-              </a>
+              </Link>
             </div>
           </div>
         </div>

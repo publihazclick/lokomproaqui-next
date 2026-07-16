@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
@@ -92,9 +93,9 @@ export default async function InfoPage() {
                     <span className={styles.cursoAdPrice}>
                       Tan solo <strong>$35 USD</strong> al mes
                     </span>
-                    <a href="/acelerador?checkout=1" className={styles.cursoAdCta}>
+                    <Link href="/acelerador?checkout=1" className={styles.cursoAdCta}>
                       Suscribirme
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -118,9 +119,9 @@ export default async function InfoPage() {
                 Tu socio confiable en el mundo del dropshipping. ¡Maximiza tus ganancias sin preocuparte por el inventario! Con nosotros, encontrarás productos de alta calidad y una experiencia de compra excepcional.
               </div>
               <div className={styles.frame33} style={{ margin: 'auto' }}>
-                <a href="/singUp/vendedor/3213692393" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
+                <Link href="/singUp/vendedor/3213692393" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
                   Regístrate gratis
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -200,9 +201,9 @@ export default async function InfoPage() {
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza con tu red de ventas</p>
-              <a href="/singUp/proveedor/3213692393" className={styles.registroBoxButton}>
+              <Link href="/singUp/proveedor/3213692393" className={styles.registroBoxButton}>
                 Registrarme →
-              </a>
+              </Link>
               <br />
               {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
               <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" className={`${styles.registroBoxImg} ${styles.registroBoxImgProveedor}`} />
@@ -212,9 +213,9 @@ export default async function InfoPage() {
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Vendedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza a generar venta sin invertir</p>
-              <a href="/singUp/vendedor/3213692393" className={styles.registroBoxButton}>
+              <Link href="/singUp/vendedor/3213692393" className={styles.registroBoxButton}>
                 Registrarme →
-              </a>
+              </Link>
               <br />
               {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
               <img src="/assets/imagenes/REGISTROVENDEDOR.png" alt="" className={styles.registroBoxImg} />
@@ -243,9 +244,9 @@ export default async function InfoPage() {
                   Registrate no <br /> Pierdas Más Dinero
                 </h2>
                 <section style={{ width: '100%', maxWidth: '376px', fontSize: '25px', height: '70px', display: 'inline-block', boxSizing: 'border-box' }}>
-                  <a href="/singUp/vendedor/3213692393" className={`${styles.btn} ${styles.btnDark} ${styles.customButton}`} style={{ textDecoration: 'none' }}>
+                  <Link href="/singUp/vendedor/3213692393" className={`${styles.btn} ${styles.btnDark} ${styles.customButton}`} style={{ textDecoration: 'none' }}>
                     Regístrate gratis
-                  </a>
+                  </Link>
                 </section>
               </div>
             </div>

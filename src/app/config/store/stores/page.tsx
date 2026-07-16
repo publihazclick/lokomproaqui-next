@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchTiendasProveedor, type TiendaProveedor } from '@/lib/bodega';
@@ -85,12 +86,12 @@ export default function StoresPage() {
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {tiendas.map((t) => (
             <div key={t.id} className="rounded-xl border border-gray-100 p-3 text-center shadow-sm">
-              <a href={`/config/verProveedor/${t.id}`}>
+              <Link href={`/config/verProveedor/${t.id}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
                 <img src={t.foto || '/assets/imagenes/todos.png'} alt="" className="mx-auto h-24 w-24 rounded-full object-cover" />
                 <h6 className="mt-2 truncate text-sm font-semibold text-gray-800">{t.nombre}</h6>
                 <p className="text-xs text-gray-500">{t.telefono}</p>
-              </a>
+              </Link>
               <button
                 onClick={() => agregarTodos(t)}
                 disabled={agregandoId === t.id}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
 import { FrontHeader } from '@/components/FrontHeader';
 import { leerCarritoFront, quitarDelCarritoFront, leerVendedorCarritoFront, type ItemCarritoFront } from '@/lib/front';
@@ -59,9 +60,9 @@ export default function FrontCarritoPage() {
               <span className="text-xl font-bold text-green-700">$ {formatCOP(total)}</span>
             </div>
 
-            <a href="/front/checkouts" className="mt-4 block rounded-full bg-green-600 px-4 py-3 text-center text-sm font-bold text-white hover:opacity-90">
+            <Link href="/front/checkouts" className="mt-4 block rounded-full bg-green-600 px-4 py-3 text-center text-sm font-bold text-white hover:opacity-90">
               Confirmar pedido
-            </a>
+            </Link>
           </>
         )}
       </div>

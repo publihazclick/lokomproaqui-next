@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchPerfilProveedorPorReferralCode, agregarTodosLosProductos, type PerfilProveedor } from '@/lib/verProveedor';
@@ -137,12 +138,12 @@ export default function StoreProductActivatedPage({ params }: { params: Promise<
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {productos.map((p) => (
-              <a key={p.id} href={`/config/verProductoProveedor/${p.id}`} className="rounded-xl border border-gray-100 p-2 shadow-sm">
+              <Link key={p.id} href={`/config/verProductoProveedor/${p.id}`} className="rounded-xl border border-gray-100 p-2 shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
                 <img src={p.foto} alt={p.pro_nombre} className="h-28 w-full rounded object-cover" />
                 <p className="mt-1 truncate text-xs font-medium text-gray-800">{p.pro_nombre.slice(0, 20)}</p>
                 <p className="text-xs text-gray-500">$ {formatCOP(p.pro_vendedor || p.pro_uni_venta || 0)}</p>
-              </a>
+              </Link>
             ))}
           </div>
           {productos.length === 0 && <p className="py-10 text-center text-gray-500">No hay productos para mostrar.</p>}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import styles from '@/app/info/info.module.css';
 
 // Port de MenuComponent (Angular, layout/menu/menu.component -- selector <app-menu>, primera
@@ -24,9 +25,9 @@ export function InfoMenuPills() {
       <section className={styles.iphoneMenu}>
         <ul className={styles.iphoneMenuUl}>
           <li className={styles.iphoneMenuLi}>
-            <a href="/acelerador" className={styles.iphoneMenuA}>
+            <Link href="/acelerador" className={styles.iphoneMenuA}>
               Acelerador de Ventas
-            </a>
+            </Link>
           </li>
           <li className={styles.iphoneMenuLi}>
             <button type="button" onClick={() => setVideoAbierto(VIDEOS.comoFunciona)} className={styles.iphoneMenuA}>
@@ -52,9 +53,9 @@ export function InfoMenuPills() {
             <span className={styles.iphoneMenuA}>Mentoría</span>
           </li>
           <li className={styles.iphoneMenuLi}>
-            <a href="/tutoriales" className={styles.iphoneMenuA}>
+            <Link href="/tutoriales" className={styles.iphoneMenuA}>
               Tutoriales
-            </a>
+            </Link>
           </li>
         </ul>
       </section>

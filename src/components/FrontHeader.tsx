@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ShoppingCart, MessageCircle } from 'lucide-react';
 import { leerCarritoFront } from '@/lib/front';
 
@@ -26,17 +27,17 @@ export function FrontHeader({ telefono }: { telefono: string }) {
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between bg-[#0d6efd] px-4 py-3 text-white shadow-sm">
-      <a href={`/front/${telefono}`} className="text-lg font-bold">
+      <Link href={`/front/${telefono}`} className="text-lg font-bold">
         LokomproAqui
-      </a>
+      </Link>
       <div className="flex items-center gap-3">
         <a href={`https://wa.me/57${telefono}`} target="_blank" rel="noreferrer" className="rounded-full bg-white/15 p-2">
           <MessageCircle className="h-5 w-5" />
         </a>
-        <a href="/front/carrito" className="relative rounded-full bg-white/15 p-2">
+        <Link href="/front/carrito" className="relative rounded-full bg-white/15 p-2">
           <ShoppingCart className="h-5 w-5" />
           {cantidad > 0 && <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold">{cantidad}</span>}
-        </a>
+        </Link>
       </div>
     </header>
   );
