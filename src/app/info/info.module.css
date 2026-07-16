@@ -521,14 +521,15 @@
   object-fit: contain;
 }
 
-/* Solo la imagen de "Registro Proveedor" (handshake): mas ancha hacia los lados sin tocar la
-   caja -- se agranda con width>100% + margenes negativos, y .colorFondo4 ahora tiene
-   overflow:hidden para que no se salga visualmente de la caja azul. */
+/* Solo la imagen de "Registro Proveedor" (handshake): ocupa el ancho COMPLETO de la caja
+   (incluido el padding horizontal de 30px de .colorFondo4 a cada lado), sin tocar la caja ni las
+   otras 2 imagenes. Margenes negativos en px exactos (no %) para que llegue justo al borde sin
+   importar el ancho real de la columna. */
 .registroBoxImgProveedor {
-  width: 130%;
-  max-width: 130%;
-  margin-left: -15%;
-  margin-right: -15%;
+  width: calc(100% + 60px);
+  max-width: calc(100% + 60px);
+  margin-left: -30px;
+  margin-right: -30px;
 }
 
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
