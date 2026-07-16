@@ -16,7 +16,7 @@ import {
 import {
   crearPedidoDropshipping,
   actualizarFleteYTransportadora,
-  cancelarPedido,
+  marcarPedidoRechazadoSinReembolso,
   marcarPedidoEnPreparacion,
   cotizarFlete,
   generarGuiaEnvio,
@@ -348,7 +348,7 @@ export function DropshippingCheckoutModal({
     if (!window.confirm('Cancelar pedido: se te devolvera el saldo debitado a tu billetera. ¿Continuar?')) return;
     setLoader(true);
     await refundWalletDropshipper(dataUser.id, totalAPagar, orderId);
-    await cancelarPedido(orderId);
+    await marcarPedidoRechazadoSinReembolso(orderId);
     setLoader(false);
     onClose();
   }

@@ -105,9 +105,23 @@ export async function actualizarFleteYTransportadora(orderId: number, fleteTotal
 }
 
 // reject_order: marca el pedido como devolucion/cancelado y (si tenia seguro antidevoluciones)
-// devuelve el flete prepagado -- aca se usa para "cancelar y reembolsar" antes de generar guia.
+// devuelve el flete prepagado -- pensado para el flujo admin (marcar "Devolucion" sobre un pedido
+// YA despachado, donde nadie reembolso nada todavia).
 export async function cancelarPedido(orderId: number): Promise<boolean> {
   const { error } = await supabase.rpc('reject_order', { p_order_id: orderId });
+  return !error;
+}
+
+// Bug real encontrado y corregido (no replicado, ver DropshippingCheckoutModal.cancelarYReembolsar):
+// el original en Angular llama a WalletService.refund() (reembolso directo e incondicional del
+// flete pagado) y DESPUES a VentasService.update({ven_estado:2}), que dispara reject_order -- ese
+// RPC, si el pedido tenia seguro antidevoluciones activo, credita el flete OTRA VEZ (pensado para
+// cuando el reembolso NO paso por otro lado, ej. el panel admin marcando una devolucion real
+// post-despacho). Resultado real en produccion HOY: cancelar un pedido asegurado desde este mismo
+// dialogo reembolsa el flete DOS veces. Esta funcion marca el pedido como rechazado sin ese efecto
+// secundario, para usar junto al reembolso directo que ya se hizo.
+export async function marcarPedidoRechazadoSinReembolso(orderId: number): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ status: 'rejected' }).eq('id', orderId);
   return !error;
 }
 
