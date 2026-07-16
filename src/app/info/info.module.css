@@ -511,11 +511,10 @@
   transform: translateY(-2px);
 }
 
-/* Empuja la imagen al fondo de la caja (margin-top:auto) para que las 3 cajas siempre queden con
-   la misma altura visual pareja aunque cada imagen tenga un tamaño natural distinto -- antes
-   quedaba un hueco blanco feo debajo de la caja mas corta. */
+/* SIN margin-top:auto: todo el contenido (titulo+subtitulo+boton+imagen) sube junto como un solo
+   bloque pegado arriba -- el espacio sobrante (si esta caja es mas corta que las otras 2) queda
+   libre al final, debajo de la imagen, en vez de empujar solo la imagen al fondo. */
 .registroBoxImg {
-  margin-top: auto;
   width: 100%;
   max-height: 220px;
   object-fit: contain;
