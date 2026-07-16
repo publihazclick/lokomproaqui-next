@@ -20,11 +20,9 @@ import { useToast, Toast } from '@/components/Toast';
 // Port 1:1 de RechargeComponent (Angular, "Recargar Saldo") -- recarga la billetera 'dropshipper'
 // via wallet_topups, mismo mecanismo ya construido en DropshippingCheckoutModal.
 //
-// IMPORTANTE: ePayco queda en modo PRUEBA (ESTADO_PRUEBA_PAGOS = true) a proposito, mismo criterio
-// que DropshippingCheckoutModal -- cambiar a false solo cuando se confirme que esta listo para
-// produccion real.
+// Pagos en modo real (confirmado por el usuario 2026-07-15).
 
-const ESTADO_PRUEBA_PAGOS = true;
+const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
 
 const ETIQUETAS_MOVIMIENTO: Record<string, string> = {

@@ -32,12 +32,8 @@ import {
 // producto lo cobra el mensajero contra entrega. Fidelidad visual identica al original (Fase 3),
 // colores/radios tomados literalmente de dropshipping-checkout.component.scss.
 //
-// OJO -- PAGOS EN MODO PRUEBA (`test: true`) A PROPOSITO: se mantiene el mismo valor que
-// `environment.ts` (no productivo) de Angular, no el de `environment.prod.ts` (`false`, cobros
-// reales). Cambiar a `false` recien cuando se confirme que este flujo esta listo para produccion
-// real -- evita procesar una recarga real de ePayco sin querer mientras se prueba este dialogo
-// recien migrado.
-const ESTADO_PRUEBA_PAGOS = true;
+// Pagos en modo real (confirmado por el usuario 2026-07-15).
+const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
 
 declare global {

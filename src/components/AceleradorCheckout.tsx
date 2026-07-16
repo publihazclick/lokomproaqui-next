@@ -8,10 +8,9 @@ import { crearIntentoPago, fetchEstadoPago } from '@/lib/acelerador';
 // Port de AceleradorCheckoutComponent (Angular) -- boton "Suscribirme" + flujo de pago del curso
 // Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador. Mismo
 // mecanismo ya usado en DropshippingCheckoutModal: widget de ePayco via next/script + polling de
-// confirmacion. ESTADO_PRUEBA_PAGOS en modo prueba a proposito, mismo criterio que el resto de la
-// migracion -- cambiar a false solo cuando el usuario confirme que esta listo para produccion real.
+// confirmacion. Pagos en modo real (confirmado por el usuario 2026-07-15).
 
-const ESTADO_PRUEBA_PAGOS = true;
+const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
 const PRECIO_USD = 35;
 
