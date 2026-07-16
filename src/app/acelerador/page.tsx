@@ -168,12 +168,15 @@ function AceleradorPageInterna() {
                         <PlayCircle className="h-14 w-14 text-gray-300" />
                       </div>
                     )}
-                    <div className="flex items-center justify-between gap-2 p-5">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{m.titulo}</p>
-                        <span className="text-xl font-extrabold text-gray-800">{l.titulo}</span>
+                    <div className="flex flex-col p-5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{m.titulo}</p>
+                          <span className="text-xl font-extrabold text-gray-800">{l.titulo}</span>
+                        </div>
+                        {l.duracionSegundos != null && <span className="shrink-0 text-sm text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
                       </div>
-                      {l.duracionSegundos != null && <span className="shrink-0 text-sm text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
+                      {l.descripcion && <p className="mt-2 text-base text-gray-500">{l.descripcion}</p>}
                     </div>
                   </Link>
                 )),
