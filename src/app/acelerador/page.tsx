@@ -28,6 +28,11 @@ export default function AceleradorPage() {
 function AceleradorPageInterna() {
   const searchParams = useSearchParams();
   const abrirCheckoutInicial = searchParams.get('checkout') === '1';
+  // Boton "Ver como visitante" del panel del mentor (2026-07-16): entra a esta misma pagina con
+  // ?preview=visitante para forzar la vista de "sin suscripcion" -- el mentor nunca la ve de otra
+  // forma porque mas abajo su rol siempre da acceso directo a "Mi Curso". No toca sesion ni datos
+  // reales, es solo un interruptor de que rama de UI se muestra.
+  const vistaVisitante = searchParams.get('preview') === 'visitante';
 
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [verificandoAcceso, setVerificandoAcceso] = useState(true);
@@ -46,6 +51,12 @@ function AceleradorPageInterna() {
       const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
       setDataUser(usuario);
 
+      if (vistaVisitante) {
+        setTieneAcceso(false);
+        setVerificandoAcceso(false);
+        return;
+      }
+
       // El mentor sube y organiza el contenido: tiene que poder ver "Mi Curso" exactamente como lo
       // ve un suscriptor real, sin necesitar pagar una suscripcion.
       if (usuario.rolname === 'mentor') {
@@ -58,7 +69,7 @@ function AceleradorPageInterna() {
       setTieneAcceso(acceso);
       setVerificandoAcceso(false);
     })();
-  }, []);
+  }, [vistaVisitante]);
 
   const onSuscripcionActivada = useCallback(() => setTieneAcceso(true), []);
 
@@ -66,6 +77,15 @@ function AceleradorPageInterna() {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-3 py-8">
+      {vistaVisitante && dataUser?.rolname === 'mentor' && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <span>Estás viendo esta página como la ve un visitante sin suscripción — no es tu vista real de mentor.</span>
+          <Link href="/mvid8x2qz1/panel" className="font-semibold underline">
+            Volver al panel
+          </Link>
+        </div>
+      )}
+
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-800">Acelerador de Ventas</h1>
         <p className="mt-1 text-gray-500">El curso avanzado para aprender a vender como dropshipper.</p>

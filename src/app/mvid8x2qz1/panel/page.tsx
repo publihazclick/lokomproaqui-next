@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { AceleradorAdmin } from '@/components/AceleradorAdmin';
 
@@ -47,9 +48,17 @@ export default function MentorPanelPage() {
           <strong>Panel Mentor</strong>
           {nombre && <span className="text-white/70"> — {nombre}</span>}
         </div>
-        <button type="button" onClick={salir} className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10">
-          Salir
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/acelerador?preview=visitante"
+            className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10"
+          >
+            Ver como visitante
+          </Link>
+          <button type="button" onClick={salir} className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10">
+            Salir
+          </button>
+        </div>
       </div>
 
       <AceleradorAdmin />
