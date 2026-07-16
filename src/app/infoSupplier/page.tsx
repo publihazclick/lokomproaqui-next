@@ -6,9 +6,8 @@ export const metadata = {
   description: 'Conoce a nuestros proveedores verificados y arma dropshipping con ellos.',
 };
 
-// Se refresca cada 60s -- la lista de proveedores cambia cuando alguien se registra o un
-// admin activa/desactiva una cuenta desde el panel (todavia en Angular).
-export const revalidate = 60;
+// Pedido explicito del usuario 2026-07-16: cero demora, siempre datos frescos en cada visita.
+export const revalidate = 0;
 
 interface Supplier {
   id: string;

@@ -7,10 +7,10 @@ export const metadata = {
   description: 'Aprende a usar LokomproAqui paso a paso: como vender, como comprar, como despachar y mucho mas.',
 };
 
-// El admin edita los tutoriales desde /config/cursos (todavia en Angular) sin volver a
-// deployar Next.js -- sin esto, Next.js prerenderiza la pagina UNA vez en el build y un
-// video nuevo no aparece hasta el proximo deploy. Con revalidate, se refresca solo cada 60s.
-export const revalidate = 60;
+// El admin edita los tutoriales desde /config/cursos sin volver a deployar Next.js -- sin esto,
+// Next.js prerenderiza la pagina UNA vez en el build y un video nuevo no aparece hasta el
+// proximo deploy. Pedido explicito del usuario 2026-07-16: cero demora, no cada 60s.
+export const revalidate = 0;
 
 // Migrado 1:1 desde src/app/components/tutoriales (Angular) -- ver memoria
 // lokomproaqui-nextjs-migration, Fase 1. Misma tabla `courses` (categorias = parent_id null,

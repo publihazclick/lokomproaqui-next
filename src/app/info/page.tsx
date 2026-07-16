@@ -18,7 +18,9 @@ export const metadata = {
 // Bootstrap (row/col-12/col-sm-4/card/etc.) que el HTML original usaba para el layout -- recreadas
 // en el modulo CSS porque el resto del sitio Next.js no carga Bootstrap.
 
-export const revalidate = 60;
+// Pedido explicito del usuario 2026-07-16: cero demora para que un cambio hecho en /config/admin
+// se vea reflejado de inmediato para todos, sin esperar la ventana de revalidacion.
+export const revalidate = 0;
 
 function extraerIdYoutube(input: string | null): string | null {
   if (!input) return null;
