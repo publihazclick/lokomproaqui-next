@@ -145,37 +145,39 @@ function AceleradorPageInterna() {
             </div>
           </div>
 
-          {modulos.length === 0 ? (
+          {modulos.every((m) => m.lecciones.length === 0) ? (
             <p className="py-10 text-center text-gray-500">Todavia no hay clases cargadas. Muy pronto vas a encontrar aca todo el contenido del curso.</p>
           ) : (
-            <div className="mt-6 flex flex-col gap-8">
-              {modulos.map((m) => (
-                <div key={m.id}>
-                  <h5 className="mb-3 text-xl font-extrabold text-gray-800">{m.titulo}</h5>
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    {m.lecciones.map((l) => (
-                      <Link
-                        key={l.id}
-                        href={`/acelerador/leccion/${l.id}`}
-                        className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg"
-                      >
-                        {l.thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                          <img src={l.thumbnailUrl} alt="" className="h-64 w-full object-cover" />
-                        ) : (
-                          <div className="flex h-64 w-full items-center justify-center bg-gray-100">
-                            <PlayCircle className="h-14 w-14 text-gray-300" />
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between gap-2 p-5">
-                          <span className="text-xl font-extrabold text-gray-800">{l.titulo}</span>
-                          {l.duracionSegundos != null && <span className="shrink-0 text-sm text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            // Una sola grilla continua con TODAS las clases (sin una grilla nueva por modulo) --
+            // asi siempre empacan 2 por fila sin dejar un hueco enorme cuando un modulo tiene un
+            // numero impar de clases (bug real reportado 2026-07-16, capturado con una captura de
+            // pantalla real: un modulo con 1 sola clase dejaba la mitad derecha de la fila vacia).
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {modulos.flatMap((m) =>
+                m.lecciones.map((l) => (
+                  <Link
+                    key={l.id}
+                    href={`/acelerador/leccion/${l.id}`}
+                    className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg"
+                  >
+                    {l.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
+                      <img src={l.thumbnailUrl} alt="" className="h-64 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-64 w-full items-center justify-center bg-gray-100">
+                        <PlayCircle className="h-14 w-14 text-gray-300" />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 p-5">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{m.titulo}</p>
+                        <span className="text-xl font-extrabold text-gray-800">{l.titulo}</span>
+                      </div>
+                      {l.duracionSegundos != null && <span className="shrink-0 text-sm text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
+                    </div>
+                  </Link>
+                )),
+              )}
             </div>
           )}
         </div>
