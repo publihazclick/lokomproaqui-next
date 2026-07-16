@@ -151,16 +151,31 @@ export async function subirArchivoPublico(file: File): Promise<string | null> {
   return data.publicUrl;
 }
 
-// Categorias que el vendedor/proveedor quiere promocionar (user_categories) -- equivalente a
-// CategoriasService.getUser/createUser.
+// Categorias que el vendedor/proveedor quiere promocionar (user_categories).
+//
+// Bug real encontrado y corregido (no replicado): CategoriasService.createUser (Angular, ya
+// migrado a Supabase) solo hace upsert de las categorias marcadas -- nunca borra las que el
+// usuario desmarca, asi que en produccion HOY destildar una categoria en el formulario de perfil
+// no tiene ningun efecto real. Se corrige sincronizando de verdad (borra las que ya no estan
+// marcadas, agrega las nuevas).
 export async function fetchCategoriasSeleccionadas(userId: string): Promise<number[]> {
   const { data } = await supabase.from('user_categories').select('category_id').eq('profile_id', userId);
   return (data || []).map((r) => r.category_id);
 }
 
 export async function guardarCategoriasSeleccionadas(userId: string, categoryIds: number[]): Promise<boolean> {
-  if (!categoryIds.length) return true;
-  const rows = categoryIds.map((id) => ({ profile_id: userId, category_id: id }));
-  const { error } = await supabase.from('user_categories').upsert(rows, { onConflict: 'profile_id,category_id', ignoreDuplicates: true });
-  return !error;
+  const actuales = await fetchCategoriasSeleccionadas(userId);
+  const aQuitar = actuales.filter((id) => !categoryIds.includes(id));
+  const aAgregar = categoryIds.filter((id) => !actuales.includes(id));
+
+  if (aQuitar.length) {
+    const { error } = await supabase.from('user_categories').delete().eq('profile_id', userId).in('category_id', aQuitar);
+    if (error) return false;
+  }
+  if (aAgregar.length) {
+    const rows = aAgregar.map((id) => ({ profile_id: userId, category_id: id }));
+    const { error } = await supabase.from('user_categories').upsert(rows, { onConflict: 'profile_id,category_id', ignoreDuplicates: true });
+    if (error) return false;
+  }
+  return true;
 }

@@ -209,7 +209,7 @@ export default function PerfilPage() {
       supplierExperience: data.supplierExperience || '',
       supplierRunsAds: data.supplierRunsAds ?? undefined,
     });
-    if (ok && categoriasCheck.size) await guardarCategoriasSeleccionadas(data.id, Array.from(categoriasCheck));
+    if (ok) await guardarCategoriasSeleccionadas(data.id, Array.from(categoriasCheck));
     setGuardando(false);
     mostrar(ok ? 'Actualizado' : 'Error de Servidor');
   }
