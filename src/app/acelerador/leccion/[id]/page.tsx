@@ -137,7 +137,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
               controls
               controlsList="nodownload"
               disablePictureInPicture
-              className="max-h-[70vh] w-full rounded-lg bg-black"
+              className="max-h-[70vh] w-full rounded-lg bg-black object-contain"
             />
             <div className="pointer-events-none absolute rounded bg-black/40 px-2 py-1 text-xs text-white/70" style={{ top: `${marcaAgua.top}%`, left: `${marcaAgua.left}%` }}>
               {dataUser.nombre} {dataUser.apellido} · {dataUser.telefono}

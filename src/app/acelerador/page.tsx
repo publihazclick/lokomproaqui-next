@@ -107,7 +107,7 @@ function AceleradorPageInterna() {
                     >
                       {l.thumbnailUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                        <img src={l.thumbnailUrl} alt="" className="h-64 w-full object-cover" />
+                        <img src={l.thumbnailUrl} alt="" className="h-64 w-full bg-gray-100 object-contain" />
                       ) : (
                         <div className="flex h-64 w-full items-center justify-center bg-gray-100">
                           <PlayCircle className="h-14 w-14 text-gray-300" />
