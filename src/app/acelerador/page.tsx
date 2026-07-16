@@ -96,27 +96,27 @@ function AceleradorPageInterna() {
             {modulos.every((m) => m.lecciones.length === 0) ? (
               <p className="py-10 text-center text-gray-500">Todavia no hay contenido cargado. Muy pronto vas a encontrar aca todo el contenido del curso.</p>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {modulos.flatMap((m) =>
                   m.lecciones.map((l) => (
                     <button
                       key={l.id}
                       type="button"
                       onClick={() => setAbrirPagoTrigger((n) => n + 1)}
-                      className="flex flex-col overflow-hidden rounded-xl border border-gray-100 text-left shadow-sm transition hover:shadow-md"
+                      className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 text-left shadow-sm transition hover:shadow-lg"
                     >
                       {l.thumbnailUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                        <img src={l.thumbnailUrl} alt="" className="h-36 w-full object-cover" />
+                        <img src={l.thumbnailUrl} alt="" className="h-64 w-full object-cover" />
                       ) : (
-                        <div className="flex h-36 w-full items-center justify-center bg-gray-100">
-                          <PlayCircle className="h-8 w-8 text-gray-300" />
+                        <div className="flex h-64 w-full items-center justify-center bg-gray-100">
+                          <PlayCircle className="h-14 w-14 text-gray-300" />
                         </div>
                       )}
-                      <div className="flex flex-1 flex-col p-4">
-                        <h5 className="font-semibold text-gray-800">{l.titulo}</h5>
-                        {l.descripcion && <p className="mt-1 flex-1 text-sm text-gray-500">{l.descripcion}</p>}
-                        <span className="mt-3 inline-block self-start rounded-full bg-green-600 px-4 py-1.5 text-xs font-bold text-white">VER MÓDULO</span>
+                      <div className="flex flex-1 flex-col p-5">
+                        <h5 className="text-xl font-extrabold text-gray-800">{l.titulo}</h5>
+                        {l.descripcion && <p className="mt-2 flex-1 text-base text-gray-500">{l.descripcion}</p>}
+                        <span className="mt-4 inline-block self-start rounded-full bg-green-600 px-5 py-2 text-sm font-bold text-white">VER MÓDULO</span>
                       </div>
                     </button>
                   )),
@@ -148,21 +148,29 @@ function AceleradorPageInterna() {
           {modulos.length === 0 ? (
             <p className="py-10 text-center text-gray-500">Todavia no hay clases cargadas. Muy pronto vas a encontrar aca todo el contenido del curso.</p>
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="mt-6 flex flex-col gap-8">
               {modulos.map((m) => (
-                <div key={m.id} className="rounded-xl border border-gray-100 p-4 shadow-sm">
-                  <h5 className="font-semibold text-gray-800">{m.titulo}</h5>
-                  <div className="mt-2 space-y-1">
+                <div key={m.id}>
+                  <h5 className="mb-3 text-xl font-extrabold text-gray-800">{m.titulo}</h5>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     {m.lecciones.map((l) => (
-                      <Link key={l.id} href={`/acelerador/leccion/${l.id}`} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link
+                        key={l.id}
+                        href={`/acelerador/leccion/${l.id}`}
+                        className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg"
+                      >
                         {l.thumbnailUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                          <img src={l.thumbnailUrl} alt="" className="h-10 w-16 shrink-0 rounded object-cover" />
+                          <img src={l.thumbnailUrl} alt="" className="h-64 w-full object-cover" />
                         ) : (
-                          <PlayCircle className="h-4 w-4 shrink-0 text-gray-400" />
+                          <div className="flex h-64 w-full items-center justify-center bg-gray-100">
+                            <PlayCircle className="h-14 w-14 text-gray-300" />
+                          </div>
                         )}
-                        <span className="flex-1">{l.titulo}</span>
-                        {l.duracionSegundos != null && <span className="text-xs text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
+                        <div className="flex items-center justify-between gap-2 p-5">
+                          <span className="text-xl font-extrabold text-gray-800">{l.titulo}</span>
+                          {l.duracionSegundos != null && <span className="shrink-0 text-sm text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
+                        </div>
                       </Link>
                     ))}
                   </div>
