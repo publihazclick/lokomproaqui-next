@@ -57,7 +57,7 @@ export default function IntroduccionPage() {
       ) : (
         <div className="mt-6 text-center">
           <h3 className="text-xl font-semibold text-gray-700">Únete a nosotros</h3>
-          <a href="/singUp" className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
+          <a href="/registro" className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
             Registrarme
           </a>
           <div className="mt-4">
