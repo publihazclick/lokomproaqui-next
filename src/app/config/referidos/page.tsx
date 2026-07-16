@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { fetchReferidosNivel, type ReferidoRow } from '@/lib/referidos';
+import { fetchReferidosNivel, fetchIdsReferidosNivel, type ReferidoRow } from '@/lib/referidos';
 
 // Port desde src/app/dashboard-config/components/referidos (Angular, ReferidosComponent) --
 // "Mis Referidos", arbol de 5 niveles de downline.
@@ -18,13 +18,14 @@ const LIMIT = 20;
 
 interface TabState {
   dataRows: ReferidoRow[];
+  idsCompletos: string[]; // TODOS los ids de este nivel (sin paginar), para encadenar el siguiente
   page: number;
   notEmptyPost: boolean;
   cargado: boolean;
 }
 
 function tabVacio(): TabState {
-  return { dataRows: [], page: 0, notEmptyPost: true, cargado: false };
+  return { dataRows: [], idsCompletos: [], page: 0, notEmptyPost: true, cargado: false };
 }
 
 export default function ReferidosPage() {
@@ -56,7 +57,7 @@ export default function ReferidosPage() {
 
   function referrerIdsPara(tabIndex: number, snapshot: TabState[]): string[] {
     if (tabIndex === 0) return dataUserId ? [dataUserId] : [];
-    return snapshot[tabIndex - 1].dataRows.map((r) => r.id);
+    return snapshot[tabIndex - 1].idsCompletos;
   }
 
   async function cargarTab(tabIndex: number, page: number, reemplazar: boolean, search: string) {
@@ -71,7 +72,10 @@ export default function ReferidosPage() {
     }
     const setLoader = page === 0 ? setCargando : setCargandoMas;
     setLoader(true);
-    const res = await fetchReferidosNivel(referrerIds, { page, limit: LIMIT, search });
+    const [res, idsCompletos] = await Promise.all([
+      fetchReferidosNivel(referrerIds, { page, limit: LIMIT, search }),
+      reemplazar ? fetchIdsReferidosNivel(referrerIds) : Promise.resolve(null),
+    ]);
     setLoader(false);
     setTabs((prev) => {
       const next = [...prev];
@@ -79,6 +83,7 @@ export default function ReferidosPage() {
       const existentes = new Set(base.map((r) => r.id));
       next[tabIndex] = {
         dataRows: [...base, ...res.data.filter((r) => !existentes.has(r.id))],
+        idsCompletos: idsCompletos ?? next[tabIndex].idsCompletos,
         page,
         notEmptyPost: res.data.length > 0,
         cargado: true,

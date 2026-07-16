@@ -45,6 +45,15 @@ const SELECT = `
   seller_tiers(name)
 `;
 
+// Ids COMPLETOS de un nivel (sin paginar) -- necesarios para encadenar al siguiente nivel. Si se
+// usaran solo las filas ya cargadas en pantalla (paginadas), un vendedor con mas de LIMIT referidos
+// directos perderia en silencio los descendientes de los que aun no se han "cargado mas".
+export async function fetchIdsReferidosNivel(referrerIds: string[]): Promise<string[]> {
+  if (!referrerIds.length) return [];
+  const { data } = await supabase.from('profiles').select('id').in('referrer_id', referrerIds);
+  return (data || []).map((p: any) => p.id);
+}
+
 export async function fetchReferidosNivel(
   referrerIds: string[],
   opts: { page: number; limit: number; search?: string },
