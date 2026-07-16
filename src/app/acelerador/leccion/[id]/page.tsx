@@ -131,7 +131,14 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
         {videoUrl && (
           <div className="relative mt-4" onContextMenu={(e) => e.preventDefault()}>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption -- leccion del curso, sin subtitulos en el original */}
-            <video src={videoUrl} controls controlsList="nodownload" disablePictureInPicture className="max-h-[70vh] w-full rounded-lg bg-black" />
+            <video
+              src={videoUrl}
+              poster={leccionActual?.thumbnailUrl || undefined}
+              controls
+              controlsList="nodownload"
+              disablePictureInPicture
+              className="max-h-[70vh] w-full rounded-lg bg-black"
+            />
             <div className="pointer-events-none absolute rounded bg-black/40 px-2 py-1 text-xs text-white/70" style={{ top: `${marcaAgua.top}%`, left: `${marcaAgua.left}%` }}>
               {dataUser.nombre} {dataUser.apellido} · {dataUser.telefono}
             </div>

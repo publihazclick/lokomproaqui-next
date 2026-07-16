@@ -50,7 +50,7 @@ export default function MentorPanelPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/acelerador?preview=visitante"
+            href="/acelerador?preview=suscriptor"
             className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10"
           >
             Ver como visitante

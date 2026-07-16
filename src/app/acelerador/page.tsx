@@ -16,6 +16,12 @@ import { AceleradorCheckout } from '@/components/AceleradorCheckout';
 // Pedido explicito del usuario 2026-07-16: se quitan los 2 videos gancho y el texto fijo de
 // precio/pitch de la vitrina sin suscripcion -- de aca en mas solo se muestra el contenido real
 // que suba el mentor (modulos/lecciones) + el boton de suscripcion, sin ningun video ni copy fijo.
+//
+// El boton "Ver como visitante" del panel del mentor entra aca con ?preview=suscriptor: aclaracion
+// del usuario el mismo dia -- "visitante" en su cabeza significaba "un usuario cualquiera viendo mi
+// contenido completo", no la vitrina de venta sin acceso (esa primera version se descarto). El
+// mentor YA cae en la rama de "Mi Curso" por su rol sin necesitar este parametro (mas abajo) -- el
+// param solo lo deja explicito/a prueba de que ese bypass cambie a futuro.
 
 export default function AceleradorPage() {
   return (
@@ -28,11 +34,7 @@ export default function AceleradorPage() {
 function AceleradorPageInterna() {
   const searchParams = useSearchParams();
   const abrirCheckoutInicial = searchParams.get('checkout') === '1';
-  // Boton "Ver como visitante" del panel del mentor (2026-07-16): entra a esta misma pagina con
-  // ?preview=visitante para forzar la vista de "sin suscripcion" -- el mentor nunca la ve de otra
-  // forma porque mas abajo su rol siempre da acceso directo a "Mi Curso". No toca sesion ni datos
-  // reales, es solo un interruptor de que rama de UI se muestra.
-  const vistaVisitante = searchParams.get('preview') === 'visitante';
+  const vistaSuscriptor = searchParams.get('preview') === 'suscriptor';
 
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [verificandoAcceso, setVerificandoAcceso] = useState(true);
@@ -51,15 +53,10 @@ function AceleradorPageInterna() {
       const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
       setDataUser(usuario);
 
-      if (vistaVisitante) {
-        setTieneAcceso(false);
-        setVerificandoAcceso(false);
-        return;
-      }
-
       // El mentor sube y organiza el contenido: tiene que poder ver "Mi Curso" exactamente como lo
-      // ve un suscriptor real, sin necesitar pagar una suscripcion.
-      if (usuario.rolname === 'mentor') {
+      // ve un suscriptor real, sin necesitar pagar una suscripcion (?preview=suscriptor solo lo hace
+      // explicito para el boton "Ver como visitante" del panel, mismo resultado).
+      if (usuario.rolname === 'mentor' || vistaSuscriptor) {
         setTieneAcceso(true);
         setVerificandoAcceso(false);
         return;
@@ -69,7 +66,7 @@ function AceleradorPageInterna() {
       setTieneAcceso(acceso);
       setVerificandoAcceso(false);
     })();
-  }, [vistaVisitante]);
+  }, [vistaSuscriptor]);
 
   const onSuscripcionActivada = useCallback(() => setTieneAcceso(true), []);
 
@@ -77,15 +74,6 @@ function AceleradorPageInterna() {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-3 py-8">
-      {vistaVisitante && dataUser?.rolname === 'mentor' && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          <span>Estás viendo esta página como la ve un visitante sin suscripción — no es tu vista real de mentor.</span>
-          <Link href="/mvid8x2qz1/panel" className="font-semibold underline">
-            Volver al panel
-          </Link>
-        </div>
-      )}
-
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-800">Acelerador de Ventas</h1>
         <p className="mt-1 text-gray-500">El curso avanzado para aprender a vender como dropshipper.</p>
@@ -120,7 +108,12 @@ function AceleradorPageInterna() {
       ) : (
         <div className="mt-6">
           {dataUser?.rolname === 'mentor' && (
-            <div className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">Estas viendo esto en modo vista previa (mentor) — asi lo ve un suscriptor real.</div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              <span>Estás viendo esto en modo vista previa (mentor) — así lo ve un usuario con suscripción activa.</span>
+              <Link href="/mvid8x2qz1/panel" className="font-semibold underline">
+                Volver al panel
+              </Link>
+            </div>
           )}
 
           <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-5">
@@ -141,7 +134,12 @@ function AceleradorPageInterna() {
                   <div className="mt-2 space-y-1">
                     {m.lecciones.map((l) => (
                       <Link key={l.id} href={`/acelerador/leccion/${l.id}`} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
-                        <PlayCircle className="h-4 w-4 text-gray-400" />
+                        {l.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
+                          <img src={l.thumbnailUrl} alt="" className="h-10 w-16 shrink-0 rounded object-cover" />
+                        ) : (
+                          <PlayCircle className="h-4 w-4 shrink-0 text-gray-400" />
+                        )}
                         <span className="flex-1">{l.titulo}</span>
                         {l.duracionSegundos != null && <span className="text-xs text-gray-400">{formatDuracion(l.duracionSegundos)}</span>}
                       </Link>

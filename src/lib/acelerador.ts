@@ -12,6 +12,7 @@ export interface Leccion {
   descripcion: string | null;
   ordenamiento: number;
   duracionSegundos: number | null;
+  thumbnailUrl: string | null;
   moduloTitulo?: string;
 }
 
@@ -32,7 +33,15 @@ export async function fetchModulosConLecciones(): Promise<ModuloConLecciones[]> 
     titulo: m.title,
     lecciones: (lessons || [])
       .filter((l: any) => l.module_id === m.id)
-      .map((l: any) => ({ id: l.id, moduleId: l.module_id, titulo: l.title, descripcion: l.description, ordenamiento: l.sort_order, duracionSegundos: l.duration_seconds })),
+      .map((l: any) => ({
+        id: l.id,
+        moduleId: l.module_id,
+        titulo: l.title,
+        descripcion: l.description,
+        ordenamiento: l.sort_order,
+        duracionSegundos: l.duration_seconds,
+        thumbnailUrl: l.thumbnail_url,
+      })),
   }));
 }
 
