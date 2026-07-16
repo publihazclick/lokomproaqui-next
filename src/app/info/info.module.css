@@ -479,6 +479,7 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .registroBoxTitle {
@@ -518,6 +519,16 @@
   width: 100%;
   max-height: 220px;
   object-fit: contain;
+}
+
+/* Solo la imagen de "Registro Proveedor" (handshake): mas ancha hacia los lados sin tocar la
+   caja -- se agranda con width>100% + margenes negativos, y .colorFondo4 ahora tiene
+   overflow:hidden para que no se salga visualmente de la caja azul. */
+.registroBoxImgProveedor {
+  width: 130%;
+  max-width: 130%;
+  margin-left: -15%;
+  margin-right: -15%;
 }
 
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
