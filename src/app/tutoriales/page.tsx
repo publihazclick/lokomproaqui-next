@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, conTimeout } from '@/lib/supabase';
 import { TutorialesClient } from './TutorialesClient';
 import type { CategoriaConVideos, CursoVideo } from './types';
 
@@ -20,7 +20,7 @@ export const revalidate = 5;
 // Angular (que pedia los datos en el cliente y mostraba un spinner), esto corre en el
 // servidor: la pagina llega con el contenido ya adentro, sin "Cargando tutoriales...".
 export default async function TutorialesPage() {
-  const { data } = await supabase.from('courses').select('*').order('sort_order');
+  const { data } = await conTimeout(supabase.from('courses').select('*').order('sort_order'), { data: null, error: null } as any);
   const todos = (data ?? []) as CursoVideo[];
 
   const categorias: CategoriaConVideos[] = todos

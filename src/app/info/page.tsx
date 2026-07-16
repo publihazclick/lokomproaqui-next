@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Check } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
 import { InfoMenuPills } from '@/components/InfoMenuPills';
@@ -49,7 +49,7 @@ const POR_QUE = [
 ];
 
 export default async function InfoPage() {
-  const { data: config } = await supabase.from('site_config').select('info_text').limit(1).single();
+  const { data: config } = await conTimeout(supabase.from('site_config').select('info_text').limit(1).single(), { data: null, error: null } as any);
   const infoText = (config?.info_text ?? {}) as Record<string, string>;
   const numeroWhatsapp = infoText.clInformacion || '3506700802';
   const video1 = extraerIdYoutube(infoText.aceleradorVideoGancho1);

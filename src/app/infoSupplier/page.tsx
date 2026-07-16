@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 
 export const metadata = {
@@ -18,11 +18,10 @@ interface Supplier {
 }
 
 export default async function InfoSupplierPage() {
-  const { data, count } = await supabase
-    .from('profiles')
-    .select('id, avatar_url, roles!inner(name)', { count: 'exact' })
-    .eq('roles.name', 'proveedor')
-    .range(0, 19);
+  const { data, count } = await conTimeout(
+    supabase.from('profiles').select('id, avatar_url, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor').range(0, 19),
+    { data: null, count: null, error: null } as any,
+  );
 
   const listSupplier = (data ?? []) as unknown as Supplier[];
 
