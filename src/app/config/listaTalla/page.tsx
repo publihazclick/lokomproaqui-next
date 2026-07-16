@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Eye, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchTiposTallaAdmin, desactivarTipoTalla, type TipoTallaRow } from '@/lib/tiposTallaAdmin';
 import { FormTipoTallaModal } from '@/components/FormTipoTallaModal';
 import { useToast, Toast } from '@/components/Toast';
@@ -10,10 +11,13 @@ import { useToast, Toast } from '@/components/Toast';
 // Port de ListSizeComponent (Angular, panel admin "Tipo de Tallas"). Ver
 // src/lib/tiposTallaAdmin.ts para el bug real corregido y por que "listaPlatform" no se porta
 // (PlatformService es un no-op documentado desde la migracion a Mipaquete).
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol. Se agrega el mismo chequeo de
+// /config/usuarios.
 
 export default function ListaTallaPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [tipos, setTipos] = useState<TipoTallaRow[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -26,9 +30,14 @@ export default function ListaTallaPage() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: sessionData }) => {
+    supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       setEstado('listo');
@@ -42,6 +51,14 @@ export default function ListaTallaPage() {
     if (!ok) return mostrar('Error de servidor');
     setTipos((prev) => prev.filter((t) => t.id !== id));
     mostrar('Eliminado');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

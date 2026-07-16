@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Eye, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchCategoriasAdmin, eliminarCategoria, type CategoriaAdminRow } from '@/lib/categoriasAdmin';
 import { FormCategoriaModal } from '@/components/FormCategoriaModal';
 import { useToast, Toast } from '@/components/Toast';
@@ -10,9 +11,12 @@ import { useToast, Toast } from '@/components/Toast';
 // Port 1:1 de CategoriasComponent (Angular, panel admin "Categorias") -- backend ya bien
 // conectado, sin bugs reales que corregir. Solo administra categorias de PRIMER NIVEL (cat_padre
 // null), igual que el original -- las subcategorias se gestionan desde el dialogo de cada una.
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol. Se agrega el mismo chequeo de
+// /config/usuarios.
 
 export default function CategoriasPage() {
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [categorias, setCategorias] = useState<CategoriaAdminRow[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -27,9 +31,14 @@ export default function CategoriasPage() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: sessionData }) => {
+    supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       setEstado('listo');
@@ -44,6 +53,14 @@ export default function CategoriasPage() {
     if (!ok) return mostrar('Error de servidor');
     setCategorias((prev) => prev.filter((c) => c.id !== id));
     mostrar('Eliminado');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

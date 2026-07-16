@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchCategoriasCursos, crearCategoriaCurso, actualizarCurso, eliminarCurso, type CategoriaCursos, type CursoAdminRow } from '@/lib/cursos';
 import { FormTutorialModal } from '@/components/FormTutorialModal';
 import { useToast, Toast } from '@/components/Toast';
@@ -10,10 +11,13 @@ import { useToast, Toast } from '@/components/Toast';
 // Port de CursosComponent (Angular, "/config/cursos") -- administracion de "Tutoriales" (pagina
 // publica /tutoriales): categorias + videos de YouTube dentro de cada una. Sin bugs reales -- ver
 // nota en lib/cursos.ts sobre por que se borran los videos antes que la categoria al eliminar.
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol. Se agrega el mismo chequeo de
+// /config/usuarios.
 
 export default function CursosPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [categorias, setCategorias] = useState<CategoriaCursos[]>([]);
   const [nuevaCategoriaTitulo, setNuevaCategoriaTitulo] = useState('');
   const [modalVideo, setModalVideo] = useState<{ video: CursoAdminRow | null; categoriaId: number; orden: number } | null>(null);
@@ -27,6 +31,11 @@ export default function CursosPage() {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       await cargar();
@@ -90,6 +99,14 @@ export default function CursosPage() {
 
   function actualizarTituloLocal(catId: number, titulo: string) {
     setCategorias((prev) => prev.map((c) => (c.id === catId ? { ...c, titulo } : c)));
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

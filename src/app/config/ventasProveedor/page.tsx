@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle, Eye } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchVentasProveedor, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
 import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 
@@ -15,9 +16,12 @@ import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 // reconstruir la UI de busqueda/filtros que nunca funciono. "Ver" reusa FormVentaDetalleModal
 // (mismo dialogo de detalle+guia ya construido para /config/ventas) en vez del formulario viejo de
 // Coordinadora.
+//
+// Bug real de seguridad encontrado y corregido: muestra pedidos (con datos de clientes) de TODA la
+// plataforma y no tenia chequeo de rol. Se agrega el mismo chequeo de /config/usuarios.
 
 export default function VentasProveedorPage() {
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [ventas, setVentas] = useState<VentaRow[]>([]);
   const [ventaAbierta, setVentaAbierta] = useState<number | null>(null);
 
@@ -31,6 +35,11 @@ export default function VentasProveedorPage() {
         window.location.href = '/info';
         return;
       }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
+        return;
+      }
       await cargar();
       setEstado('listo');
     });
@@ -40,6 +49,14 @@ export default function VentasProveedorPage() {
     const numero = (row.telefonoCliente || '').replace(/\D/g, '');
     const url = `https://wa.me/57${numero}?text=${encodeURIComponent(`Hola Cliente ${row.nombreCliente || ''} Este esta es tu guia --> ${row.numeroGuia} <-- `)}`;
     window.open(url);
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

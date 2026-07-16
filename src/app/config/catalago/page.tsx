@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchCatalogos, eliminarCatalogo, type CatalogoRow } from '@/lib/catalogoAdmin';
 import { FormCatalogoModal } from '@/components/FormCatalogoModal';
 import { useToast, Toast } from '@/components/Toast';
@@ -11,12 +12,15 @@ import { useToast, Toast } from '@/components/Toast';
 // CatalogoService ya estaba bien implementado (sin bugs), se porta directo. Ver
 // src/lib/catalogoAdmin.ts sobre el link "Copiar" (apunta a /publico/:id, pagina publica que aun
 // no se porto -- pieza separada).
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol. Se agrega el mismo chequeo de
+// /config/usuarios.
 
 const URL_CATALOGO = 'https://lokomproaqui.com/publico/';
 
 export default function CatalagoPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [catalogos, setCatalogos] = useState<CatalogoRow[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [modalAbierto, setModalAbierto] = useState<'nuevo' | CatalogoRow | null>(null);
@@ -29,6 +33,11 @@ export default function CatalagoPage() {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       await cargar();
@@ -56,6 +65,14 @@ export default function CatalagoPage() {
     }
     setCatalogos((prev) => prev.filter((c) => c.id !== row.id));
     mostrar('Eliminado');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

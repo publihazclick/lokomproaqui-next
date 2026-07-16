@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchSiteConfig, guardarSiteConfig, subirVideoIntro, type SiteConfigForm } from '@/lib/adminConfig';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port de AdminComponent (Angular, "/config/admin", "Configurar Introduccion") -- 3 pasos con
 // titulo + video, guardados en site_config.info_text. Ver src/lib/adminConfig.ts sobre el bug real
 // de subida de archivo corregido (se mandaba el FileList completo en vez del File).
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol (cualquier usuario logueado
+// podia editar la configuracion publica del sitio). Se agrega el mismo chequeo de /config/usuarios.
 
 const PASOS: { key: keyof SiteConfigForm; urlKey: keyof SiteConfigForm; label: string }[] = [
   { key: 'tituloPrimero', urlKey: 'urlPrimero', label: 'Primer Paso' },
@@ -17,7 +21,7 @@ const PASOS: { key: keyof SiteConfigForm; urlKey: keyof SiteConfigForm; label: s
 
 export default function AdminConfigPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [data, setData] = useState<SiteConfigForm | null>(null);
   const [subiendo, setSubiendo] = useState<string | null>(null);
 
@@ -25,6 +29,11 @@ export default function AdminConfigPage() {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       setData(await fetchSiteConfig());
@@ -48,6 +57,14 @@ export default function AdminConfigPage() {
     setData(nuevo);
     const ok = await guardarSiteConfig(nuevo);
     mostrar(ok ? 'Actualizado' : 'Error');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando' || !data) return null;

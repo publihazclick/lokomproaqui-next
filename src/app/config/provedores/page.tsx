@@ -13,12 +13,15 @@ import { useToast, Toast } from '@/components/Toast';
 // (`where.rolName`), asi que en produccion HOY esta pantalla en realidad muestra TODOS los
 // usuarios, no solo proveedores. Se corrige filtrando de verdad por `roles.name = 'proveedor'`.
 // Reusa el mismo directorio/formulario que /config/usuarios (FormUsuarioModal), ya migrado.
+//
+// Bug real de seguridad encontrado y corregido: podia editar el perfil/rol de cualquier usuario y
+// no tenia chequeo de rol propio. Se agrega el mismo chequeo que ya tiene /config/usuarios.
 
 const LIMIT = 20;
 
 export default function ProvedoresPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [usuarios, setUsuarios] = useState<UsuarioAdminRow[]>([]);
   const [roles, setRoles] = useState<RolOpcion[]>([]);
   const [busqueda, setBusqueda] = useState('');
@@ -48,7 +51,11 @@ export default function ProvedoresPage() {
         window.location.href = '/info';
         return;
       }
-      await fetchDataUserCompleto(sessionData.session.user.id);
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
+        return;
+      }
       setEstado('listo');
       setRoles(await fetchRolesAsignables());
       cargar(0, true, '');
@@ -66,6 +73,14 @@ export default function ProvedoresPage() {
     if (!ok) return mostrar('Error de servidor');
     setUsuarios((prev) => prev.filter((u) => u.id !== id));
     mostrar('Eliminado');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando') return null;

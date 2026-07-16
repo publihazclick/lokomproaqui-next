@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchRechargeAdmin, eliminarRecharge, type RechargeAdminRow } from '@/lib/rechargeAdmin';
 import { formatCOP } from '@/lib/cartStore';
 import { FormRechargeModal } from '@/components/FormRechargeModal';
@@ -10,10 +11,13 @@ import { useToast, Toast } from '@/components/Toast';
 
 // Port de RechargeComponent (Angular, "/config/adminF/recharge", solo admin) -- CRUD de los
 // paquetes de recarga de billetera que ya se muestran en /config/recharge.
+//
+// Bug real de seguridad encontrado y corregido: no tenia chequeo de rol (cualquier usuario logueado
+// podia editar/eliminar los paquetes de recarga). Se agrega el mismo chequeo ya usado en /config/usuarios.
 
 export default function AdminRechargePage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [paquetes, setPaquetes] = useState<RechargeAdminRow[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [modalAbierto, setModalAbierto] = useState<'nuevo' | RechargeAdminRow | null>(null);
@@ -26,6 +30,11 @@ export default function AdminRechargePage() {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       await cargar();
@@ -51,6 +60,14 @@ export default function AdminRechargePage() {
   }
 
   if (estado === 'revisando') return null;
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1000px] px-3 py-6">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchSiteConfig, guardarSiteConfig, fetchBanners, crearBanner, actualizarBanner, eliminarBanner, type SiteConfigForm, type BannerRow } from '@/lib/adminConfig';
 import { useToast, Toast } from '@/components/Toast';
 
@@ -9,6 +10,9 @@ import { useToast, Toast } from '@/components/Toast';
 // sobre los 2 bugs reales corregidos (filtro de banners ignorado, titulo de banner que nunca se
 // guardaba al editar). "Numero de celular de Pedidos/Retiros" se omiten: estaban comentados en el
 // HTML original, nunca se mostraron ni guardaron realmente.
+//
+// Bug real de seguridad encontrado y corregido: sin chequeo de rol. Se agrega el mismo chequeo de
+// /config/usuarios.
 
 interface BannerLocal extends BannerRow {
   check?: boolean;
@@ -17,7 +21,7 @@ interface BannerLocal extends BannerRow {
 
 export default function ConfiguracionPage() {
   const { mensaje, mostrar } = useToast();
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [data, setData] = useState<SiteConfigForm | null>(null);
   const [banners, setBanners] = useState<BannerLocal[]>([]);
   const [guardando, setGuardando] = useState(false);
@@ -26,6 +30,11 @@ export default function ConfiguracionPage() {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       if (!sessionData.session) {
         window.location.href = '/info';
+        return;
+      }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
         return;
       }
       const [config, listaBanners] = await Promise.all([fetchSiteConfig(), fetchBanners()]);
@@ -75,6 +84,14 @@ export default function ConfiguracionPage() {
     for (const banner of marcados) await eliminarBanner(banner.id);
     setBanners((prev) => prev.filter((b) => !(b.check && !b.esNuevo)));
     mostrar('Eliminado...');
+  }
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
   }
 
   if (estado === 'revisando' || !data) return null;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchPagosProveedorAdmin, type PagoProveedorAdmin } from '@/lib/bank';
 import { formatCOP } from '@/lib/cartStore';
 import { FormPaymentDetailModal } from '@/components/FormPaymentDetailModal';
@@ -9,9 +10,14 @@ import { FormPaymentDetailModal } from '@/components/FormPaymentDetailModal';
 // Port de VendorPaymentsComponent (Angular, "/config/adminF/vendorpayment", solo admin) --
 // solicitudes de retiro de proveedores/bodega, aprobar subiendo el comprobante (ver
 // FormPaymentDetailModal, ahora conectado al RPC real process_supplier_payout).
+//
+// Bug real de seguridad encontrado y corregido: esta pantalla aprueba pagos reales (debita
+// wallet_balances) pero no tenia NINGUN chequeo de rol (el guard de Angular original,
+// AuthService.canActivate, solo exige sesion iniciada, no rol admin -- cualquier usuario logueado
+// podia entrar y aprobar pagos). Se agrega el mismo chequeo ya usado en /config/usuarios.
 
 export default function VendorPaymentsPage() {
-  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo' | 'no-autorizado'>('revisando');
   const [pagos, setPagos] = useState<PagoProveedorAdmin[]>([]);
   const [pagoAbierto, setPagoAbierto] = useState<PagoProveedorAdmin | null>(null);
 
@@ -25,12 +31,25 @@ export default function VendorPaymentsPage() {
         window.location.href = '/info';
         return;
       }
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      if (usuario.rolname !== 'administrador') {
+        setEstado('no-autorizado');
+        return;
+      }
       await cargar();
       setEstado('listo');
     });
   }, []);
 
   if (estado === 'revisando') return null;
+
+  if (estado === 'no-autorizado') {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-gray-500">Esta sección es solo para administradores.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1000px] px-3 py-6">
