@@ -74,7 +74,7 @@ function AceleradorPageInterna() {
   if (verificandoAcceso) return <p className="py-16 text-center text-gray-500">Cargando...</p>;
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] px-3 py-8">
+    <div className="mx-auto w-full max-w-[1600px] px-3 py-8 sm:px-6 lg:px-10">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-800">Acelerador de Ventas</h1>
         <p className="mt-1 text-gray-500">El curso avanzado para aprender a vender como dropshipper.</p>
