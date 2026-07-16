@@ -524,12 +524,16 @@
 /* Solo la imagen de "Registro Proveedor" (handshake): ocupa el ancho COMPLETO de la caja
    (incluido el padding horizontal de 30px de .colorFondo4 a cada lado), sin tocar la caja ni las
    otras 2 imagenes. Margenes negativos en px exactos (no %) para que llegue justo al borde sin
-   importar el ancho real de la columna. */
+   importar el ancho real de la columna. object-fit:cover (no el "contain" heredado de
+   .registroBoxImg): con "contain" + max-height:220px, la imagen se encogia para mantener su
+   proporcion dentro de esa altura y quedaba mas angosta que el ancho real, dejando espacio azul
+   visible a los lados -- "cover" la rellena completa, recortando en vez de encoger. */
 .registroBoxImgProveedor {
   width: calc(100% + 60px);
   max-width: calc(100% + 60px);
   margin-left: -30px;
   margin-right: -30px;
+  object-fit: cover;
 }
 
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
