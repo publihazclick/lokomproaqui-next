@@ -404,6 +404,26 @@
   padding: 2px;
 }
 
+/* Chulito (check_circle) arriba de cada linea del checklist -- color azul de marca (#02a0e3, el
+   mismo que el resto del sitio) en vez del negro plano, para que se vea mas integrado con el
+   resto del diseño. */
+.contenidoCaja li {
+  display: block;
+  margin-bottom: 22px;
+}
+
+.checkCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  background: #02a0e3;
+  color: #fff;
+}
+
 /* h1/h2 SIN tamano propio: en el Angular real esa regla estaba COMENTADA
    (`/*h1{font-size:24px}*\/`), nunca se aplico -- el titulo usa el tamano GRANDE por defecto del
    navegador. Tailwind (preflight) resetea eso a texto chico en este proyecto, asi que hay que

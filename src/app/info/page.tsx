@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
@@ -153,6 +154,9 @@ export default async function InfoPage() {
                 <ul>
                   {QUE_HACEMOS.map((texto) => (
                     <li key={texto}>
+                      <span className={styles.checkCircle}>
+                        <Check size={18} strokeWidth={3} />
+                      </span>
                       <p>{texto}</p>
                     </li>
                   ))}
@@ -178,6 +182,9 @@ export default async function InfoPage() {
                 <ul>
                   {POR_QUE.map((texto) => (
                     <li key={texto}>
+                      <span className={styles.checkCircle}>
+                        <Check size={18} strokeWidth={3} />
+                      </span>
                       <p>{texto}</p>
                     </li>
                   ))}
