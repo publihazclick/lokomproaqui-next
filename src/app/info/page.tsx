@@ -188,7 +188,7 @@ export default async function InfoPage() {
         </div>
 
         <div className={styles.col12}>
-        <div className={styles.row} style={{ margin: '5px' }}>
+        <div className={styles.row} style={{ margin: '5px', marginBottom: '40px' }}>
           <div className={styles.colSm4}>
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
