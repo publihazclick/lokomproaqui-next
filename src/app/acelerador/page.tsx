@@ -5,14 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { PlayCircle, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
-import { fetchSiteConfig } from '@/lib/adminConfig';
-import { extraerIdYoutube } from '@/lib/cursos';
 import { fetchModulosConLecciones, tieneAccesoAcelerador, formatDuracion, type ModuloConLecciones } from '@/lib/acelerador';
 import { AceleradorCheckout } from '@/components/AceleradorCheckout';
 
 // Port de AceleradorComponent (Angular, "/acelerador") -- vitrina de venta del curso (sin
 // suscripcion vigente) o "Mi Curso" (con suscripcion vigente). AceleradorService ya estaba bien
 // implementado, sin bugs -- se porta 1:1.
+//
+// Pedido explicito del usuario 2026-07-16: se quitan los 2 videos gancho y el texto fijo de
+// precio/pitch de la vitrina sin suscripcion -- de aca en mas solo se muestra el contenido real
+// que suba el mentor (modulos/lecciones) + el boton de suscripcion, sin ningun video ni copy fijo.
 
 export default function AceleradorPage() {
   return (
@@ -30,15 +32,10 @@ function AceleradorPageInterna() {
   const [verificandoAcceso, setVerificandoAcceso] = useState(true);
   const [tieneAcceso, setTieneAcceso] = useState(false);
   const [modulos, setModulos] = useState<ModuloConLecciones[]>([]);
-  const [videoGancho1, setVideoGancho1] = useState<string | null>(null);
-  const [videoGancho2, setVideoGancho2] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [config, mods] = await Promise.all([fetchSiteConfig(), fetchModulosConLecciones()]);
-      if (config.aceleradorVideoGancho1) setVideoGancho1(`https://www.youtube-nocookie.com/embed/${extraerIdYoutube(config.aceleradorVideoGancho1)}`);
-      if (config.aceleradorVideoGancho2) setVideoGancho2(`https://www.youtube-nocookie.com/embed/${extraerIdYoutube(config.aceleradorVideoGancho2)}`);
-      setModulos(mods);
+      setModulos(await fetchModulosConLecciones());
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
@@ -75,52 +72,28 @@ function AceleradorPageInterna() {
 
       {!tieneAcceso ? (
         <div className="mt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {videoGancho1 && (
-              <div className="aspect-video overflow-hidden rounded-xl">
-                <iframe src={videoGancho1} allowFullScreen className="h-full w-full" />
-              </div>
-            )}
-            {videoGancho2 && (
-              <div className="aspect-video overflow-hidden rounded-xl">
-                <iframe src={videoGancho2} allowFullScreen className="h-full w-full" />
-              </div>
-            )}
-          </div>
-
-          {(videoGancho1 || videoGancho2) && (
-            <div className="mt-6 flex items-center gap-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 p-5">
-              <Award className="h-10 w-10 shrink-0 text-green-600" />
-              <div>
-                <span className="text-xs font-bold uppercase text-green-700">Suscripcion mensual</span>
-                <h3 className="text-xl font-bold text-gray-800">
-                  Tan solo <strong>$35 USD</strong>
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Encontraras <strong>clases grabadas</strong> + <strong>acompañamiento personalizado</strong> para llevar tu negocio al siguiente nivel.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-6 text-center">
+          <div className="text-center">
             <AceleradorCheckout buttonLabel="Pagar Suscripcion" abrirCheckoutInicial={abrirCheckoutInicial} onActivada={onSuscripcionActivada} />
           </div>
 
           <div className="mt-8">
             <h4 className="text-center text-xl font-bold text-gray-800">Contenido del curso</h4>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {modulos.map((m) => (
-                <div key={m.id} className="rounded-xl border border-gray-100 p-4 shadow-sm">
-                  <h5 className="font-semibold text-gray-800">{m.titulo}</h5>
-                  {m.lecciones.map((l) => (
-                    <p key={l.id} className="mt-1 text-sm text-gray-500">
-                      {l.titulo}
-                    </p>
-                  ))}
-                </div>
-              ))}
-            </div>
+            {modulos.length === 0 ? (
+              <p className="py-10 text-center text-gray-500">Todavia no hay contenido cargado. Muy pronto vas a encontrar aca todo el contenido del curso.</p>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {modulos.map((m) => (
+                  <div key={m.id} className="rounded-xl border border-gray-100 p-4 shadow-sm">
+                    <h5 className="font-semibold text-gray-800">{m.titulo}</h5>
+                    {m.lecciones.map((l) => (
+                      <p key={l.id} className="mt-1 text-sm text-gray-500">
+                        {l.titulo}
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (

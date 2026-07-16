@@ -62,7 +62,7 @@ const MENUS: MenuItem[] = [
   { Icon: Settings, nombre: 'Edición Productos', href: '/config/productos', mostrar: (r) => r === 'proveedor' },
   { Icon: User, nombre: 'Mi Cuenta', href: '/config/perfil', mostrar: (r) => r !== 'visitante' },
   { Icon: Settings, nombre: 'Configuración', href: '/config/configuracion', mostrar: (r) => r === 'administrador' },
-  { Icon: GraduationCap, nombre: 'Cursos / Ayuda', href: '/acelerador', mostrar: () => true },
+  { Icon: GraduationCap, nombre: 'Cursos / Ayuda', href: '/acelerador', mostrar: (r) => r !== 'visitante' },
 ];
 
 const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar' | 'compartir'; mostrar: (r: Rol) => boolean }[] = [
