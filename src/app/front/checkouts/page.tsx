@@ -25,7 +25,7 @@ export default function FrontChecktPage() {
       setItems(cart);
       const telefono = leerVendedorCarritoFront();
       if (telefono) setTienda(await resolverTiendaPorTelefono(telefono));
-      if (cart.length === 0) window.location.href = '/front/productos';
+      if (cart.length === 0) window.location.href = telefono ? `/front/${telefono}` : '/info';
     })();
   }, []);
 
@@ -86,7 +86,7 @@ export default function FrontChecktPage() {
           <div className="rounded-xl bg-white p-8 text-center shadow-sm">
             <h3 className="text-xl font-bold text-green-700">¡Pedido confirmado!</h3>
             <p className="mt-2 text-sm text-gray-600">Un asesor se pondra en contacto contigo pronto.</p>
-            <a href="/front/productos" className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-2.5 text-sm font-bold text-white">
+            <a href={tienda ? `/front/${tienda.telefono}` : '/info'} className="mt-4 inline-block rounded-full bg-[#0d6efd] px-6 py-2.5 text-sm font-bold text-white">
               Seguir comprando
             </a>
           </div>

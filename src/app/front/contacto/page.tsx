@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FrontHeader } from '@/components/FrontHeader';
 import { leerVendedorCarritoFront } from '@/lib/front';
 
@@ -12,6 +12,11 @@ const NUMERO_SOPORTE = '573148487506';
 
 export default function FrontContactoPage() {
   const [data, setData] = useState({ nombre: '', email: '', sujeto: '', compania: '', mensaje: '' });
+  const [telefono, setTelefono] = useState('');
+
+  useEffect(() => {
+    setTelefono(leerVendedorCarritoFront() || '');
+  }, []);
 
   function enviarData() {
     const url = `https://wa.me/${NUMERO_SOPORTE}?text=${encodeURIComponent(
@@ -22,7 +27,7 @@ export default function FrontContactoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <FrontHeader telefono={leerVendedorCarritoFront() || ''} />
+      <FrontHeader telefono={telefono} />
 
       <div className="mx-auto w-full max-w-[600px] px-3 py-6">
         <h3 className="text-xl font-bold text-gray-800">Contacto</h3>
