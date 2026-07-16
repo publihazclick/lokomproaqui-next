@@ -59,9 +59,9 @@ export function FormCobroModal({ userId, saldoDisponible, retiroExistente, esAdm
   async function cambiarEstado(estado: 1 | 2) {
     if (!retiroExistente) return;
     setGuardando(true);
-    const ok = await cambiarEstadoRetiro(retiroExistente.id, estado);
+    const res = await cambiarEstadoRetiro(retiroExistente.id, estado);
     setGuardando(false);
-    if (!ok) return mostrar('Error de servidor');
+    if (!res.success) return mostrar(res.message || 'Error de servidor');
     mostrar('Actualizado');
     onGuardado();
   }

@@ -105,9 +105,14 @@ export async function crearRetiro(data: NuevoRetiro): Promise<boolean> {
   return !error;
 }
 
-export async function cambiarEstadoRetiro(id: number, estado: 1 | 2): Promise<boolean> {
+export async function cambiarEstadoRetiro(id: number, estado: 1 | 2): Promise<{ success: boolean; message?: string }> {
   const { error } = await supabase.rpc('process_withdrawal_request', { p_request_id: id, p_action: estado === 1 ? 'approve' : 'reject' });
-  return !error;
+  if (error) {
+    if (error.message?.includes('saldo_insuficiente')) return { success: false, message: 'El vendedor ya no tiene saldo suficiente para este retiro' };
+    if (error.message?.includes('retiro_ya_procesado')) return { success: false, message: 'Este retiro ya fue procesado' };
+    return { success: false, message: 'No se pudo actualizar el retiro' };
+  }
+  return { success: true };
 }
 
 export async function eliminarRetiro(id: number): Promise<boolean> {
