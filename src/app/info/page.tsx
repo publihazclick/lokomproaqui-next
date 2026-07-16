@@ -18,10 +18,13 @@ export const metadata = {
 // Bootstrap (row/col-12/col-sm-4/card/etc.) que el HTML original usaba para el layout -- recreadas
 // en el modulo CSS porque el resto del sitio Next.js no carga Bootstrap.
 
-// Pedido explicito del usuario 2026-07-16: cero cache -- ni siquiera revalidate:0 alcanzaba (el
-// CDN de Vercel seguia sirviendo "HIT" con Age creciente, confirmado con curl contra produccion).
-// force-dynamic saca la ruta por completo del Data Cache/ISR: cada visita se renderiza de nuevo.
-export const dynamic = 'force-dynamic';
+// CORREGIDO 2026-07-16: force-dynamic causaba timeouts reales (confirmado con curl contra
+// produccion: la consulta a Supabase a veces tarda 15-20s+, y sin ningun cache CADA visita queda
+// expuesta a esa demora -- varios usuarios reportaron "tardo demasiado en responder"). Con
+// revalidate corto, casi todas las visitas reciben una version ya guardada (rapida, sin esperar a
+// Supabase) mientras se regenera sola en segundo plano -- los cambios del panel admin igual se ven
+// reflejados en segundos, no en 60s como antes, pero sin arriesgar la carga de nadie.
+export const revalidate = 5;
 
 function extraerIdYoutube(input: string | null): string | null {
   if (!input) return null;

@@ -6,9 +6,11 @@ export const metadata = {
   description: 'Conoce a nuestros proveedores verificados y arma dropshipping con ellos.',
 };
 
-// Pedido explicito del usuario 2026-07-16: cero cache (revalidate:0 no alcanzaba, el CDN de
-// Vercel seguia sirviendo HIT). force-dynamic renderiza de nuevo en cada visita, sin cachear nada.
-export const dynamic = 'force-dynamic';
+// CORREGIDO 2026-07-16: force-dynamic causaba timeouts reales (la consulta a Supabase a veces
+// tarda 15-20s+, confirmado con curl contra produccion -- sin ningun cache cada visita quedaba
+// expuesta a esa demora). Con revalidate corto, casi todas las visitas reciben una version ya
+// guardada mientras se regenera sola en segundo plano.
+export const revalidate = 5;
 
 interface Supplier {
   id: string;

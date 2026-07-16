@@ -9,9 +9,10 @@ export const metadata = {
 
 // El admin edita los tutoriales desde /config/cursos sin volver a deployar Next.js -- sin esto,
 // Next.js prerenderiza la pagina UNA vez en el build y un video nuevo no aparece hasta el
-// proximo deploy. Pedido explicito del usuario 2026-07-16: cero cache (revalidate:0 no alcanzaba,
-// el CDN de Vercel seguia sirviendo HIT). force-dynamic renderiza de nuevo en cada visita.
-export const dynamic = 'force-dynamic';
+// proximo deploy. CORREGIDO 2026-07-16: force-dynamic causaba timeouts reales (la consulta a
+// Supabase a veces tarda 15-20s+, confirmado con curl contra produccion). Con revalidate corto,
+// casi todas las visitas reciben una version ya guardada mientras se regenera sola.
+export const revalidate = 5;
 
 // Migrado 1:1 desde src/app/components/tutoriales (Angular) -- ver memoria
 // lokomproaqui-nextjs-migration, Fase 1. Misma tabla `courses` (categorias = parent_id null,
