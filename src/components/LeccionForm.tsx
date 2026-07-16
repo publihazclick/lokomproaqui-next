@@ -329,11 +329,14 @@ export function LeccionForm({
 
           <div>
             <span className="mb-1 block text-sm font-semibold text-gray-700">PASO 3 — Agrega una imagen de portada (opcional, pero recomendado)</span>
-            <p className="mb-2 text-xs text-gray-400">Esta imagen es lo primero que ven las personas antes de pagar el curso. Elige una que se vea clara y llamativa.</p>
+            <p className="mb-2 text-xs text-gray-400">
+              Esta imagen es lo primero que ven las personas antes de pagar el curso. Elige una que se vea clara y llamativa. Tamaño ideal:{' '}
+              <span className="font-semibold text-gray-500">1280 x 720 px</span> (horizontal, como una foto de YouTube) — así se ve completa y sin cortes en celular y computador.
+            </p>
             {thumbnailUrl && (
               <div className="mb-2 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura en Supabase Storage */}
-                <img src={thumbnailUrl} alt="" className="h-16 w-28 rounded bg-gray-100 object-contain" />
+                <img src={thumbnailUrl} alt="" className="aspect-video w-28 rounded bg-gray-100 object-contain" />
                 <button type="button" onClick={() => setThumbnailUrl(null)} className="text-xs font-semibold text-gray-500 underline">
                   cambiar imagen
                 </button>
