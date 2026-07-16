@@ -130,9 +130,10 @@ function AceleradorPageInterna() {
           {dataUser?.rolname === 'mentor' && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">
               <span>Estás viendo esto en modo vista previa (mentor) — así lo ve un usuario con suscripción activa.</span>
-              <Link href="/mvid8x2qz1/panel" className="font-semibold underline">
+              {/* <a> normal a proposito, no next/link -- ver comentario en mvid8x2qz1/panel/page.tsx */}
+              <a href="/mvid8x2qz1/panel" className="font-semibold underline">
                 Volver al panel
-              </Link>
+              </a>
             </div>
           )}
 

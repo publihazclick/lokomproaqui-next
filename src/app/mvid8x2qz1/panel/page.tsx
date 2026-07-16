@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { AceleradorAdmin } from '@/components/AceleradorAdmin';
 
@@ -49,12 +48,17 @@ export default function MentorPanelPage() {
           {nombre && <span className="text-white/70"> — {nombre}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <Link
+          {/* <a> normal a proposito (no next/link): asi el navegador SIEMPRE hace una carga
+              fresca de esta pantalla al volver, sin arrastrar formularios que hayan quedado
+              abiertos/a medio llenar de antes -- bug real reportado 2026-07-16 (ver
+              LeccionForm/AceleradorAdmin: el cache de navegacion de Next.js reusaba la MISMA
+              instancia de React con el estado viejo intacto). */}
+          <a
             href="/acelerador?preview=suscriptor"
             className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10"
           >
             Ver como visitante
-          </Link>
+          </a>
           <button type="button" onClick={salir} className="rounded-full border border-white/30 px-3.5 py-1.5 text-xs font-semibold hover:bg-white/10">
             Salir
           </button>

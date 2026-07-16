@@ -94,33 +94,46 @@ export function AceleradorAdmin() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-extrabold text-gray-900">Acelerador de Ventas — Módulos y Lecciones</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        El precio mensual de la suscripción se edita en Configuraciones. Los videos se suben a un bucket privado: nunca quedan con un link público.
-      </p>
+      <h1 className="text-2xl font-extrabold text-gray-900">📚 Subir mi curso</h1>
 
-      <div className="mt-6 flex gap-2">
-        <input
-          type="text"
-          value={nuevoModuloTitulo}
-          onChange={(e) => setNuevoModuloTitulo(e.target.value)}
-          placeholder="Nombre del módulo nuevo"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#02a0e3]"
-        />
-        <button
-          type="button"
-          onClick={crearModulo}
-          className="shrink-0 rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] px-5 py-2 text-sm font-bold text-white shadow-md"
-        >
-          + Crear módulo
-        </button>
+      <div className="mt-3 rounded-xl bg-blue-50 p-4 text-sm text-gray-700">
+        <p className="font-semibold text-gray-800">👋 No te preocupes, es muy fácil. Solo son 2 pasos:</p>
+        <p className="mt-2">
+          <span className="font-bold">PASO 1.</span> Ponle un nombre a un <span className="font-semibold">Módulo</span> (piensa en un módulo
+          como una carpeta con un tema, por ejemplo: &quot;Cómo vender por WhatsApp&quot;).
+        </p>
+        <p className="mt-1">
+          <span className="font-bold">PASO 2.</span> Adentro de ese módulo, agrega tus <span className="font-semibold">Clases</span> (cada
+          clase es un video que vas a subir).
+        </p>
+      </div>
+
+      <div className="mt-6 rounded-2xl border-2 border-dashed border-[#02a0e3] bg-[#f4faff] p-4">
+        <p className="mb-2 text-sm font-bold text-gray-800">PASO 1 — Crea un módulo nuevo</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={nuevoModuloTitulo}
+            onChange={(e) => setNuevoModuloTitulo(e.target.value)}
+            placeholder="Ej: Módulo 1 - Cómo empezar a vender"
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#02a0e3]"
+          />
+          <button
+            type="button"
+            onClick={crearModulo}
+            className="shrink-0 rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] px-5 py-2 text-sm font-bold text-white shadow-md"
+          >
+            + Crear módulo
+          </button>
+        </div>
       </div>
 
       {loader && <p className="mt-6 text-sm text-gray-500">Cargando...</p>}
 
-      <div className="mt-6 flex flex-col gap-5">
+      <div className="mt-8 flex flex-col gap-6">
         {listModules.map((modulo, i) => (
           <div key={modulo.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">📁 Módulo {i + 1}</p>
             <div className="flex items-center gap-3">
               <div className="flex shrink-0 flex-col gap-1">
                 <button
@@ -153,19 +166,20 @@ export function AceleradorAdmin() {
                 onClick={() => actualizarModulo(modulo)}
                 className="shrink-0 rounded-full bg-[#02a0e3] px-3.5 py-1.5 text-xs font-bold text-white"
               >
-                Guardar
+                Guardar cambios
               </button>
               <button
                 type="button"
                 onClick={() => eliminarModulo(modulo)}
                 className="shrink-0 rounded-full p-1.5 text-red-500 hover:bg-red-50"
-                title="Eliminar módulo"
+                title="Eliminar este módulo"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
 
-            <ul className="mt-4 flex flex-col divide-y divide-gray-100 rounded-lg border border-gray-100">
+            <p className="mb-1 mt-4 text-sm font-bold text-gray-800">PASO 2 — Las clases de este módulo</p>
+            <ul className="flex flex-col divide-y divide-gray-100 rounded-lg border border-gray-100">
               {modulo.lessons.map((leccion, j) => (
                 <li key={leccion.id} className="flex items-center justify-between gap-2 px-3 py-2.5">
                   <span className="flex items-center gap-2 text-sm">
@@ -188,7 +202,7 @@ export function AceleradorAdmin() {
                       </button>
                     </span>
                     {leccion.title}
-                    {!leccion.video_path && <span className="text-xs text-gray-400">(sin video)</span>}
+                    {!leccion.video_path && <span className="text-xs text-gray-400">(todavía sin video)</span>}
                   </span>
                   <span className="flex shrink-0 items-center gap-1">
                     <a
@@ -196,7 +210,7 @@ export function AceleradorAdmin() {
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                      title="Vista previa"
+                      title="Ver cómo queda esta clase"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>
@@ -204,7 +218,7 @@ export function AceleradorAdmin() {
                       type="button"
                       onClick={() => setFormLeccion({ moduloId: modulo.id, leccion })}
                       className="rounded-full p-1.5 text-[#0177a8] hover:bg-[#f4faff]"
-                      title="Editar"
+                      title="Editar esta clase"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -212,29 +226,31 @@ export function AceleradorAdmin() {
                       type="button"
                       onClick={() => eliminarLeccion(leccion)}
                       className="rounded-full p-1.5 text-red-500 hover:bg-red-50"
-                      title="Eliminar"
+                      title="Eliminar esta clase"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </span>
                 </li>
               ))}
-              {modulo.lessons.length === 0 && <li className="px-3 py-2.5 text-sm text-gray-400">Este módulo todavía no tiene lecciones.</li>}
+              {modulo.lessons.length === 0 && (
+                <li className="px-3 py-2.5 text-sm text-gray-400">Este módulo todavía no tiene ninguna clase. Usa el botón de abajo para agregar la primera.</li>
+              )}
             </ul>
 
             <button
               type="button"
               onClick={() => setFormLeccion({ moduloId: modulo.id, leccion: null })}
-              className="mt-3 rounded-full bg-gray-100 px-4 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-200"
+              className="mt-3 rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200"
             >
-              + Agregar lección
+              ➕ Agregar una clase (video) a este módulo
             </button>
           </div>
         ))}
       </div>
 
       {!loader && listModules.length === 0 && (
-        <p className="py-16 text-center text-gray-400">Todavía no hay ningún módulo. Crea el primero arriba para empezar a organizar el curso.</p>
+        <p className="py-16 text-center text-gray-400">Todavía no has creado ningún módulo. Usa el PASO 1 de arriba para crear el primero.</p>
       )}
 
       {formLeccion && (

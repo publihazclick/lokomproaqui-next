@@ -232,7 +232,7 @@ export function LeccionForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return alert('Ponle un título a la lección');
+    if (!title.trim()) return alert('Ponle un título a la clase');
     if (!videoPath) return alert('Sube el video antes de guardar');
     setGuardando(true);
 
@@ -257,16 +257,17 @@ export function LeccionForm({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-gray-900">{leccion?.id ? 'Actualizar' : 'Crear'} Lección</h2>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-lg font-extrabold text-gray-900">{leccion?.id ? '🎬 Editar esta clase' : '🎬 Nueva clase para tu curso'}</h2>
           <button type="button" onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
             <X className="h-5 w-5" />
           </button>
         </div>
+        <p className="mb-4 text-sm text-gray-500">Ve completando cada paso de arriba hacia abajo. Al final tocas &quot;Guardar&quot;.</p>
 
         <form onSubmit={submit} className="flex flex-col gap-4">
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-gray-700">Título</span>
+            <span className="mb-1 block text-sm font-semibold text-gray-700">PASO 1 — ¿Cómo se llama esta clase?</span>
             <input
               type="text"
               value={title}
@@ -276,18 +277,9 @@ export function LeccionForm({
             />
           </label>
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-gray-700">Descripción (opcional)</span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#02a0e3]"
-            />
-          </label>
-
           <div>
-            <span className="mb-1 block text-sm font-semibold text-gray-700">1. Elige el video de esta lección</span>
+            <span className="mb-1 block text-sm font-semibold text-gray-700">PASO 2 — Sube el video de esta clase</span>
+            <p className="mb-2 text-xs text-gray-400">Si el video pesa mucho puede tardar varios minutos en subir. Mientras suba, no cierres ni recargues esta ventana.</p>
 
             {videoPath && (
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-700">
@@ -328,7 +320,7 @@ export function LeccionForm({
 
             {!videoPath && !subiendoVideo && (
               <label className="flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500 hover:border-[#02a0e3] hover:bg-[#f4faff]">
-                Arrastra el video aquí o haz click para elegirlo
+                Toca aquí para elegir el video desde tu celular o computador
                 <span className="text-xs text-gray-400">Videos hasta {LIMITE_MB} MB</span>
                 <input type="file" accept="video/*" className="hidden" onChange={onSelectVideo} />
               </label>
@@ -336,35 +328,48 @@ export function LeccionForm({
           </div>
 
           <div>
-            <span className="mb-1 block text-sm font-semibold text-gray-700">2. Miniatura (opcional)</span>
+            <span className="mb-1 block text-sm font-semibold text-gray-700">PASO 3 — Agrega una imagen de portada (opcional, pero recomendado)</span>
+            <p className="mb-2 text-xs text-gray-400">Esta imagen es lo primero que ven las personas antes de pagar el curso. Elige una que se vea clara y llamativa.</p>
             {thumbnailUrl && (
               <div className="mb-2 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura en Supabase Storage */}
                 <img src={thumbnailUrl} alt="" className="h-16 w-28 rounded object-cover" />
                 <button type="button" onClick={() => setThumbnailUrl(null)} className="text-xs font-semibold text-gray-500 underline">
-                  cambiar
+                  cambiar imagen
                 </button>
               </div>
             )}
-            {subiendoThumb && <p className="mb-2 text-xs text-gray-500">Subiendo miniatura...</p>}
+            {subiendoThumb && <p className="mb-2 text-xs text-gray-500">Subiendo imagen...</p>}
             {!thumbnailUrl && !subiendoThumb && (
               <label className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-300 px-4 py-4 text-center text-sm text-gray-500 hover:border-[#02a0e3] hover:bg-[#f4faff]">
-                Arrastra una imagen o haz click para elegirla
+                Toca aquí para elegir una imagen
                 <input type="file" accept="image/*" className="hidden" onChange={onSelectThumbnail} />
               </label>
             )}
           </div>
 
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-gray-700">PASO 4 — Escribe una descripción cortita (opcional)</span>
+            <p className="mb-2 text-xs text-gray-400">Este texto también lo ven las personas antes de pagar, para animarlas a inscribirse.</p>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Ej: Vas a aprender los 3 pasos para cerrar cualquier venta por WhatsApp"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#02a0e3]"
+            />
+          </label>
+
           <div className="mt-2 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-100">
-              Cerrar
+              Cerrar sin guardar
             </button>
             <button
               type="submit"
               disabled={!puedeGuardar || guardando}
               className="rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] px-5 py-2 text-sm font-bold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {guardando ? 'Guardando...' : leccion?.id ? 'Actualizar' : '3. Guardar lección'}
+              {guardando ? 'Guardando...' : leccion?.id ? '✅ Guardar cambios' : '✅ Guardar esta clase'}
             </button>
           </div>
         </form>
