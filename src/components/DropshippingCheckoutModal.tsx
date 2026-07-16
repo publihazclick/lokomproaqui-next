@@ -305,6 +305,7 @@ export function DropshippingCheckoutModal({
       return;
     }
     if (saldoInsuficiente) {
+      setError(`Necesitas recargar tu billetera para completar este pedido: te falta ${formatCOPMoneda(totalAPagar - saldo)}.`);
       setMostrarRecarga(true);
       return;
     }
@@ -839,6 +840,11 @@ export function DropshippingCheckoutModal({
 
                   {mostrarRecarga && (
                     <div className="mt-2.5 rounded-2xl border p-3.5" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                      {error && (
+                        <p className="mb-2.5 text-[13px] font-semibold" style={{ color: '#dc2626' }}>
+                          {error}
+                        </p>
+                      )}
                       <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: '#6b7280' }}>
                         Recargar Billetera de fletes
                       </p>
@@ -886,7 +892,7 @@ export function DropshippingCheckoutModal({
                       )}
                       <button
                         onClick={() => (error ? reintentarGuia() : confirmarPago())}
-                        disabled={saldoInsuficiente || loader}
+                        disabled={loader}
                         className="rounded-full px-5.5 py-2.5 text-sm font-bold text-white disabled:opacity-55"
                         style={{ background: '#02a0e3', boxShadow: '0 4px 10px rgba(2,160,227,0.3)' }}
                       >

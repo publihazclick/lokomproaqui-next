@@ -15,7 +15,6 @@ import {
 import { useCart, formatCOP } from '@/lib/cartStore';
 import { useToast, Toast } from '@/components/Toast';
 import { type DataUserCompleto } from '@/lib/usuarios';
-import { getBalanceDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
 import { DropshippingCheckoutModal } from '@/components/DropshippingCheckoutModal';
 
 // Port 1:1 desde src/app/components/view-productos (Angular) -- el dialogo real de "ver
@@ -76,7 +75,6 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
   const [idMyProduct, setIdMyProduct] = useState<number | null>(null);
   const [idPrice, setIdPrice] = useState<number | ''>('');
   const [guardando, setGuardando] = useState(false);
-  const [verificandoSaldo, setVerificandoSaldo] = useState(false);
   const [checkoutAbierto, setCheckoutAbierto] = useState<'dropshipping' | 'muestra' | null>(null);
 
   useEffect(() => {
@@ -219,10 +217,12 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     }
   }
 
-  // Equivalente a ViewProductosComponent.abrirDropshipping: valida sesion + color/talla, y el
-  // piso operativo de saldo (SALDO_MINIMO_DROPSHIPPING) ANTES de abrir el checkout -- ese dialogo
-  // hace ademas su propio chequeo contra el costo real del flete una vez cotizado.
-  async function abrirDropshipping(mode: 'dropshipping' | 'muestra') {
+  // Equivalente a ViewProductosComponent.abrirDropshipping, salvo el piso operativo de saldo
+  // (pedido explicito del usuario 2026-07-16): el formulario completo se abre y cotiza el envio
+  // con todas las transportadoras SIEMPRE que haya sesion + color/talla -- el saldo insuficiente
+  // ya no bloquea la apertura, solo se avisa (con mensaje claro) al momento de confirmar el pago,
+  // dentro del propio dialogo (DropshippingCheckoutModal.confirmarPago).
+  function abrirDropshipping(mode: 'dropshipping' | 'muestra') {
     if (!dataUser?.id) {
       mostrar('Debes iniciar sesión para continuar');
       return;
@@ -234,13 +234,6 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     const necesitaTalla = !!seleccionoColor?.tallaSelect[0]?.tal_descripcion;
     if (necesitaTalla && !tallaSel) {
       mostrar('Primero debes seleccionar talla y color');
-      return;
-    }
-    setVerificandoSaldo(true);
-    const saldo = await getBalanceDropshipper(dataUser.id);
-    setVerificandoSaldo(false);
-    if (saldo < SALDO_MINIMO_DROPSHIPPING) {
-      mostrar(`Necesitas mínimo $ ${formatCOP(SALDO_MINIMO_DROPSHIPPING)} en tu billetera para generar pedidos. Recárgala en Mi Cuenta.`);
       return;
     }
     setCheckoutAbierto(mode);
@@ -389,15 +382,13 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
               <div className="mt-3 flex justify-center gap-2 border-t border-gray-100 pt-3">
                 <button
                   onClick={() => abrirDropshipping('dropshipping')}
-                  disabled={verificandoSaldo}
-                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                 >
                   Hacer Dropshipping
                 </button>
                 <button
                   onClick={() => abrirDropshipping('muestra')}
-                  disabled={verificandoSaldo}
-                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                  className="rounded bg-[#02a0e3] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                 >
                   Pedir muestra
                 </button>
