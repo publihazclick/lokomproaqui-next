@@ -6,8 +6,9 @@ export const metadata = {
   description: 'Conoce a nuestros proveedores verificados y arma dropshipping con ellos.',
 };
 
-// Pedido explicito del usuario 2026-07-16: cero demora, siempre datos frescos en cada visita.
-export const revalidate = 0;
+// Pedido explicito del usuario 2026-07-16: cero cache (revalidate:0 no alcanzaba, el CDN de
+// Vercel seguia sirviendo HIT). force-dynamic renderiza de nuevo en cada visita, sin cachear nada.
+export const dynamic = 'force-dynamic';
 
 interface Supplier {
   id: string;

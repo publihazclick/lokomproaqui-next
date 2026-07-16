@@ -18,9 +18,10 @@ export const metadata = {
 // Bootstrap (row/col-12/col-sm-4/card/etc.) que el HTML original usaba para el layout -- recreadas
 // en el modulo CSS porque el resto del sitio Next.js no carga Bootstrap.
 
-// Pedido explicito del usuario 2026-07-16: cero demora para que un cambio hecho en /config/admin
-// se vea reflejado de inmediato para todos, sin esperar la ventana de revalidacion.
-export const revalidate = 0;
+// Pedido explicito del usuario 2026-07-16: cero cache -- ni siquiera revalidate:0 alcanzaba (el
+// CDN de Vercel seguia sirviendo "HIT" con Age creciente, confirmado con curl contra produccion).
+// force-dynamic saca la ruta por completo del Data Cache/ISR: cada visita se renderiza de nuevo.
+export const dynamic = 'force-dynamic';
 
 function extraerIdYoutube(input: string | null): string | null {
   if (!input) return null;
