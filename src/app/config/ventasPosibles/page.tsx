@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Eye, Trash2 } from 'lucide-react';
+import { Search, Eye, Trash2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchVentas, eliminarVenta, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
@@ -76,6 +76,15 @@ export default function VentasPosiblesPage() {
   function buscar() {
     setPage(0);
     cargar(0, busqueda);
+  }
+
+  // Port 1:1 de openUrl (Angular): manda la guia por WhatsApp -- si el pedido todavia no tiene
+  // guia (numeroGuia null, el caso normal para "Pendiente") el mensaje real de Angular tambien
+  // queda con ese hueco vacio, se replica igual.
+  function enviarGuiaWhatsapp(row: VentaRow) {
+    const numero = (row.telefonoCliente || '').replace(/\D/g, '');
+    const url = `https://wa.me/57${numero}?text=${encodeURIComponent(`Hola Cliente ${row.nombreCliente || ''} Este esta es tu guia --> ${row.numeroGuia || ''} <-- `)}`;
+    window.open(url);
   }
 
   function cambiarPagina(nueva: number) {
@@ -184,7 +193,14 @@ export default function VentasPosiblesPage() {
                     </div>
                   </td>
                   <td className="py-3 pr-3 align-top">{row.nombreCliente}</td>
-                  <td className="py-3 pr-3 align-top">{row.telefonoCliente}</td>
+                  <td className="py-3 pr-3 align-top">
+                    <span className="inline-flex items-center gap-1.5">
+                      {row.telefonoCliente}
+                      <button type="button" onClick={() => enviarGuiaWhatsapp(row)} className="text-green-500 hover:text-green-600" title="Enviar por WhatsApp">
+                        <MessageCircle className="h-4 w-4 fill-current" />
+                      </button>
+                    </span>
+                  </td>
                   <td className="py-3 pr-3 align-top">{new Date(row.fecha).toLocaleString('es-CO')}</td>
                   <td className="py-3 pr-3 align-top">{VENTA_ESTADO_LABEL[row.estado]}</td>
                 </tr>
