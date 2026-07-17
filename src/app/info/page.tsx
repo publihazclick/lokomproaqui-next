@@ -60,16 +60,19 @@ export default async function InfoPage() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
-      <section className="rounded-b-[40px] bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 py-16 text-center text-white">
-        <h1 className="text-3xl font-bold leading-tight">Vende Sin Inventario. Gana 40%.</h1>
-        <p className="mt-3 text-lg opacity-90">Nosotros almacenamos, empacamos y enviamos. Tú solo publicas y cobras.</p>
-        <Link href="/singUp" className={`${styles.heroCta} mt-6`}>
-          QUIERO EMPEZAR HOY
+      <section className="bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 pb-16 pt-20 text-center text-white">
+        <h1 className="text-4xl font-bold leading-tight">Vende Online Sin Inventario</h1>
+        <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas hasta 40%.</p>
+        <Link
+          href="/singUp"
+          className="mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#8B5CF6] shadow-2xl transition hover:scale-105"
+        >
+          EMPEZAR GRATIS AHORA
         </Link>
-        <div className={styles.heroProofRow} style={{ marginTop: '24px' }}>
-          <span className={styles.heroProofItem}>✓ Envío 24h</span>
-          <span className={styles.heroProofItem}>✓ Sin Inversión</span>
-          <span className={styles.heroProofItem}>✓ Soporte 24/7</span>
+        <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm font-medium">
+          <span>✓ Envío 24 Horas</span>
+          <span>✓ $0 Inversión</span>
+          <span>✓ Soporte 24/7</span>
         </div>
       </section>
 
