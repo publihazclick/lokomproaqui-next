@@ -67,8 +67,10 @@ export function AceleradorCheckout({
         return;
       }
       const userId = sessionData.session.user.id;
-      const { data: profile } = await supabase.from('profiles').select('full_name, last_name, phone, document_id, city').eq('id', userId).maybeSingle();
-      const { data: userAuth } = await supabase.auth.getUser();
+      const [{ data: profile }, { data: userAuth }] = await Promise.all([
+        supabase.from('profiles').select('full_name, last_name, phone, document_id, city').eq('id', userId).maybeSingle(),
+        supabase.auth.getUser(),
+      ]);
       setDataUser({
         id: userId,
         nombre: profile?.full_name || '',
@@ -183,8 +185,19 @@ export function AceleradorCheckout({
     iniciarPolling(codigo);
   }
 
-  function abrirEpayco(usuario: DataUserPago, codigo: string) {
-    if (!window.ePayco) {
+  // Reintenta hasta ~3s (afterInteractive deberia dejar window.ePayco listo mucho antes, pero en
+  // una conexion muy lenta el script puede seguir en camino justo cuando el usuario hace click) en
+  // vez de fallar de una con el primer click de la sesion.
+  async function esperarEpayco(intentos = 15): Promise<boolean> {
+    for (let i = 0; i < intentos; i++) {
+      if (window.ePayco) return true;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return !!window.ePayco;
+  }
+
+  async function abrirEpayco(usuario: DataUserPago, codigo: string) {
+    if (!(await esperarEpayco()) || !window.ePayco) {
       setProcesandoPago(false);
       alert('Error en el proceso de pago');
       return;
@@ -239,7 +252,12 @@ export function AceleradorCheckout({
 
   return (
     <div ref={containerRef}>
-      <Script src="https://checkout.epayco.co/checkout.js" strategy="lazyOnload" />
+      {/* afterInteractive (no lazyOnload): este widget se puede disparar apenas el usuario llega a
+          la pagina (boton principal o cualquier tarjeta de leccion) -- lazyOnload lo pospone hasta
+          que el navegador queda inactivo despues de cargar TODA la pagina, lo que hacia que el
+          primer click, en cualquiera de esos puntos, se sintiera lento/colgado esperando a que
+          window.ePayco existiera. */}
+      <Script src="https://checkout.epayco.co/checkout.js" strategy="afterInteractive" />
       {!mostrarFormAnon ? (
         <button onClick={onClickPrincipal} disabled={procesandoPago} className={`${buttonClass} disabled:opacity-60`}>
           {procesandoPago ? 'Procesando...' : buttonLabel}
