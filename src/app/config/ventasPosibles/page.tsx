@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Eye, Trash2, MessageCircle } from 'lucide-react';
+import { Search, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchVentas, eliminarVenta, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
@@ -26,6 +26,16 @@ import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 // - Sin colores de fondo por estado en las filas -- las clases .colorEntrante/.colorCompletado/etc
 //   existen en el .scss del componente pero NO se ven aplicadas en la captura real (fondo plano).
 const LIMIT = 10;
+
+// Icono real de WhatsApp (no existe en lucide-react, marcas registradas no se incluyen ahi) --
+// pedido explicito del usuario: que se vea como el logo real, no un globo de chat generico.
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.34.663 4.523 1.812 6.377L4 29l7.823-1.771A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3Zm6.997 16.943c-.297.836-1.47 1.53-2.41 1.73-.64.135-1.475.243-4.29-.92-3.6-1.49-5.916-5.14-6.096-5.38-.173-.24-1.456-1.938-1.456-3.696 0-1.759.917-2.622 1.243-2.983.297-.328.65-.41.868-.41.218 0 .436.002.626.011.2.01.47-.076.735.561.297.716.998 2.474 1.086 2.653.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.378.469-.54.63-.18.18-.368.375-.158.735.21.36.933 1.542 2.003 2.497 1.376 1.228 2.535 1.608 2.895 1.788.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.088.986 2.448 1.166.36.18.6.27.69.42.09.15.09.87-.208 1.706Z" />
+    </svg>
+  );
+}
 
 export default function VentasPosiblesPage() {
   const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
@@ -138,11 +148,11 @@ export default function VentasPosiblesPage() {
       </div>
 
       <div className="mt-2 flex flex-col items-start gap-2">
-        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-2.5 text-white disabled:opacity-60">
           <Search className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
+          <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0066FF] p-2.5 text-white disabled:opacity-60">
             <Eye className="h-4 w-4" />
           </button>
           <button
@@ -150,7 +160,7 @@ export default function VentasPosiblesPage() {
             onClick={eliminarSeleccionadas}
             disabled={eliminando || checks.size === 0}
             title="Erase"
-            className="rounded bg-[#dc3545] p-2.5 text-white disabled:opacity-60"
+            className="rounded bg-[#FF3B30] p-2.5 text-white disabled:opacity-60"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -180,15 +190,15 @@ export default function VentasPosiblesPage() {
                   </td>
                   <td className="py-3 pr-3 align-top">
                     {row.estado === 0 && (
-                      <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1 text-xs font-medium text-[#ffc107]">Debes Autorizar Despacho</div>
+                      <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1 text-sm font-bold text-[#FFA800]">Debes Autorizar Despacho</div>
                     )}
                     {row.estado === 1 && (
-                      <a href="/config/ventas" className="mb-1 inline-block cursor-pointer rounded bg-[#dfdfdf] px-2 py-1 text-xs font-medium text-[#ffc107]">
+                      <a href="/config/ventas" className="mb-1 inline-block cursor-pointer rounded bg-[#dfdfdf] px-2 py-1 text-sm font-bold text-[#FFA800]">
                         Venta Generada Esperando guia
                       </a>
                     )}
                     <div>
-                      <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0d6efd] p-2 text-white">
+                      <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0066FF] p-2 text-white">
                         <Eye className="h-4 w-4" />
                       </button>
                     </div>
@@ -197,8 +207,8 @@ export default function VentasPosiblesPage() {
                   <td className="py-3 pr-3 align-top">
                     <span className="inline-flex items-center gap-1.5">
                       {row.telefonoCliente}
-                      <button type="button" onClick={() => enviarGuiaWhatsapp(row)} className="text-green-500 hover:text-green-600" title="Enviar por WhatsApp">
-                        <MessageCircle className="h-4 w-4 fill-current" />
+                      <button type="button" onClick={() => enviarGuiaWhatsapp(row)} className="text-[#25D366] hover:text-[#1EBE57]" title="Enviar por WhatsApp">
+                        <WhatsAppIcon className="h-5 w-5" />
                       </button>
                     </span>
                   </td>
