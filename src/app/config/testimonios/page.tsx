@@ -73,19 +73,21 @@ export default function TestimoniosPage() {
         <h4 className="text-lg font-bold">Testimonios</h4>
       </div>
       <div className="rounded-b-xl border border-t-0 border-gray-100 p-4 shadow-sm">
-        <div className="flex gap-2">
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && cargar(0, true, busqueda)}
-            placeholder="Buscar Testimonios"
-            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={() => cargar(0, true, busqueda)} disabled={cargando} className="rounded bg-[#0d6efd] px-3 py-2 text-sm text-white disabled:opacity-60">
-            Buscar
-          </button>
-          <button onClick={() => setModalAbierto('crear')} className="flex items-center gap-1 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex min-w-0 flex-1 gap-2">
+            <input
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && cargar(0, true, busqueda)}
+              placeholder="Buscar Testimonios"
+              className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button onClick={() => cargar(0, true, busqueda)} disabled={cargando} className="shrink-0 rounded bg-[#0d6efd] px-3 py-2 text-sm text-white disabled:opacity-60">
+              Buscar
+            </button>
+          </div>
+          <button onClick={() => setModalAbierto('crear')} className="flex shrink-0 items-center justify-center gap-1 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white">
             <Plus className="h-4 w-4" /> Nuevo
           </button>
         </div>

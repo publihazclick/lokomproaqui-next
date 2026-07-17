@@ -88,18 +88,24 @@ export default function FrontProductosPage({ params }: { params: Promise<{ slug?
       <FrontHeader telefono={tienda!.telefono || telefono!} />
 
       <div className="mx-auto w-full max-w-[1200px] px-3 py-6">
-        <div className="flex gap-2">
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscar()}
-            placeholder="Buscar Productos"
-            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={buscar} className="rounded bg-[#0d6efd] px-3 py-2 text-sm text-white">
-            Buscar
-          </button>
-          <select value={orden} onChange={(e) => setOrden(e.target.value as typeof orden)} className="rounded border border-gray-300 px-2 py-2 text-sm">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex min-w-0 gap-2">
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && buscar()}
+              placeholder="Buscar Productos"
+              className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button onClick={buscar} className="shrink-0 rounded bg-[#0d6efd] px-3 py-2 text-sm text-white">
+              Buscar
+            </button>
+          </div>
+          <select
+            value={orden}
+            onChange={(e) => setOrden(e.target.value as typeof orden)}
+            className="w-full shrink-0 rounded border border-gray-300 px-2 py-2 text-sm sm:w-auto"
+          >
             <option value="fecha">Ordenar Fecha</option>
             <option value="nombre">Ordenar nombre</option>
             <option value="menor_a_mayor">Menor a Mayor</option>
