@@ -189,12 +189,12 @@ export default function VentasPage() {
       </div>
 
       <div className="mt-2 flex flex-wrap items-start gap-2">
-        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
-          <Search className="h-4 w-4" />
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+          <Search className="h-5 w-5" />
         </button>
         {esAdmin && (
-          <button type="button" onClick={() => setMostrarPuntos(true)} title="Dar puntos" className="rounded bg-[#0d6efd] p-2.5 text-white">
-            <Gift className="h-4 w-4" />
+          <button type="button" onClick={() => setMostrarPuntos(true)} title="Dar puntos" className="rounded bg-[#0066FF] p-3 text-white">
+            <Gift className="h-5 w-5" />
           </button>
         )}
       </div>
@@ -234,23 +234,23 @@ export default function VentasPage() {
       </div>
 
       <div className="mt-3">
-        <button type="button" onClick={borrarFiltros} className="rounded bg-[#dc3545] px-4 py-2 text-sm font-medium text-white">
+        <button type="button" onClick={borrarFiltros} className="rounded bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white">
           borrar Filtros
         </button>
       </div>
 
       <div className="mt-3 flex items-start gap-2">
-        <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
-          <Eye className="h-4 w-4" />
+        <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+          <Eye className="h-5 w-5" />
         </button>
         <button
           type="button"
           onClick={eliminarSeleccionadas}
           disabled={eliminando || seleccionadas.size === 0}
           title="Erase"
-          className="rounded bg-[#dc3545] p-2.5 text-white disabled:opacity-60"
+          className="rounded bg-[#FF3B30] p-3 text-white disabled:opacity-60"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-5 w-5" />
         </button>
       </div>
 
@@ -283,11 +283,11 @@ export default function VentasPage() {
                     {row.estado !== 5 && (
                       <>
                         {!row.numeroGuia && (
-                          <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1 text-xs font-medium text-[#ffc107]">Debes generar la guia</div>
+                          <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1 text-sm font-bold text-[#FFA800]">Debes generar la guia</div>
                         )}
                         <div>
-                          <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0d6efd] p-2 text-white">
-                            <Eye className="h-4 w-4" />
+                          <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0066FF] p-2.5 text-white">
+                            <Eye className="h-5 w-5" />
                           </button>
                         </div>
                         {row.numeroGuia && (
@@ -340,7 +340,7 @@ export default function VentasPage() {
 
       {!cargando && notEmptyPost && ventas.length > 0 && (
         <div className="mt-4 text-center">
-          <button onClick={() => cargar(page + 1, false)} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
+          <button onClick={() => cargar(page + 1, false)} disabled={cargandoMas} className="text-sm font-medium text-[#0066FF] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : 'Ver más'}
           </button>
         </div>

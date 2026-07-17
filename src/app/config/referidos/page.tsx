@@ -129,7 +129,7 @@ export default function ReferidosPage() {
             type="button"
             onClick={() => cambiarTab(idx)}
             className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-semibold ${
-              activeTab === idx ? 'border-b-2 border-[#0d6efd] text-[#0d6efd]' : 'text-gray-500'
+              activeTab === idx ? 'border-b-2 border-[#0066FF] text-[#0066FF]' : 'text-gray-500'
             }`}
           >
             Referidos {label}
@@ -149,8 +149,8 @@ export default function ReferidosPage() {
       </div>
 
       <div className="mt-2">
-        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
-          <Search className="h-4 w-4" />
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+          <Search className="h-5 w-5" />
         </button>
       </div>
 
@@ -191,7 +191,7 @@ export default function ReferidosPage() {
 
       {!cargando && tabActual.notEmptyPost && tabActual.dataRows.length > 0 && (
         <div className="mt-4 text-center">
-          <button onClick={verMas} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
+          <button onClick={verMas} disabled={cargandoMas} className="text-sm font-medium text-[#0066FF] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : 'Ver más'}
           </button>
         </div>

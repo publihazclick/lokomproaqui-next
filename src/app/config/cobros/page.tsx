@@ -135,11 +135,11 @@ export default function CobrosPage() {
       </div>
 
       <div className="mt-2 flex items-start gap-2">
-        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
-          <Search className="h-4 w-4" />
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+          <Search className="h-5 w-5" />
         </button>
-        <button type="button" onClick={() => setModalAbierto('crear')} title="Solicitar retiro" className="rounded bg-[#0d6efd] p-2.5 text-white">
-          <Plus className="h-4 w-4" />
+        <button type="button" onClick={() => setModalAbierto('crear')} title="Solicitar retiro" className="rounded bg-[#0066FF] p-3 text-white">
+          <Plus className="h-5 w-5" />
         </button>
       </div>
 
@@ -168,12 +168,12 @@ export default function CobrosPage() {
                 <tr key={r.id} className="border-b border-gray-100">
                   <td className="py-3 pr-3 align-top">
                     <div className="flex gap-1">
-                      <button type="button" onClick={() => setModalAbierto(r)} className="rounded bg-[#0d6efd] p-2 text-white">
-                        <Eye className="h-4 w-4" />
+                      <button type="button" onClick={() => setModalAbierto(r)} className="rounded bg-[#0066FF] p-2.5 text-white">
+                        <Eye className="h-5 w-5" />
                       </button>
                       {esAdmin && (
-                        <button type="button" onClick={() => eliminar(r.id)} className="rounded bg-[#dc3545] p-2 text-white">
-                          <Trash2 className="h-4 w-4" />
+                        <button type="button" onClick={() => eliminar(r.id)} className="rounded bg-[#FF3B30] p-2.5 text-white">
+                          <Trash2 className="h-5 w-5" />
                         </button>
                       )}
                     </div>
@@ -182,7 +182,7 @@ export default function CobrosPage() {
                   <td className="py-3 pr-3 align-top">{r.metodo}</td>
                   <td className="py-3 pr-3 align-top"></td>
                   <td className="py-3 pr-3 align-top">
-                    <span className={r.estado === 0 ? 'text-[#dc3545]' : r.estado === 1 ? 'text-[#0d6efd]' : 'text-gray-500'}>{r.estadoLabel}</span>
+                    <span className={r.estado === 0 ? 'text-[#FF3B30]' : r.estado === 1 ? 'text-[#0066FF]' : 'text-gray-500'}>{r.estadoLabel}</span>
                   </td>
                   <td className="py-3 pr-3 align-top">{fechaMedium(r.fecha)}</td>
                   <td className="py-3 pr-3 align-top"></td>
@@ -200,7 +200,7 @@ export default function CobrosPage() {
 
       {!cargando && notEmptyPost && retiros.length > 0 && (
         <div className="mt-4 text-center">
-          <button onClick={() => cargar(dataUser.id, esAdmin, page + 1, false, busqueda)} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
+          <button onClick={() => cargar(dataUser.id, esAdmin, page + 1, false, busqueda)} disabled={cargandoMas} className="text-sm font-medium text-[#0066FF] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : 'Ver más'}
           </button>
         </div>
