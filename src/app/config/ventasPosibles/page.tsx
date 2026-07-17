@@ -141,7 +141,7 @@ export default function VentasPosiblesPage() {
         <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
           <Search className="h-4 w-4" />
         </button>
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
           <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
             <Eye className="h-4 w-4" />
           </button>
