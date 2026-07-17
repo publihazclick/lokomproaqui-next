@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchReferidosNivel, fetchIdsReferidosNivel, type ReferidoRow } from '@/lib/referidos';
+import { fechaMedium } from '@/lib/format';
 
 // Port 1:1 (diseno) de ReferidosComponent (Angular, "Referidos"). Verificado el mismo estandar de
 // fidelidad que Ventas Posibles/Ventas/Cobros (cero margen de error, tutoriales grabados con esta
@@ -177,7 +178,7 @@ export default function ReferidosPage() {
                   <td className="py-3 pr-3 align-top"></td>
                   <td className="py-3 pr-3 align-top">{row.telefono}</td>
                   <td className="py-3 pr-3 align-top">{row.nivelVendedor}</td>
-                  <td className="py-3 pr-3 align-top">{new Date(row.fechaRegistro).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top">{fechaMedium(row.fechaRegistro)}</td>
                   <td className="py-3 pr-3 align-top">Activo</td>
                 </tr>
               ))}

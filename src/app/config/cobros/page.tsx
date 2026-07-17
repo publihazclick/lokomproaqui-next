@@ -5,6 +5,7 @@ import { Search, Plus, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchRetiros, fetchSaldoDisponible, fetchTotalPagado, eliminarRetiro, type RetiroRow } from '@/lib/cobros';
+import { fechaMedium } from '@/lib/format';
 import { FormCobroModal } from '@/components/FormCobroModal';
 import { useToast, Toast } from '@/components/Toast';
 
@@ -183,12 +184,12 @@ export default function CobrosPage() {
                   <td className="py-3 pr-3 align-top">
                     <span className={r.estado === 0 ? 'text-[#dc3545]' : r.estado === 1 ? 'text-[#0d6efd]' : 'text-gray-500'}>{r.estadoLabel}</span>
                   </td>
-                  <td className="py-3 pr-3 align-top">{new Date(r.fecha).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top">{fechaMedium(r.fecha)}</td>
                   <td className="py-3 pr-3 align-top"></td>
                   <td className="py-3 pr-3 align-top">{r.cedula}</td>
                   <td className="py-3 pr-3 align-top">{r.celular}</td>
                   <td className="py-3 pr-3 align-top">{r.cuenta}</td>
-                  <td className="py-3 pr-3 align-top">{r.fechaPago ? new Date(r.fechaPago).toLocaleString('es-CO') : ''}</td>
+                  <td className="py-3 pr-3 align-top">{fechaMedium(r.fechaPago)}</td>
                 </tr>
               ))}
             </tbody>

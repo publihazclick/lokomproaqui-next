@@ -5,6 +5,7 @@ import { Search, Eye, Trash2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchVentas, eliminarVenta, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
+import { fechaMedium } from '@/lib/format';
 import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 
 // Port 1:1 (diseno) de VentasClienteComponent (Angular, "Ventas Posibles" -- "Autorizar Despacho"
@@ -201,7 +202,7 @@ export default function VentasPosiblesPage() {
                       </button>
                     </span>
                   </td>
-                  <td className="py-3 pr-3 align-top">{new Date(row.fecha).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top">{fechaMedium(row.fecha)}</td>
                   <td className="py-3 pr-3 align-top">{VENTA_ESTADO_LABEL[row.estado]}</td>
                 </tr>
               ))}

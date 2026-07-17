@@ -5,6 +5,7 @@ import { Search, RefreshCw, MessageCircle, Trash2, Gift, Eye } from 'lucide-reac
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, fetchVendedores, type DataUserCompleto, type VendedorBasico } from '@/lib/usuarios';
 import { fetchVentas, refreshTracking, eliminarVenta, VENTA_ESTADOS, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
+import { fechaMedium } from '@/lib/format';
 import { useToast, Toast } from '@/components/Toast';
 import { FormPuntosModal } from '@/components/FormPuntosModal';
 import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
@@ -314,7 +315,7 @@ export default function VentasPage() {
                     <p>{row.vendedorCiudad}</p>
                   </td>
                   <td className="py-3 pr-3 align-top">{row.nombreCliente}</td>
-                  <td className="py-3 pr-3 align-top">{new Date(row.fecha).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top">{fechaMedium(row.fecha)}</td>
                   <td className="py-3 pr-3 align-top">{VENTA_ESTADO_LABEL[row.estado]}</td>
                   <td className="py-3 pr-3 align-top">
                     {!row.numeroGuia && <span>Sin guía aún</span>}
@@ -323,7 +324,7 @@ export default function VentasPage() {
                       <>
                         {row.trackingStatus}
                         <br />
-                        <span className="text-xs text-gray-500">{row.trackingSyncedAt ? new Date(row.trackingSyncedAt).toLocaleString('es-CO') : ''}</span>
+                        <span className="text-xs text-gray-500">{fechaMedium(row.trackingSyncedAt)}</span>
                       </>
                     )}
                   </td>
