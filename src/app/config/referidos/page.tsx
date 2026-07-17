@@ -5,15 +5,19 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchReferidosNivel, fetchIdsReferidosNivel, type ReferidoRow } from '@/lib/referidos';
 
-// Port desde src/app/dashboard-config/components/referidos (Angular, ReferidosComponent) --
-// "Mis Referidos", arbol de 5 niveles de downline.
+// Port 1:1 (diseno) de ReferidosComponent (Angular, "Referidos"). Verificado el mismo estandar de
+// fidelidad que Ventas Posibles/Ventas/Cobros (cero margen de error, tutoriales grabados con esta
+// interfaz). Header real de Angular: ['Nombre','lider','E-mail','Telefonos','Nivel','Fecha
+// Registro','Activo'] -- se replica exacto, incluida la columna "E-mail" (siempre vacia, el email
+// vive en auth.users y nunca fue accesible desde este componente en Angular tampoco) y la columna
+// "Activo" (el codigo original tiene `pro_estado == 0 ? 'Activo' : 'Activo'` -- ambas ramas del
+// ternario devuelven lo mismo, texto plano SIEMPRE "Activo", nunca "Inactivo" ni con color).
 //
-// Corrige un bug real de exposicion de datos (ver src/lib/referidos.ts para el detalle completo):
-// UsuariosService.get() nunca soporto el filtro por referente, asi que HOY en produccion cualquier
-// usuario logueado ve la lista COMPLETA de usuarios de la plataforma en las 5 pestañas, no solo su
-// propio equipo. Se corrige aca en vez de portarse tal cual, mismo criterio que /config/perfil.
-
-const TABS = ['Primer nivel', 'Segundo nivel', 'Tercer nivel', 'Cuarto nivel', 'Quinto nivel'];
+// Se mantiene (no se revierte) el arreglo real de seguridad ya hecho en una sesion anterior: en
+// Angular, buscar() reemplaza el query completo y pierde el filtro por referente -- cualquier
+// usuario logueado veia la lista COMPLETA de la plataforma al buscar. Eso es un bug de datos, no
+// de diseno, se sigue corrigiendo aca (ver src/lib/referidos.ts).
+const TABS = ['primer nivel', 'segundo nivel', 'tercer nivel', 'cuarto nivel', 'quinto nivel'];
 const LIMIT = 20;
 
 interface TabState {
@@ -113,85 +117,84 @@ export default function ReferidosPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1140px] px-3 py-6">
-      <div className="rounded-t-xl bg-[#0d6efd] px-4 py-3 text-white">
-        <h4 className="text-lg font-bold">Referidos</h4>
+      <div className="border-b border-gray-200 pb-3">
+        <h4 className="text-lg font-bold text-gray-900">Referidos</h4>
       </div>
-      <div className="rounded-b-xl border border-t-0 border-gray-100 p-4 shadow-sm">
-        <div className="flex gap-1 overflow-x-auto border-b border-gray-200">
-          {TABS.map((label, idx) => (
-            <button
-              key={label}
-              onClick={() => cambiarTab(idx)}
-              className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-semibold ${
-                activeTab === idx ? 'border-b-2 border-[#0d6efd] text-[#0d6efd]' : 'text-gray-500'
-              }`}
-            >
-              Referidos {label}
-            </button>
-          ))}
-        </div>
 
-        <div className="mt-4 flex gap-2">
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscar()}
-            placeholder="Buscar Referidos"
-            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={buscar} disabled={cargando} className="flex items-center gap-1 rounded bg-[#0d6efd] px-3 py-2 text-sm text-white disabled:opacity-60">
-            <Search className="h-4 w-4" />
+      <div className="mt-4 flex gap-1 overflow-x-auto border-b border-gray-200">
+        {TABS.map((label, idx) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => cambiarTab(idx)}
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-semibold ${
+              activeTab === idx ? 'border-b-2 border-[#0d6efd] text-[#0d6efd]' : 'text-gray-500'
+            }`}
+          >
+            Referidos {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && buscar()}
+          placeholder="Buscar Referidos"
+          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="mt-2">
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
+          <Search className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        {cargando ? (
+          <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
+        ) : (
+          <table className="w-full min-w-[820px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-sm font-bold text-gray-900">
+                <th className="py-2 pr-3">Nombre</th>
+                <th className="py-2 pr-3">lider</th>
+                <th className="py-2 pr-3">E-mail</th>
+                <th className="py-2 pr-3">Telefonos</th>
+                <th className="py-2 pr-3">Nivel</th>
+                <th className="py-2 pr-3">Fecha Registro</th>
+                <th className="py-2 pr-3">Activo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabActual.dataRows.map((row) => (
+                <tr key={row.id} className="border-b border-gray-100">
+                  <td className="py-3 pr-3 align-top">{row.nombre}</td>
+                  <td className="py-3 pr-3 align-top">{row.liderNombre}</td>
+                  <td className="py-3 pr-3 align-top"></td>
+                  <td className="py-3 pr-3 align-top">{row.telefono}</td>
+                  <td className="py-3 pr-3 align-top">{row.nivelVendedor}</td>
+                  <td className="py-3 pr-3 align-top">{new Date(row.fechaRegistro).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top">Activo</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {!cargando && tabActual.dataRows.length === 0 && <p className="py-10 text-center text-gray-500">No hay referidos en este nivel.</p>}
+      </div>
+
+      {!cargando && tabActual.notEmptyPost && tabActual.dataRows.length > 0 && (
+        <div className="mt-4 text-center">
+          <button onClick={verMas} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
+            {cargandoMas ? 'Cargando…' : 'Ver más'}
           </button>
         </div>
-
-        <div className="mt-4 overflow-x-auto">
-          {cargando ? (
-            <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
-          ) : (
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
-                  <th className="py-2 pr-3">Nombre</th>
-                  <th className="py-2 pr-3">Líder</th>
-                  <th className="py-2 pr-3">Teléfono</th>
-                  <th className="py-2 pr-3">Ciudad</th>
-                  <th className="py-2 pr-3">Categoría</th>
-                  <th className="py-2 pr-3">Fecha Registro</th>
-                  <th className="py-2 pr-3">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tabActual.dataRows.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-100">
-                    <td className="py-2 pr-3">{row.nombre}</td>
-                    <td className="py-2 pr-3">{row.liderNombre || '—'}</td>
-                    <td className="py-2 pr-3">{row.telefono || '—'}</td>
-                    <td className="py-2 pr-3">{row.ciudad || '—'}</td>
-                    <td className="py-2 pr-3">{row.nivelVendedor || '—'}</td>
-                    <td className="py-2 pr-3">{new Date(row.fechaRegistro).toLocaleDateString('es-CO')}</td>
-                    <td className="py-2 pr-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {row.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {!cargando && tabActual.dataRows.length === 0 && <p className="py-10 text-center text-gray-500">No hay referidos en este nivel.</p>}
-        </div>
-
-        {!cargando && tabActual.notEmptyPost && tabActual.dataRows.length > 0 && (
-          <div className="mt-4 text-center">
-            <button onClick={verMas} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
-              {cargandoMas ? 'Cargando…' : 'Ver más'}
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
