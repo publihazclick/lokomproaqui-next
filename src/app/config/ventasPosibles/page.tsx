@@ -29,7 +29,7 @@ export default function VentasPosiblesPage() {
 
   const [vendedores, setVendedores] = useState<VendedorBasico[]>([]);
   const [vendedorFiltro, setVendedorFiltro] = useState('');
-  const [estadoFiltro, setEstadoFiltro] = useState('0');
+  const [estadoFiltro, setEstadoFiltro] = useState('');
   const [fechaInicio, setFechaInicio] = useState(haceDias(30));
   const [fechaFinal, setFechaFinal] = useState(haceDias(0));
   const [busqueda, setBusqueda] = useState('');
@@ -88,7 +88,7 @@ export default function VentasPosiblesPage() {
 
   function borrarFiltros() {
     setVendedorFiltro('');
-    setEstadoFiltro('0');
+    setEstadoFiltro('');
     setFechaInicio(haceDias(30));
     setFechaFinal(haceDias(0));
     setBusqueda('');
@@ -185,6 +185,7 @@ export default function VentasPosiblesPage() {
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Estado de la venta</label>
           <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+            <option value=""></option>
             {VENTA_ESTADOS.filter((op) => op.value !== 'todos').map((op) => (
               <option key={op.value} value={op.value}>
                 {op.label}
