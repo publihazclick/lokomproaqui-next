@@ -481,43 +481,6 @@
   overflow: hidden;
 }
 
-.heroHead {
-  position: relative;
-  z-index: 1;
-  max-width: 720px;
-  margin: 0 auto 32px;
-  text-align: center;
-  color: #fff;
-}
-
-.heroTitle {
-  margin: 0;
-  font-weight: 800;
-  font-size: 2rem;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-}
-
-.heroSubtitle {
-  margin: 14px auto 0;
-  max-width: 520px;
-  font-size: 1.05rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.92);
-  line-height: 1.5;
-}
-
-.heroFooter {
-  position: relative;
-  z-index: 1;
-  max-width: 720px;
-  margin: 40px auto 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
 .heroCta {
   position: relative;
   display: inline-block;
@@ -579,14 +542,6 @@
 }
 
 @media (max-width: 768px) {
-  .heroTitle {
-    font-size: 1.5rem;
-  }
-
-  .heroSubtitle {
-    font-size: 0.95rem;
-  }
-
   .heroCta {
     width: 100%;
     box-sizing: border-box;
@@ -632,15 +587,15 @@
 }
 
 .cursoAdBadge {
-  position: relative;
-  display: inline-block;
-  margin: 0 auto 18px;
-  padding: 7px 16px;
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  padding: 6px 14px;
   border-radius: 30px;
   background: #fff;
   color: #ec4899;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   z-index: 2;

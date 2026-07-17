@@ -60,6 +60,19 @@ export default async function InfoPage() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
+      <section className="rounded-b-[40px] bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 py-16 text-center text-white">
+        <h1 className="text-3xl font-bold leading-tight">Vende Sin Inventario. Gana 40%.</h1>
+        <p className="mt-3 text-lg opacity-90">Nosotros almacenamos, empacamos y enviamos. Tú solo publicas y cobras.</p>
+        <Link href="/singUp" className={`${styles.heroCta} mt-6`}>
+          QUIERO EMPEZAR HOY
+        </Link>
+        <div className={styles.heroProofRow} style={{ marginTop: '24px' }}>
+          <span className={styles.heroProofItem}>✓ Envío 24h</span>
+          <span className={styles.heroProofItem}>✓ Sin Inversión</span>
+          <span className={styles.heroProofItem}>✓ Soporte 24/7</span>
+        </div>
+      </section>
+
       <InfoMenuPills />
 
       <a
@@ -81,13 +94,7 @@ export default async function InfoPage() {
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor1}`} />
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor2}`} />
 
-              <div className={styles.heroHead}>
-                <span className={styles.cursoAdBadge}>🔥 +2,450 Despachos este mes</span>
-                <h1 className={styles.heroTitle}>VENDE SIN INVENTARIO NI RIESGO</h1>
-                <p className={styles.heroSubtitle}>
-                  Nosotros guardamos, empacamos y despachamos. Tú solo vendes y ganas <strong>40%</strong>.
-                </p>
-              </div>
+              <span className={styles.cursoAdBadge}>🔥 +2,450 Despachos este mes</span>
 
               <div className={styles.cursoAdInner}>
                 <div className={styles.cursoAdVideos}>
@@ -122,17 +129,6 @@ export default async function InfoPage() {
                       Suscribirme
                     </Link>
                   </div>
-                </div>
-              </div>
-
-              <div className={styles.heroFooter}>
-                <Link href="/singUp" className={styles.heroCta}>
-                  QUIERO EMPEZAR GRATIS
-                </Link>
-                <div className={styles.heroProofRow}>
-                  <span className={styles.heroProofItem}>🚚 Envío 24h</span>
-                  <span className={styles.heroProofItem}>💸 Sin Inversión</span>
-                  <span className={styles.heroProofItem}>💬 Soporte 24/7</span>
                 </div>
               </div>
             </section>

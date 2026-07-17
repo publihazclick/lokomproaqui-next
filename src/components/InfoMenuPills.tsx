@@ -19,9 +19,9 @@ const VIDEOS: Record<string, string> = {
 };
 
 const CARD_CLASS =
-  'flex flex-col items-center gap-2 rounded-[20px] bg-white p-5 text-center shadow-[0_4px_20px_rgba(99,102,241,0.12)] transition hover:scale-[1.02] hover:shadow-[0_8px_28px_rgba(139,92,246,0.2)]';
+  'flex flex-col items-center gap-2.5 rounded-[24px] bg-white p-6 text-center shadow-lg shadow-indigo-500/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-500/20';
 const EMOJI_CLASS = 'text-3xl';
-const LABEL_CLASS = 'text-sm font-bold text-gray-800';
+const LABEL_CLASS = 'text-base font-bold text-gray-800';
 
 export function InfoMenuPills() {
   const [videoAbierto, setVideoAbierto] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function InfoMenuPills() {
   return (
     <>
       <section className="mx-auto w-full max-w-[1200px] px-4 pt-7">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-5">
           <Link href="/acelerador" className={CARD_CLASS}>
             <span className={EMOJI_CLASS}>🚀</span>
             <span className={LABEL_CLASS}>Vende 2x Más Rápido</span>
