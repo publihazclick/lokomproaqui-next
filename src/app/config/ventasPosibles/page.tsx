@@ -148,21 +148,21 @@ export default function VentasPosiblesPage() {
       </div>
 
       <div className="mt-2 flex flex-col items-start gap-2">
-        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-2.5 text-white disabled:opacity-60">
-          <Search className="h-4 w-4" />
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+          <Search className="h-5 w-5" />
         </button>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0066FF] p-2.5 text-white disabled:opacity-60">
-            <Eye className="h-4 w-4" />
+          <button type="button" onClick={buscar} disabled={cargando} title="Refresh" className="rounded bg-[#0066FF] p-3 text-white disabled:opacity-60">
+            <Eye className="h-5 w-5" />
           </button>
           <button
             type="button"
             onClick={eliminarSeleccionadas}
             disabled={eliminando || checks.size === 0}
             title="Erase"
-            className="rounded bg-[#FF3B30] p-2.5 text-white disabled:opacity-60"
+            className="rounded bg-[#FF3B30] p-3 text-white disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -198,8 +198,8 @@ export default function VentasPosiblesPage() {
                       </a>
                     )}
                     <div>
-                      <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0066FF] p-2 text-white">
-                        <Eye className="h-4 w-4" />
+                      <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0066FF] p-2.5 text-white">
+                        <Eye className="h-5 w-5" />
                       </button>
                     </div>
                   </td>
@@ -208,7 +208,7 @@ export default function VentasPosiblesPage() {
                     <span className="inline-flex items-center gap-1.5">
                       {row.telefonoCliente}
                       <button type="button" onClick={() => enviarGuiaWhatsapp(row)} className="text-[#25D366] hover:text-[#1EBE57]" title="Enviar por WhatsApp">
-                        <WhatsAppIcon className="h-5 w-5" />
+                        <WhatsAppIcon className="h-6 w-6" />
                       </button>
                     </span>
                   </td>
