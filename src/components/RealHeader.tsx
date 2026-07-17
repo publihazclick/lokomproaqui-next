@@ -147,23 +147,33 @@ export function RealHeader() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-[#02a0e3] shadow-md">
-        <div className="flex h-[74px] items-center gap-2 px-3 sm:px-4">
+        <div className="mx-auto flex h-[72px] max-w-[1200px] items-center gap-2 px-3 sm:h-24 sm:px-4">
           <button type="button" onClick={() => setMenuAbierto(true)} className="rounded p-2 text-white hover:bg-white/10" aria-label="Abrir menú">
             <Menu className="h-6 w-6" />
           </button>
 
           <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
-            <img src={logo} alt="LokomproAqui" className="h-[55px] w-auto max-w-full" style={{ width: 177 }} />
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage.
+                Ancho fijo via w-auto + altura: la relacion de aspecto real del svg (~2.38:1) hace
+                que "30% mas grande" en ANCHO (230px) de un logo de 177px necesite ~97px de alto,
+                que no entra en un header de 72px sin recortarse -- se prioriza que el logo entre
+                completo dentro del header (72px mobile / 96px desktop) sobre el numero literal. */}
+            <img src={logo} alt="LokomproAqui" className="h-14 w-auto max-w-full sm:h-[88px]" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             {rol === 'visitante' ? (
               <>
-                <Link href="/login" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
-                  Iniciar Sesion
+                <Link
+                  href="/login"
+                  className="whitespace-nowrap rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-110 sm:rounded-2xl sm:px-5 sm:py-2.5 sm:text-sm"
+                >
+                  Iniciar Sesión
                 </Link>
-                <Link href="/singUp" className="whitespace-nowrap rounded bg-gray-900 px-2.5 py-1.5 text-[11px] font-semibold text-white sm:px-3 sm:text-xs">
+                <Link
+                  href="/singUp"
+                  className="whitespace-nowrap rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-md shadow-pink-900/25 transition hover:brightness-110 sm:rounded-2xl sm:px-6 sm:py-3 sm:text-sm"
+                >
                   Registrarse
                 </Link>
               </>

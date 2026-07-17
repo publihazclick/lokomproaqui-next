@@ -62,13 +62,32 @@ export default async function InfoPage() {
 
       <InfoMenuPills />
 
+      <a
+        href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola, tengo dudas sobre LokomproAqui')}`}
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(37,211,102,0.5)] transition hover:scale-105 sm:bottom-5 sm:right-5 sm:gap-2.5 sm:px-5 sm:py-4 sm:text-base"
+      >
+        <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" fill="currentColor" aria-hidden="true">
+          <path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.34.663 4.523 1.812 6.377L4 29l7.823-1.771A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3Zm6.997 16.943c-.297.836-1.47 1.53-2.41 1.73-.64.135-1.475.243-4.29-.92-3.6-1.49-5.916-5.14-6.096-5.38-.173-.24-1.456-1.938-1.456-3.696 0-1.759.917-2.622 1.243-2.983.297-.328.65-.41.868-.41.218 0 .436.002.626.011.2.01.47-.076.735.561.297.716.998 2.474 1.086 2.653.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.378.469-.54.63-.18.18-.368.375-.158.735.21.36.933 1.542 2.003 2.497 1.376 1.228 2.535 1.608 2.895 1.788.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.088.986 2.448 1.166.36.18.6.27.69.42.09.15.09.87-.208 1.706Z" />
+        </svg>
+        <span>¿Dudas? Te ayudo</span>
+      </a>
+
       <div className={styles.row} style={{ margin: '5px' }}>
         {video1 && (
           <div className={styles.col12}>
             <section className={styles.cursoAd}>
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor1}`} />
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor2}`} />
-              <span className={styles.cursoAdBadge}>🔥 Nuevo</span>
+
+              <div className={styles.heroHead}>
+                <span className={styles.cursoAdBadge}>🔥 +2,450 Despachos este mes</span>
+                <h1 className={styles.heroTitle}>VENDE SIN INVENTARIO NI RIESGO</h1>
+                <p className={styles.heroSubtitle}>
+                  Nosotros guardamos, empacamos y despachamos. Tú solo vendes y ganas <strong>40%</strong>.
+                </p>
+              </div>
 
               <div className={styles.cursoAdInner}>
                 <div className={styles.cursoAdVideos}>
@@ -105,9 +124,40 @@ export default async function InfoPage() {
                   </div>
                 </div>
               </div>
+
+              <div className={styles.heroFooter}>
+                <Link href="/singUp" className={styles.heroCta}>
+                  QUIERO EMPEZAR GRATIS
+                </Link>
+                <div className={styles.heroProofRow}>
+                  <span className={styles.heroProofItem}>🚚 Envío 24h</span>
+                  <span className={styles.heroProofItem}>💸 Sin Inversión</span>
+                  <span className={styles.heroProofItem}>💬 Soporte 24/7</span>
+                </div>
+              </div>
             </section>
           </div>
         )}
+
+        <section className="mx-auto my-12 w-full max-w-[1200px] px-4">
+          <h2 className="text-center text-2xl font-extrabold text-gray-900 sm:text-3xl">Cómo funciona en 3 pasos</h2>
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {[
+              { emoji: '📝', title: 'Regístrate gratis', desc: 'Crea tu cuenta en 2 minutos, sin costos ocultos.' },
+              { emoji: '🛒', title: 'Elige productos', desc: 'Escoge de +85 proveedores verificados y arma tu catálogo.' },
+              { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas con el 40%.' },
+            ].map((paso, i) => (
+              <div key={paso.title} className="relative rounded-[24px] bg-white p-7 text-center shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
+                <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="text-5xl">{paso.emoji}</span>
+                <h3 className="mt-4 text-lg font-bold text-gray-900">{paso.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">{paso.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className={styles.banner}>
           <div className={styles.frame42}>
@@ -201,8 +251,8 @@ export default async function InfoPage() {
           </section>
         </div>
 
-        <div className={styles.col12}>
-        <div className={styles.row} style={{ margin: '5px', marginBottom: '40px' }}>
+        <div className={`${styles.col12} ${styles.container1200}`}>
+        <div className={styles.row} style={{ margin: '48px auto' }}>
           <div className={styles.colSm4}>
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
@@ -242,7 +292,7 @@ export default async function InfoPage() {
         </div>
         </div>
 
-        <div className={`${styles.col12} ${styles.row} ${styles.colorFondo5}`} style={{ margin: '0 -1px' }}>
+        <div className={`${styles.col12} ${styles.row} ${styles.colorFondo5}`}>
           <div className={styles.col12}>
             <div className={`${styles.dFlex} ${styles.justifyContentCenter}`}>
               <div style={{ textAlign: 'center', width: '100%' }}>
