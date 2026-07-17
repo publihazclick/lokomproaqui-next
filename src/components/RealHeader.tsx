@@ -46,15 +46,13 @@ const MENUS: MenuItem[] = [
   { Icon: LayoutGrid, nombre: 'Productos', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: ShoppingCart, nombre: 'Hacer Compra', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Tag, nombre: 'Realizar Venta', href: '/realizarventa', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
-  { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
+  { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Wallet, nombre: 'Mis Cobros', href: '/config/cobros', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
-  { Icon: Users, nombre: 'Ventas de Subvendedor', href: '/config/ventasLider', mostrar: (r) => r === 'administrador' },
   { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
   { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
-  { Icon: Truck, nombre: 'Activar Transportadoras', href: '/config/listaPlatform', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r === 'vendedor' },
@@ -216,7 +214,7 @@ export function RealHeader() {
             <div className="flex-1 overflow-y-auto px-2 py-3">
               <ul className="flex flex-col gap-0.5">
                 {menusVisibles.map((item) => {
-                  const href = item.href === '/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
+                  const href = item.href === '/config/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
                   return (
                     <li key={item.nombre}>
                       <Link

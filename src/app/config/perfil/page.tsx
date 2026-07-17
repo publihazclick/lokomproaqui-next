@@ -104,7 +104,19 @@ export default function PerfilPage() {
     });
   }, []);
 
-  if (estado === 'revisando' || estado === 'cargando' || !data) return null;
+  if (estado === 'revisando' || estado === 'cargando') return null;
+
+  // Bug real encontrado 2026-07-17: fetchPerfilCompleto devuelve null en silencio si la consulta
+  // falla (ej. columna faltante en la base de datos) -- antes esto dejaba la pantalla en blanco
+  // para siempre, sin ningun aviso. Ahora se muestra un error real en vez de nada.
+  if (!data) {
+    return (
+      <div className="mx-auto w-full max-w-[600px] px-3 py-16 text-center">
+        <p className="text-lg font-semibold text-red-700">No pudimos cargar tu cuenta.</p>
+        <p className="mt-2 text-sm text-gray-500">Intenta recargar la página. Si el problema sigue, avísale al equipo de soporte.</p>
+      </div>
+    );
+  }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const urlTienda = `${origin}/portada/index/${data.telefono || ''}`;
