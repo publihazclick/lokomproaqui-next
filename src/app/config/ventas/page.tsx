@@ -283,7 +283,7 @@ export default function VentasPage() {
                     {row.estado !== 5 && (
                       <>
                         {!row.numeroGuia && (
-                          <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1 text-sm font-bold text-[#FFA800]">Debes generar la guia</div>
+                          <div className="mb-1 inline-block rounded bg-[#dfdfdf] px-2 py-1.5 text-base font-bold text-[#FF9500]">Debes generar la guia</div>
                         )}
                         <div>
                           <button type="button" onClick={() => setVentaAbierta(row.id)} className="rounded bg-[#0066FF] p-2.5 text-white">
