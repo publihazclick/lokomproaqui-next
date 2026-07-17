@@ -1,18 +1,27 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, Trash2, Plus } from 'lucide-react';
+import { Search, Plus, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchRetiros, fetchSaldoDisponible, fetchTotalPagado, eliminarRetiro, type RetiroRow } from '@/lib/cobros';
 import { FormCobroModal } from '@/components/FormCobroModal';
 import { useToast, Toast } from '@/components/Toast';
 
-// Port de CobrosComponent (Angular, "Cobrar") -- retiro de saldo de la billetera de referidos.
-// Ver src/lib/cobros.ts para el detalle completo de los bugs reales encontrados y corregidos
-// (filtro de estado por defecto que ocultaba TODOS los retiros, busqueda ignorada, columna de
-// email del vendedor siempre vacia, y 6 de 7 tarjetas de resumen que siempre mostraban $0).
-
+// Port 1:1 (diseno) de CobrosComponent (Angular, "Cobrar"). Mismo criterio que Ventas Posibles y
+// Ventas: cero margen de error, replicar exacto lo que muestra Angular real, no una version
+// simplificada. Ver src/lib/cobros.ts para los bugs reales de datos ya corregidos antes (filtro
+// que ocultaba todos los retiros, busqueda ignorada).
+//
+// Las 8 cajas de resumen del header son reales en Angular (dataInfo.*), pero el backend real
+// (UsuariosService.getInfo()) SOLO llena "Por Cobrar" -- las otras 7 siempre mostraban $0, ya
+// documentado en una sesion anterior. Se mantienen las 8 cajas en el mismo orden/nombres exactos
+// de Angular; "Por Cobrar" y "Total Pagado" usan datos reales (ya se habian arreglado antes),
+// las otras 6 quedan en $0 igual que el original -- no existe cálculo real detrás para inventarlas.
+//
+// "Pais" y "Email" de la tabla quedan siempre vacios -- no existe columna de pais en
+// withdrawal_requests, y el email vive en auth.users (no accesible desde el cliente), mismo bug
+// real que en Angular (columna vendedor siempre vacia, ya documentado antes).
 const LIMIT = 15;
 
 export default function CobrosPage() {
@@ -78,7 +87,7 @@ export default function CobrosPage() {
   }
 
   async function eliminar(id: number) {
-    if (!window.confirm('Deseas Eliminar Dato')) return;
+    if (!window.confirm('¿Deseas Eliminar Dato?')) return;
     const ok = await eliminarRetiro(id);
     if (!ok) return mostrar('Error de servidor');
     setRetiros((prev) => prev.filter((r) => r.id !== id));
@@ -87,104 +96,114 @@ export default function CobrosPage() {
 
   if (estado === 'revisando' || !dataUser) return null;
 
+  const cero = '$ 0 COP';
+  const cajas: { label: string; valor: string }[] = [
+    { label: 'Total Ganado', valor: cero },
+    { label: 'Total Cobrado', valor: cero },
+    { label: 'Total Pagado', valor: `$ ${totalPagado.toLocaleString('es-CO')} COP` },
+    { label: 'Por Cobrar', valor: `$ ${saldo.toLocaleString('es-CO')} COP` },
+    { label: 'Devoluciones', valor: cero },
+    { label: 'Ventas Pendientes Por Entregar', valor: cero },
+    { label: 'Ventas Totales del calzado (Exitoso)', valor: cero },
+    { label: 'Ventas Totales del calzado ( Despachado )', valor: cero },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-[1140px] px-3 py-6">
-      <div className="rounded-t-xl bg-[#0d6efd] px-4 py-3 text-white">
-        <h4 className="text-lg font-bold">Cobrar</h4>
-        <div className="mt-2 flex flex-wrap gap-6">
-          <div>
-            <span className="text-xs opacity-80">Por Cobrar</span>
-            <p className="text-lg font-bold">$ {saldo.toLocaleString('es-CO')} COP</p>
-          </div>
-          <div>
-            <span className="text-xs opacity-80">Total Pagado</span>
-            <p className="text-lg font-bold">$ {totalPagado.toLocaleString('es-CO')} COP</p>
-          </div>
+    <div className="mx-auto w-full max-w-[1320px] px-3 py-6">
+      <div className="border-b border-gray-200 pb-4">
+        <h4 className="text-lg font-bold text-gray-900">Cobrar</h4>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {cajas.map((c) => (
+            <div key={c.label}>
+              <span className="block text-xs text-gray-500">{c.label}</span>
+              <p className="text-sm font-semibold text-gray-900">{c.valor}</p>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="rounded-b-xl border border-t-0 border-gray-100 p-4 shadow-sm">
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscar()}
-            placeholder="Buscar Retiros (cédula, celular, cuenta, método)"
-            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] px-3 py-2 text-sm text-white disabled:opacity-60">
-            Buscar
-          </button>
-          <button onClick={() => setModalAbierto('crear')} className="flex items-center gap-1 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white">
-            <Plus className="h-4 w-4" /> Solicitar retiro
-          </button>
-        </div>
 
-        <div className="mt-4 overflow-x-auto">
-          {cargando ? (
-            <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
-          ) : (
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
-                  <th className="py-2 pr-3">Acciones</th>
-                  <th className="py-2 pr-3">Monto</th>
-                  <th className="py-2 pr-3">Método</th>
-                  <th className="py-2 pr-3">Estado</th>
-                  <th className="py-2 pr-3">Fecha</th>
-                  {esAdmin && <th className="py-2 pr-3">Vendedor</th>}
-                  <th className="py-2 pr-3">Cédula</th>
-                  <th className="py-2 pr-3">Celular</th>
-                  <th className="py-2 pr-3">Cuenta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {retiros.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-100">
-                    <td className="py-2 pr-3">
-                      <div className="flex gap-1">
-                        <button onClick={() => setModalAbierto(r)} className="flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs text-white">
-                          <Eye className="h-3 w-3" /> Ver
+      <div className="mt-4">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && buscar()}
+          placeholder="Buscar Retiros"
+          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="mt-2 flex items-start gap-2">
+        <button type="button" onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] p-2.5 text-white disabled:opacity-60">
+          <Search className="h-4 w-4" />
+        </button>
+        <button type="button" onClick={() => setModalAbierto('crear')} title="Solicitar retiro" className="rounded bg-[#0d6efd] p-2.5 text-white">
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        {cargando ? (
+          <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
+        ) : (
+          <table className="w-full min-w-[1200px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-sm font-bold text-gray-900">
+                <th className="py-2 pr-3">Acciones</th>
+                <th className="py-2 pr-3">Monto</th>
+                <th className="py-2 pr-3">Método de pago</th>
+                <th className="py-2 pr-3">Pais</th>
+                <th className="py-2 pr-3">Estado</th>
+                <th className="py-2 pr-3">Fecha Cobro</th>
+                <th className="py-2 pr-3">Email</th>
+                <th className="py-2 pr-3">Cédula</th>
+                <th className="py-2 pr-3">Celular</th>
+                <th className="py-2 pr-3">Cuenta Bancaria</th>
+                <th className="py-2 pr-3">Fecha Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              {retiros.map((r) => (
+                <tr key={r.id} className="border-b border-gray-100">
+                  <td className="py-3 pr-3 align-top">
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setModalAbierto(r)} className="rounded bg-[#0d6efd] p-2 text-white">
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {esAdmin && (
+                        <button type="button" onClick={() => eliminar(r.id)} className="rounded bg-[#dc3545] p-2 text-white">
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                        {esAdmin && (
-                          <button onClick={() => eliminar(r.id)} className="flex items-center gap-1 rounded bg-[#dc3545] px-2 py-1 text-xs text-white">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3">$ {r.monto.toLocaleString('es-CO')} COP</td>
-                    <td className="py-2 pr-3">{r.metodo}</td>
-                    <td className="py-2 pr-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          r.estado === 1 ? 'bg-blue-100 text-blue-700' : r.estado === 2 ? 'bg-gray-100 text-gray-500' : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {r.estadoLabel}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-xs">{new Date(r.fecha).toLocaleString('es-CO')}</td>
-                    {esAdmin && <td className="py-2 pr-3">{r.vendedorNombre || '—'}</td>}
-                    <td className="py-2 pr-3">{r.cedula}</td>
-                    <td className="py-2 pr-3">{r.celular}</td>
-                    <td className="py-2 pr-3">{r.cuenta}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {!cargando && retiros.length === 0 && <p className="py-10 text-center text-gray-500">No hay retiros para mostrar.</p>}
-        </div>
-
-        {!cargando && notEmptyPost && retiros.length > 0 && (
-          <div className="mt-4 text-center">
-            <button onClick={() => cargar(dataUser.id, esAdmin, page + 1, false, busqueda)} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
-              {cargandoMas ? 'Cargando…' : 'Ver más'}
-            </button>
-          </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 pr-3 align-top">$ {r.monto.toLocaleString('es-CO')} COP</td>
+                  <td className="py-3 pr-3 align-top">{r.metodo}</td>
+                  <td className="py-3 pr-3 align-top"></td>
+                  <td className="py-3 pr-3 align-top">
+                    <span className={r.estado === 0 ? 'text-[#dc3545]' : r.estado === 1 ? 'text-[#0d6efd]' : 'text-gray-500'}>{r.estadoLabel}</span>
+                  </td>
+                  <td className="py-3 pr-3 align-top">{new Date(r.fecha).toLocaleString('es-CO')}</td>
+                  <td className="py-3 pr-3 align-top"></td>
+                  <td className="py-3 pr-3 align-top">{r.cedula}</td>
+                  <td className="py-3 pr-3 align-top">{r.celular}</td>
+                  <td className="py-3 pr-3 align-top">{r.cuenta}</td>
+                  <td className="py-3 pr-3 align-top">{r.fechaPago ? new Date(r.fechaPago).toLocaleString('es-CO') : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
+        {!cargando && retiros.length === 0 && <p className="py-10 text-center text-gray-500">No hay retiros para mostrar.</p>}
       </div>
+
+      {!cargando && notEmptyPost && retiros.length > 0 && (
+        <div className="mt-4 text-center">
+          <button onClick={() => cargar(dataUser.id, esAdmin, page + 1, false, busqueda)} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
+            {cargandoMas ? 'Cargando…' : 'Ver más'}
+          </button>
+        </div>
+      )}
 
       <Toast mensaje={mensaje} />
 
