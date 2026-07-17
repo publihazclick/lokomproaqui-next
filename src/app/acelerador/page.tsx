@@ -107,10 +107,10 @@ function AceleradorPageInterna() {
                     >
                       {l.thumbnailUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                        <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-gray-100 object-contain" />
+                        <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-black object-contain" />
                       ) : (
-                        <div className="flex aspect-video w-full items-center justify-center bg-gray-100">
-                          <PlayCircle className="h-14 w-14 text-gray-300" />
+                        <div className="flex aspect-video w-full items-center justify-center bg-black">
+                          <PlayCircle className="h-14 w-14 text-gray-600" />
                         </div>
                       )}
                       <div className="flex flex-1 flex-col p-5">
@@ -162,10 +162,10 @@ function AceleradorPageInterna() {
                   >
                     {l.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                      <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-gray-100 object-contain" />
+                      <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-black object-contain" />
                     ) : (
-                      <div className="flex aspect-video w-full items-center justify-center bg-gray-100">
-                        <PlayCircle className="h-14 w-14 text-gray-300" />
+                      <div className="flex aspect-video w-full items-center justify-center bg-black">
+                        <PlayCircle className="h-14 w-14 text-gray-600" />
                       </div>
                     )}
                     <div className="flex flex-col p-5">

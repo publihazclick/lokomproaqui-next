@@ -336,7 +336,7 @@ export function LeccionForm({
             {thumbnailUrl && (
               <div className="mb-2 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- miniatura en Supabase Storage */}
-                <img src={thumbnailUrl} alt="" className="aspect-video w-28 rounded bg-gray-100 object-contain" />
+                <img src={thumbnailUrl} alt="" className="aspect-video w-28 rounded bg-black object-contain" />
                 <button type="button" onClick={() => setThumbnailUrl(null)} className="text-xs font-semibold text-gray-500 underline">
                   cambiar imagen
                 </button>
