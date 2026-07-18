@@ -19,7 +19,7 @@ const VIDEOS: Record<string, string> = {
 };
 
 const CARD_CLASS =
-  'flex flex-col items-center gap-2.5 rounded-[24px] bg-white p-6 text-center shadow-lg shadow-indigo-500/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-500/20';
+  'flex flex-col items-center gap-2.5 rounded-[24px] bg-white p-6 text-center shadow-lg shadow-sky-500/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-sky-500/20';
 const EMOJI_CLASS = 'text-3xl';
 const LABEL_CLASS = 'text-base font-bold text-gray-800';
 

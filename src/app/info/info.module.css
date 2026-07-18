@@ -77,7 +77,7 @@
 }
 
 .btnDark {
-  color: #8b5cf6;
+  color: #02a0e3;
   background-color: #fff;
   border-color: #fff;
   font-weight: 700;
@@ -102,7 +102,7 @@
 /* ── Banner principal ──────────────────────────────────────────────────────────────────────── */
 
 .banner {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #0177a8 0%, #02a0e3 100%);
   padding: 40px 20px;
   margin: 48px auto;
   max-width: 1200px;
@@ -145,10 +145,10 @@
 }
 
 .frame33 {
-  background: linear-gradient(90deg, #ec4899, #f472b6);
+  background: linear-gradient(90deg, #38bdf8, #7dd3fc);
   padding: 12px 28px;
   border-radius: 999px;
-  box-shadow: 0 10px 24px rgba(236, 72, 153, 0.35);
+  box-shadow: 0 10px 24px rgba(2, 160, 227, 0.35);
   display: table;
   flex-direction: row;
   align-items: center;
@@ -214,7 +214,7 @@
   padding: 32px;
   margin: 48px auto;
   max-width: 1200px;
-  box-shadow: 0px 4px 24px rgba(99, 102, 241, 0.1);
+  box-shadow: 0px 4px 24px rgba(2, 160, 227, 0.1);
   border-radius: 24px;
 }
 
@@ -258,7 +258,7 @@
 .quehacemosCard h4 {
   margin: 4px 0 6px;
   font-weight: 800;
-  color: #8b5cf6;
+  color: #02a0e3;
 }
 
 .quehacemosCard p {
@@ -313,7 +313,7 @@
   height: 32px;
   margin: 0 auto 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #0177a8, #02a0e3);
   color: #fff;
 }
 
@@ -384,7 +384,7 @@
    genericos de arriba (CON el gutter normal de Bootstrap entre cada caja, confirmado con captura
    que si debe haber espacio -- se probo sacarlo por error y se corrigio). */
 .colorFondo4 {
-  background: linear-gradient(160deg, #6366f1, #8b5cf6);
+  background: linear-gradient(160deg, #0177a8, #02a0e3);
   color: white;
   text-align: center;
   padding: 24px 30px 30px;
@@ -414,7 +414,7 @@
   align-items: center;
   gap: 8px;
   background: #fff;
-  color: #8b5cf6;
+  color: #02a0e3;
   font-weight: 700;
   padding: 10px 22px;
   border-radius: 999px;
@@ -438,10 +438,6 @@
 .registroBoxImg {
   width: 100%;
   height: auto;
-  /* Las 3 fotos (handshake/audifonos/auriculares) tienen un fondo azul plano HORNEADO en el PNG
-     -- desentonaba con el nuevo gradiente indigo/fucsia de .colorFondo4. Se rota el matiz para
-     que ese azul se vea morado/fucsia en vez de re-generar los 3 assets. */
-  filter: hue-rotate(75deg) saturate(1.05);
 }
 
 /* Solo la imagen de "Registro Proveedor" (handshake): ocupa el ancho COMPLETO de la caja
@@ -463,7 +459,7 @@
   margin: 48px auto;
   max-width: 1200px;
   color: white;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+  background: linear-gradient(135deg, #0177a8, #02a0e3, #38bdf8);
   padding: 48px 20px;
   border-radius: 24px;
 }
@@ -476,8 +472,8 @@
   margin: 48px 0;
   padding: 40px 48px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-  box-shadow: 0 20px 45px -18px rgba(139, 92, 246, 0.55), 0 4px 14px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(135deg, #0177a8 0%, #02a0e3 50%, #38bdf8 100%);
+  box-shadow: 0 20px 45px -18px rgba(1, 119, 168, 0.55), 0 4px 14px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
 
@@ -523,7 +519,7 @@
   padding: 6px 14px;
   border-radius: 30px;
   background: #fff;
-  color: #ec4899;
+  color: #38bdf8;
   font-weight: 800;
   font-size: 0.75rem;
   letter-spacing: 0.5px;
@@ -610,7 +606,7 @@
   margin-left: 4px;
   border-style: solid;
   border-width: 11px 0 11px 19px;
-  border-color: transparent transparent transparent #8b5cf6;
+  border-color: transparent transparent transparent #02a0e3;
 }
 
 .cursoAdPlay:hover {
@@ -704,7 +700,7 @@
 .cursoAdCta {
   display: inline-block;
   background: #fff;
-  color: #8b5cf6;
+  color: #02a0e3;
   font-weight: 700;
   font-size: 0.9rem;
   padding: 12px 26px;

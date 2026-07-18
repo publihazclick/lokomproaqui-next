@@ -60,12 +60,12 @@ export default async function InfoPage() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
-      <section className="bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 pb-24 pt-20 text-center text-white">
+      <section className="bg-gradient-to-br from-[#0177a8] via-[#02a0e3] to-[#38bdf8] px-6 pb-24 pt-20 text-center text-white">
         <h1 className="text-4xl font-bold leading-tight">Vende Online Sin Inventario</h1>
         <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas hasta 40%.</p>
         <Link
           href="/singUp"
-          className="shine-sweep mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#8B5CF6] shadow-2xl transition duration-300 hover:scale-105"
+          className="shine-sweep mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#0177a8] shadow-2xl transition duration-300 hover:scale-105"
         >
           EMPEZAR GRATIS AHORA
         </Link>
@@ -85,7 +85,7 @@ export default async function InfoPage() {
             { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas con el 40%.' },
           ].map((paso, i) => (
             <div key={paso.title} className="relative rounded-[24px] bg-white p-7 text-center shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
-              <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xs font-bold text-white">
+              <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] text-xs font-bold text-white">
                 {i + 1}
               </span>
               <span className="text-5xl">{paso.emoji}</span>
