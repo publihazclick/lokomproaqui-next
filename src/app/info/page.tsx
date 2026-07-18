@@ -62,7 +62,7 @@ export default async function InfoPage() {
 
       <section className="bg-gradient-to-br from-[#0177a8] via-[#02a0e3] to-[#38bdf8] px-6 pb-24 pt-20 text-center text-white">
         <h1 className="text-4xl font-bold leading-tight">Vende Online Sin Inventario</h1>
-        <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas hasta 40%.</p>
+        <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas desde un 40% en adelante.</p>
         <Link
           href="/singUp"
           className="shine-sweep mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#0177a8] shadow-2xl transition duration-300 hover:scale-105"
@@ -81,8 +81,8 @@ export default async function InfoPage() {
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
           {[
             { emoji: '📝', title: 'Regístrate gratis', desc: 'Crea tu cuenta en 2 minutos, sin costos ocultos.' },
-            { emoji: '🛒', title: 'Elige productos', desc: 'Escoge de +85 proveedores verificados y arma tu catálogo.' },
-            { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas con el 40%.' },
+            { emoji: '🛒', title: 'Elige productos', desc: 'Escoge de +236 proveedores verificados y arma tu catálogo.' },
+            { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas desde un 40% en adelante.' },
           ].map((paso, i) => (
             <div key={paso.title} className="relative rounded-[24px] bg-white p-7 text-center shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
               <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-[#0177a8] to-[#02a0e3] text-xs font-bold text-white">
@@ -117,7 +117,7 @@ export default async function InfoPage() {
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor1}`} />
               <div className={`${styles.cursoAdDecor} ${styles.cursoAdDecor2}`} />
 
-              <span className={styles.cursoAdBadge}>🔥 +2,450 Despachos este mes</span>
+              <span className={styles.cursoAdBadge}>🔥 +60,350 Despachos este mes</span>
 
               <div className={styles.cursoAdInner}>
                 <div className={styles.cursoAdVideos}>
@@ -194,7 +194,7 @@ export default async function InfoPage() {
                   <div className={styles.quehacemosCard}>
                     <span className={styles.quehacemosCardEmoji}>🛍️</span>
                     <h4>Vendedor</h4>
-                    <p>Más de 85 proveedores con productos disponibles para generar ingresos.</p>
+                    <p>Más de 236 proveedores con productos disponibles para generar ingresos.</p>
                   </div>
                   <div className={styles.quehacemosCard}>
                     <span className={styles.quehacemosCardEmoji}>📦</span>
