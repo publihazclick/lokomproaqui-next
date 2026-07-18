@@ -171,14 +171,30 @@ export function RealHeader() {
             <Menu className="h-6 w-6" />
           </button>
 
+          {/* Logueado (cualquier rol): el logo va pegado al menu hamburguesa (posicion original) --
+              pedido explicito del usuario. Solo para visitante (sin loguear) se mueve al otro lado,
+              junto a "Iniciar Sesion" mas abajo, como se pidio en un cambio anterior. */}
+          {rol !== 'visitante' && (
+            <Link href="/articulo" className="min-w-0 shrink">
+              {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
+              <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+            </Link>
+          )}
+
           <div className="ml-auto flex min-w-0 shrink items-center gap-2 sm:gap-4">
             {rol === 'visitante' ? (
-              // Pedido explicito del usuario: el logo va al lado opuesto del menu hamburguesa
-              // (no pegado a el) y sin el boton "EMPEZAR GRATIS" en la cabecera -- ese CTA sigue
-              // disponible en otras partes de la pagina (hero de /info, MENUS_PIE, etc.).
-              <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
-                Iniciar Sesión
-              </Link>
+              <>
+                {/* Pedido explicito del usuario: el logo va al lado opuesto del menu hamburguesa
+                    (no pegado a el) y sin el boton "EMPEZAR GRATIS" en la cabecera -- ese CTA sigue
+                    disponible en otras partes de la pagina (hero de /info, MENUS_PIE, etc.). */}
+                <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
+                  Iniciar Sesión
+                </Link>
+                <Link href="/info" className="min-w-0 shrink">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- logo, servido por Angular */}
+                  <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+                </Link>
+              </>
             ) : (
               <>
                 {balance !== null && (
@@ -204,11 +220,6 @@ export function RealHeader() {
                 </Link>
               </>
             )}
-
-            <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
-              {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
-              <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
-            </Link>
           </div>
         </div>
       </header>
