@@ -149,14 +149,17 @@ export function RealHeader() {
       {/* Banner promo del Acelerador de Ventas, solo en /info -- pedido explicito del usuario:
           va ANTES de la cabecera (no dentro), por eso vive aca y no en info/page.tsx. */}
       {pathname === '/info' && (
-        <div className="bg-gradient-to-r from-[#0177a8] to-[#02a0e3] px-3 py-2 text-center text-white">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#0177a8] via-[#02a0e3] to-[#0177a8] px-3 py-2.5 text-center text-white shadow-[0_2px_16px_rgba(2,160,227,0.55)] sm:py-3">
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
-            <span className="text-xs font-bold sm:text-sm">🚀 Acelerador de Ventas</span>
+            <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide sm:text-base">
+              <span className="animate-pulse text-base sm:text-lg">🔥</span>
+              Acelerador de Ventas
+            </span>
             <Link
               href="/acelerador"
-              className="whitespace-nowrap rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0177a8] shadow transition hover:scale-105 sm:px-4 sm:py-1.5 sm:text-sm"
+              className="shine-sweep whitespace-nowrap rounded-full bg-white px-4 py-1.5 text-xs font-extrabold text-[#0177a8] shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
             >
-              Ver ahora
+              Ver ahora →
             </Link>
           </div>
         </div>

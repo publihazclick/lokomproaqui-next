@@ -384,7 +384,10 @@
    genericos de arriba (CON el gutter normal de Bootstrap entre cada caja, confirmado con captura
    que si debe haber espacio -- se probo sacarlo por error y se corrigio). */
 .colorFondo4 {
-  background: linear-gradient(160deg, #0177a8, #02a0e3);
+  /* Solido, no degradado: coincide EXACTO con el fondo azul horneado en los 3 PNG
+     (REGISTROPROVEEDOR/REGISTROVENDEDOR/CONTACTARASESOR, confirmado #02a0e3 pixel por pixel) para
+     que la imagen se funda con la caja sin ningun borde visible -- pedido explicito del usuario. */
+  background: #02a0e3;
   color: white;
   text-align: center;
   padding: 24px 30px 30px;
@@ -451,6 +454,17 @@
   margin-left: -30px;
   margin-right: -30px;
   height: auto;
+}
+
+/* Las 3 cajas (.colSm4) se apilan a 100% de ancho en mobile (breakpoint sm de arriba) -- ahi el
+   gutter horizontal de Bootstrap no genera separacion vertical, asi que quedan pegadas una debajo
+   de otra. Separacion chica solo entre cajas apiladas (selector de hermano, no toca la primera ni
+   agrega margen sobrante al final) -- pedido explicito del usuario. En desktop (3 columnas en la
+   misma fila) esta regla no aplica porque no son hermanos verticales visibles. */
+@media (max-width: 768px) {
+  .colSm4 + .colSm4 {
+    margin-top: 14px;
+  }
 }
 
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */

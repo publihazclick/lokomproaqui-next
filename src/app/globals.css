@@ -40,7 +40,7 @@ body {
   left: -75%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(139, 92, 246, 0.35), transparent);
+  background: linear-gradient(120deg, transparent, rgba(2, 160, 227, 0.35), transparent);
   transform: skewX(-20deg);
   animation: shine-sweep-move 5s ease-in-out infinite;
 }
