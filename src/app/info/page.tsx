@@ -4,6 +4,7 @@ import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
 import { InfoMenuPills } from '@/components/InfoMenuPills';
+import { SessionRedirect } from '@/components/SessionRedirect';
 import styles from './info.module.css';
 
 export const metadata = {
@@ -57,6 +58,11 @@ export default async function InfoPage() {
 
   return (
     <div className={styles.infoPage}>
+      {/* Pedido explicito del usuario 2026-07-19: un usuario ya logueado nunca debe ver /info --
+          esta pagina es server component con ISR (revalidate=5), no puede leer la sesion del lado
+          del servidor, asi que el chequeo vive en este "island" cliente que redirige apenas monta
+          si detecta sesion activa. */}
+      <SessionRedirect when="logged-in" to="/articulo" />
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
