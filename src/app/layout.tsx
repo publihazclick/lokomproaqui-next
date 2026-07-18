@@ -29,7 +29,11 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* overflow-x-hidden como respaldo global: contenido dinamico (ej. descripcion de producto
+          con HTML crudo desde la base de datos) puede desbordar su contenedor en mobile si trae
+          palabras/URLs largas sin espacios o elementos con ancho fijo -- esto evita que ESO
+          arrastre a toda la pagina a poder scrollear de lado, aunque el elemento en si se corte. */}
+      <body className="min-h-full flex flex-col overflow-x-hidden">
         <CartProvider>
           <RealHeader />
           {children}

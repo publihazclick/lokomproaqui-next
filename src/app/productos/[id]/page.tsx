@@ -154,7 +154,7 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
           <h4 className="mt-2 text-xl font-medium text-gray-900">{data.pro_nombre}</h4>
 
           <p
-            className="mt-1 text-sm leading-relaxed text-gray-700"
+            className="mt-1 max-w-full overflow-hidden break-words text-sm leading-relaxed text-gray-700 [&_*]:max-w-full [&_img]:h-auto"
             dangerouslySetInnerHTML={{ __html: (data.pro_descripcion || '').slice(0, rango) }}
           />
           {rango === 100 ? (

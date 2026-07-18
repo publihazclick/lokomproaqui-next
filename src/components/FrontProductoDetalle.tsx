@@ -129,7 +129,12 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
           <div>
             <h1 className="text-xl font-bold text-gray-800">{producto.pro_nombre}</h1>
             <p className="mt-1 text-2xl font-bold text-green-700">$ {formatCOP(producto.pro_uni_venta)}</p>
-            {producto.pro_descripcion && <p className="mt-2 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: producto.pro_descripcion }} />}
+            {producto.pro_descripcion && (
+              <p
+                className="mt-2 max-w-full overflow-hidden break-words text-sm text-gray-600 [&_*]:max-w-full [&_img]:h-auto"
+                dangerouslySetInnerHTML={{ __html: producto.pro_descripcion }}
+              />
+            )}
 
             {producto.listColor.length > 0 && (
               <div className="mt-4">

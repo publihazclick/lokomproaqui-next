@@ -375,7 +375,10 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
 
             <div className="mt-3 border-t border-gray-100 pt-3">
               <h3 className="text-sm font-bold text-gray-700">DESCRIPCION:</h3>
-              <p className="mt-1 text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: producto.pro_descripcion || '' }} />
+              <p
+                className="mt-1 max-w-full overflow-hidden break-words text-sm text-gray-600 [&_*]:max-w-full [&_img]:h-auto"
+                dangerouslySetInnerHTML={{ __html: producto.pro_descripcion || '' }}
+              />
             </div>
 
             {dataUser?.id && (
