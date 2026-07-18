@@ -153,17 +153,27 @@ export function RealHeader() {
           </button>
 
           <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
-            {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage.
-                Ancho fijo via w-auto + altura: la relacion de aspecto real del svg (~2.38:1) sigue
-                fijando el limite -- un logo bastante mas grande (70px/116px) ya pide un header mas
-                alto (80px/128px) para que no se recorte, se prioriza que quepa completo. */}
-            <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+            {logo === '/assets/logo.svg' ? (
+              // Wordmark en texto (degradado fucsia-morado) en vez del SVG con fondo rosa solido --
+              // pedido explicito del usuario. Solo para el caso "sin foto de perfil" (logo sigue en
+              // su valor default) -- un usuario logueado con avatar real sigue mostrando SU FOTO
+              // (rama de abajo), nunca el wordmark de marca, igual que el comportamiento original.
+              <span className="whitespace-nowrap bg-gradient-to-r from-fuchsia-500 to-purple-600 bg-clip-text text-sm font-extrabold text-transparent sm:text-5xl">
+                LoKomproAqui.com
+              </span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- avatar real del usuario, Supabase Storage
+              <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full rounded-full object-cover sm:h-[116px]" />
+            )}
           </Link>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
             {rol === 'visitante' ? (
               <>
-                <Link href="/login" className="whitespace-nowrap text-xs font-semibold text-white hover:underline sm:text-base">
+                {/* Oculto en mobile (queda disponible en el menu hamburguesa, MENUS_PIE mas abajo):
+                    un wordmark de texto grande + 2 botones no entran juntos en 390px sin que algo
+                    se corte -- se prioriza que el logo y el CTA principal se vean completos. */}
+                <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
                   Iniciar Sesión
                 </Link>
                 <Link
@@ -209,8 +219,7 @@ export function RealHeader() {
           <nav className="relative flex h-full w-[280px] flex-col bg-[#7386d5] text-white shadow-xl">
             <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
               <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
-                <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
+                <span className="bg-gradient-to-r from-fuchsia-500 to-purple-600 bg-clip-text text-xl font-extrabold text-transparent">LoKomproAqui.com</span>
               </Link>
               <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
                 <X className="h-5 w-5" />

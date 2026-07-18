@@ -24,3 +24,35 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Brillo diagonal que barre el boton de izquierda a derecha cada 5s, reusable en cualquier CTA
+   (header global + hero de /info). El botón necesita position:relative + overflow:hidden (via la
+   clase shine-sweep) para que el barrido quede recortado dentro de su propia forma. */
+.shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(139, 92, 246, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: shine-sweep-move 5s ease-in-out infinite;
+}
+
+@keyframes shine-sweep-move {
+  0% {
+    left: -75%;
+  }
+  20% {
+    left: 125%;
+  }
+  100% {
+    left: 125%;
+  }
+}

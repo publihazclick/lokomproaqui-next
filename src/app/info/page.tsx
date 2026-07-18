@@ -60,12 +60,12 @@ export default async function InfoPage() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
-      <section className="bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 pb-16 pt-20 text-center text-white">
+      <section className="bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] px-6 pb-24 pt-20 text-center text-white">
         <h1 className="text-4xl font-bold leading-tight">Vende Online Sin Inventario</h1>
         <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas hasta 40%.</p>
         <Link
           href="/singUp"
-          className="mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#8B5CF6] shadow-2xl transition hover:scale-105"
+          className="shine-sweep mt-6 inline-block rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#8B5CF6] shadow-2xl transition duration-300 hover:scale-105"
         >
           EMPEZAR GRATIS AHORA
         </Link>
@@ -73,6 +73,26 @@ export default async function InfoPage() {
           <span>✓ Envío 24 Horas</span>
           <span>✓ $0 Inversión</span>
           <span>✓ Soporte 24/7</span>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-[1200px] bg-white px-4 py-16">
+        <h2 className="text-center text-2xl font-bold text-[#1E293B]">Cómo funciona en 3 pasos</h2>
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          {[
+            { emoji: '📝', title: 'Regístrate gratis', desc: 'Crea tu cuenta en 2 minutos, sin costos ocultos.' },
+            { emoji: '🛒', title: 'Elige productos', desc: 'Escoge de +85 proveedores verificados y arma tu catálogo.' },
+            { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas con el 40%.' },
+          ].map((paso, i) => (
+            <div key={paso.title} className="relative rounded-[24px] bg-white p-7 text-center shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
+              <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xs font-bold text-white">
+                {i + 1}
+              </span>
+              <span className="text-5xl">{paso.emoji}</span>
+              <h3 className="mt-4 text-lg font-bold text-gray-900">{paso.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-500">{paso.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -137,26 +157,6 @@ export default async function InfoPage() {
             </section>
           </div>
         )}
-
-        <section className="mx-auto my-12 w-full max-w-[1200px] px-4">
-          <h2 className="text-center text-2xl font-extrabold text-gray-900 sm:text-3xl">Cómo funciona en 3 pasos</h2>
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {[
-              { emoji: '📝', title: 'Regístrate gratis', desc: 'Crea tu cuenta en 2 minutos, sin costos ocultos.' },
-              { emoji: '🛒', title: 'Elige productos', desc: 'Escoge de +85 proveedores verificados y arma tu catálogo.' },
-              { emoji: '💰', title: 'Vende y gana', desc: 'Comparte tu link, nosotros despachamos, tú te quedas con el 40%.' },
-            ].map((paso, i) => (
-              <div key={paso.title} className="relative rounded-[24px] bg-white p-7 text-center shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
-                <span className="absolute left-6 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xs font-bold text-white">
-                  {i + 1}
-                </span>
-                <span className="text-5xl">{paso.emoji}</span>
-                <h3 className="mt-4 text-lg font-bold text-gray-900">{paso.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">{paso.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
 
         <section className={styles.banner}>
           <div className={styles.frame42}>
