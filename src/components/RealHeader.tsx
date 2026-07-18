@@ -213,64 +213,69 @@ export function RealHeader() {
         </div>
       </header>
 
-      {/* Menu lateral (hamburguesa) */}
-      {menuAbierto && (
-        <div className="fixed inset-0 z-[100] flex">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMenuAbierto(false)} />
-          {/* Antes bg-[#7386d5] (periwinkle indigo suelto del Angular original) -- desentonaba con el
-              celeste de marca (#02a0e3) que domina el resto del sitio, mas notorio aun en /info
-              justo debajo de la barra superior de este mismo drawer que ya usa #02a0e3. Ahora usa
-              el mismo azul oscuro del degradado de marca (#0177a8), coherente con hero/banner. */}
-          <nav className="relative flex h-full w-[280px] flex-col bg-[#0177a8] text-white shadow-xl">
-            <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
-              <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
-                <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
-              </Link>
-              <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Menu lateral (hamburguesa) -- siempre montado (no `{menuAbierto && ...}`) para que el nav
+          pueda animarse deslizando de izquierda a derecha al abrir (translate-x-full -> 0) en vez
+          de aparecer de golpe; si se desmontara en cada cierre, no habria "estado inicial" del que
+          partir para animar la siguiente apertura. Pedido explicito del usuario. */}
+      <div
+        className={`fixed inset-0 z-[100] flex transition-opacity duration-300 ${menuAbierto ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+      >
+        <div className="absolute inset-0 bg-black/60" onClick={() => setMenuAbierto(false)} />
+        {/* Antes bg-[#7386d5] (periwinkle indigo suelto del Angular original) -- desentonaba con el
+            celeste de marca (#02a0e3) que domina el resto del sitio, mas notorio aun en /info
+            justo debajo de la barra superior de este mismo drawer que ya usa #02a0e3. Ahora usa
+            el mismo azul oscuro del degradado de marca (#0177a8), coherente con hero/banner. */}
+        <nav
+          className={`relative flex h-full w-[280px] flex-col bg-[#0177a8] text-white shadow-xl transition-transform duration-300 ease-out ${menuAbierto ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
+            <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
+              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
+            </Link>
+            <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-            <div className="flex-1 overflow-y-auto px-2 py-3">
-              <ul className="flex flex-col gap-0.5">
-                {menusVisibles.map((item) => {
-                  const href = item.href === '/config/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
-                  return (
-                    <li key={item.nombre}>
-                      <Link
-                        href={href}
-                        onClick={() => setMenuAbierto(false)}
-                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === href ? 'bg-white/15' : ''}`}
-                      >
-                        <item.Icon className="h-[18px] w-[18px] shrink-0" />
-                        {item.nombre}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              <div className="my-3 border-t border-white/15" />
-
-              <ul className="flex flex-col gap-0.5">
-                {menusPieVisibles.map((item) => (
+          <div className="flex-1 overflow-y-auto px-2 py-3">
+            <ul className="flex flex-col gap-0.5">
+              {menusVisibles.map((item) => {
+                const href = item.href === '/config/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
+                return (
                   <li key={item.nombre}>
-                    <button
-                      type="button"
-                      onClick={() => accionPie(item.accion)}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium hover:bg-white/10"
+                    <Link
+                      href={href}
+                      onClick={() => setMenuAbierto(false)}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === href ? 'bg-white/15' : ''}`}
                     >
                       <item.Icon className="h-[18px] w-[18px] shrink-0" />
                       {item.nombre}
-                    </button>
+                    </Link>
                   </li>
-                ))}
-              </ul>
-            </div>
-          </nav>
-        </div>
-      )}
+                );
+              })}
+            </ul>
+
+            <div className="my-3 border-t border-white/15" />
+
+            <ul className="flex flex-col gap-0.5">
+              {menusPieVisibles.map((item) => (
+                <li key={item.nombre}>
+                  <button
+                    type="button"
+                    onClick={() => accionPie(item.accion)}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium hover:bg-white/10"
+                  >
+                    <item.Icon className="h-[18px] w-[18px] shrink-0" />
+                    {item.nombre}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+      </div>
 
       {/* Carrito */}
       {carritoAbierto && (
