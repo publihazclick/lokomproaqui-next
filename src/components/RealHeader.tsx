@@ -217,7 +217,11 @@ export function RealHeader() {
       {menuAbierto && (
         <div className="fixed inset-0 z-[100] flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMenuAbierto(false)} />
-          <nav className="relative flex h-full w-[280px] flex-col bg-[#7386d5] text-white shadow-xl">
+          {/* Antes bg-[#7386d5] (periwinkle indigo suelto del Angular original) -- desentonaba con el
+              celeste de marca (#02a0e3) que domina el resto del sitio, mas notorio aun en /info
+              justo debajo de la barra superior de este mismo drawer que ya usa #02a0e3. Ahora usa
+              el mismo azul oscuro del degradado de marca (#0177a8), coherente con hero/banner. */}
+          <nav className="relative flex h-full w-[280px] flex-col bg-[#0177a8] text-white shadow-xl">
             <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
               <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
