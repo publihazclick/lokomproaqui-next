@@ -91,7 +91,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
         <div className="p-2">
           {modulos.map((m) => (
             <div key={m.id} className="mb-3">
-              <div className="px-2 py-1 text-sm font-extrabold uppercase text-gray-600">{m.titulo}</div>
+              <div className="px-2 py-1 text-base font-black uppercase text-gray-900">{m.titulo}</div>
               {m.lecciones.map((l) => (
                 <Link
                   key={l.id}
@@ -121,7 +121,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
           </div>
         )}
 
-        {leccionActual && <p className="text-sm font-extrabold uppercase text-gray-500 sm:text-base">{leccionActual.moduloTitulo}</p>}
+        {leccionActual && <p className="text-base font-black uppercase text-gray-800 sm:text-lg">{leccionActual.moduloTitulo}</p>}
         {leccionActual && <h2 className="mt-1 text-xl font-bold text-gray-800">{leccionActual.titulo}</h2>}
         {leccionActual?.descripcion && <p className="mt-1 text-sm text-gray-600">{leccionActual.descripcion}</p>}
 

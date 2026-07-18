@@ -159,7 +159,7 @@ export function AceleradorAdmin() {
                 type="text"
                 value={modulo.title}
                 onChange={(e) => actualizarTituloModuloLocal(modulo.id, e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-base font-extrabold outline-none focus:border-[#02a0e3]"
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-lg font-black text-gray-900 outline-none focus:border-[#02a0e3]"
               />
               <button
                 type="button"
