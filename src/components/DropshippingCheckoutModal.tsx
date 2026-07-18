@@ -92,7 +92,13 @@ export function DropshippingCheckoutModal({
   const [precioVentaClienteStr, setPrecioVentaClienteStr] = useState(formatearMonto(precioUnitario * (cantidadAdquirir || 1)));
   const precioVentaCliente = precioVentaClienteStr ? parseInt(precioVentaClienteStr.replace(/\./g, ''), 10) : null;
   const [envioIncluido, setEnvioIncluido] = useState(true);
-  const [seguroActivo, setSeguroActivo] = useState(false);
+  // "Mi cliente ya me pago el producto" (pedido explicito del usuario 2026-07-18) -- solo aplica a
+  // 'dropshipping'. Reusa el toggle envioIncluido con un significado nuevo: ver fleteDesdeWallet.
+  const [clientePago, setClientePago] = useState(false);
+  // Activado por defecto (antes false): pedido explicito del usuario 2026-07-18 para que "la gran
+  // mayoria" active la proteccion -- el default es la palanca mas fuerte de adopcion, la mayoria
+  // de vendedores no va a tocar algo que ya viene marcado. El vendedor puede desmarcarlo.
+  const [seguroActivo, setSeguroActivo] = useState(true);
 
   const [cliente, setCliente] = useState<Cliente>(() =>
     mode === 'muestra'
@@ -154,8 +160,19 @@ export function DropshippingCheckoutModal({
 
   const subtotal = mode === 'dropshipping' && precioVentaCliente != null ? precioVentaCliente : precioUnitario * (Number(cantidad) || 0);
   const flete = fleteSeleccionado?.fleteTotal || 0;
-  const totalAPagar = flete + (mode === 'dropshipping' && seguroActivo ? 5000 : 0);
-  const totalRecaudo = mode !== 'dropshipping' ? subtotal : envioIncluido ? subtotal : subtotal + flete;
+  // "Mi cliente ya me pago el producto" (pedido explicito del usuario 2026-07-18): el flete solo
+  // sale de la wallet si tambien le pagaron el envio (envioIncluido se reusa con ese significado
+  // cuando clientePago esta activo) -- si el envio quedo "aparte", el mensajero lo cobra al
+  // entregar, no se debita de la wallet. Para 'muestra' no cambia nada (siempre sale de la wallet).
+  const fleteDesdeWallet = mode === 'dropshipping' ? !clientePago || envioIncluido : true;
+  const totalAPagar = (fleteDesdeWallet ? flete : 0)
+    + (mode === 'dropshipping' && seguroActivo ? 5000 : 0)
+    + (mode === 'dropshipping' && clientePago ? subtotal : 0);
+  const totalRecaudo = mode !== 'dropshipping'
+    ? subtotal
+    : clientePago
+      ? (fleteDesdeWallet ? 0 : flete)
+      : (envioIncluido ? subtotal : subtotal + flete);
   const saldoInsuficiente = totalAPagar > saldo;
 
   function formValido(): boolean {
@@ -259,6 +276,7 @@ export function DropshippingCheckoutModal({
       ven_totalManual: mode === 'dropshipping' ? subtotal : undefined,
       shipping_included: mode === 'dropshipping' ? envioIncluido : undefined,
       insurance_active: mode === 'dropshipping' ? seguroActivo : undefined,
+      customer_prepaid_product: mode === 'dropshipping' ? clientePago : undefined,
       nombreProducto: producto.pro_nombre,
       ven_nombre_cliente: cliente.nombre.trim(),
       ven_telefono_cliente: cliente.telefono.trim(),
@@ -470,16 +488,25 @@ export function DropshippingCheckoutModal({
               </h4>
               <p className="mt-2 text-sm" style={{ color: '#6b7280' }}>
                 Se descontaron <strong style={{ color: '#1f2937' }}>{formatCOPMoneda(totalAPagar)}</strong> de tu billetera (
-                {mode === 'dropshipping' && seguroActivo ? 'flete + seguro' : 'flete'}).
+                {[
+                  fleteDesdeWallet ? 'flete' : null,
+                  mode === 'dropshipping' && clientePago ? 'producto' : null,
+                  mode === 'dropshipping' && seguroActivo ? 'seguro' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' + ')}
+                ).
               </p>
-              {subtotal > 0 && (
+              {totalRecaudo > 0 && (
                 <p className="mt-1 text-sm" style={{ color: '#6b7280' }}>
                   Recuerda cobrar <strong style={{ color: '#1f2937' }}>{formatCOPMoneda(totalRecaudo)}</strong> contra entrega al recibir el pedido.
                 </p>
               )}
-              <p className="mt-1 text-sm" style={{ color: '#6b7280' }}>
-                Apenas el cliente pague, se te devuelve el flete a tu billetera — no es un gasto perdido.
-              </p>
+              {mode === 'dropshipping' && !clientePago && (
+                <p className="mt-1 text-sm" style={{ color: '#6b7280' }}>
+                  Apenas el pedido se entregue con éxito, se te devuelve el flete a tu billetera — no es un gasto perdido.
+                </p>
+              )}
               {guiaGenerada && (
                 <p className="mt-2 text-sm" style={{ color: '#6b7280' }}>
                   Guía generada: <strong style={{ color: '#1f2937' }}>{guiaGenerada}</strong>
@@ -534,7 +561,7 @@ export function DropshippingCheckoutModal({
                   </p>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold" style={{ color: '#6b7280' }}>
-                      Precio a cobrar al cliente (COP) *
+                      {clientePago ? 'Valor que ya te pagó el cliente por el producto (COP) *' : 'Precio a cobrar al cliente (COP) *'}
                     </label>
                     <input
                       className="w-full rounded-[10px] border px-3 py-2 text-sm disabled:bg-gray-100"
@@ -547,6 +574,30 @@ export function DropshippingCheckoutModal({
                       placeholder="Ej: 80.000"
                     />
                   </div>
+
+                  <label
+                    className="mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3"
+                    style={{ borderColor: clientePago ? '#02a0e3' : '#e5e7eb', background: clientePago ? 'rgba(2,160,227,0.06)' : '#fff' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={clientePago}
+                      onChange={() => setClientePago((v) => !v)}
+                      disabled={camposBloqueados}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="m-0 text-[13px] font-bold" style={{ color: '#1f2937' }}>
+                        💰 Mi cliente ya me pagó el producto
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: '#6b7280' }}>
+                        {clientePago
+                          ? 'El mensajero NO cobrará el producto -- ya te lo pagaron por fuera. Ese valor se descuenta de tu billetera.'
+                          : 'Actívalo si tu cliente ya te transfirió/pagó el producto antes del envío (fuera de la plataforma).'}
+                      </p>
+                    </div>
+                  </label>
+
                   <div className="mt-2.5 grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -555,7 +606,7 @@ export function DropshippingCheckoutModal({
                       className="rounded-[10px] border px-1.5 py-2.5 text-[13px] font-bold"
                       style={envioIncluido ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.08)', color: '#0288c2' } : { borderColor: '#e5e7eb', color: '#1f2937' }}
                     >
-                      Envío incluido
+                      {clientePago ? 'También pagó el envío' : 'Envío incluido'}
                     </button>
                     <button
                       type="button"
@@ -564,13 +615,17 @@ export function DropshippingCheckoutModal({
                       className="rounded-[10px] border px-1.5 py-2.5 text-[13px] font-bold"
                       style={!envioIncluido ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.08)', color: '#0288c2' } : { borderColor: '#e5e7eb', color: '#1f2937' }}
                     >
-                      Envío aparte
+                      {clientePago ? 'Envío lo paga aparte' : 'Envío aparte'}
                     </button>
                   </div>
                   <p className="mx-0.5 mt-2 text-[11.5px]" style={{ color: '#6b7280' }}>
-                    {envioIncluido
-                      ? 'El precio de arriba ya incluye el flete: el mensajero solo cobra ese valor.'
-                      : 'El mensajero cobrará el precio de arriba MÁS el flete, por separado.'}
+                    {clientePago
+                      ? envioIncluido
+                        ? 'Tu cliente ya pagó todo (producto + envío): no se cobra nada contra entrega, el flete también sale de tu billetera.'
+                        : 'Tu cliente ya pagó el producto, pero el envío lo paga aparte al mensajero cuando reciba.'
+                      : envioIncluido
+                        ? 'El precio de arriba ya incluye el flete: el mensajero solo cobra ese valor.'
+                        : 'El mensajero cobrará el precio de arriba MÁS el flete, por separado.'}
                   </p>
                 </div>
               )}
@@ -708,6 +763,35 @@ export function DropshippingCheckoutModal({
                   </div>
                 </div>
 
+                {/* Movido aca arriba (antes vivia despues de elegir transportadora, escondido al
+                    final del flujo) y activado por defecto -- pedido explicito del usuario
+                    2026-07-18: quiere que "la gran mayoria" lo elija. Visible desde que abre el
+                    formulario (el precio del seguro no depende de la transportadora elegida), y
+                    el mensaje cambia a perdida en rojo cuando lo desmarca, en vez de solo mostrar
+                    el costo de agregarlo -- la friccion queda del lado de QUITARLO. */}
+                {mode === 'dropshipping' && (
+                  <label
+                    className="mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3.5"
+                    style={{ background: seguroActivo ? '#fffbeb' : '#fef2f2', borderColor: seguroActivo ? '#fde68a' : '#fecaca' }}
+                  >
+                    <input type="checkbox" checked={seguroActivo} onChange={() => setSeguroActivo((v) => !v)} className="mt-0.5" />
+                    <div>
+                      <p className="m-0 text-[13px] font-bold" style={{ color: '#1f2937' }}>
+                        🛡️ Protección de flete (recomendado) <span style={{ color: '#92400e' }}>+ {formatCOPMoneda(5000)}</span>
+                      </p>
+                      {seguroActivo ? (
+                        <p className="mt-1 text-xs leading-relaxed" style={{ color: '#6b7280' }}>
+                          Activada: si el pedido se devuelve, de todas formas te devolvemos el flete completo a tu billetera.
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs font-semibold leading-relaxed" style={{ color: '#dc2626' }}>
+                          ⚠️ Sin protección: si el cliente rechaza el pedido, pierdes todo el flete que prepagaste, sin devolución.
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                )}
+
                 {!fleteSeleccionado && (
                   <div className="mt-2.5 text-center">
                     <button
@@ -791,10 +875,24 @@ export function DropshippingCheckoutModal({
                       <span style={{ color: '#6b7280' }}>Valor producto ({cantidad} und)</span>
                       <strong>{formatCOPMoneda(subtotal)}</strong>
                     </div>
-                    <p className="-mt-1.5 mb-2 text-xs" style={{ color: '#6b7280' }}>
-                      Cobras <strong>{formatCOPMoneda(totalRecaudo)}</strong> contra entrega al recibir el pedido
-                      {mode === 'dropshipping' && !envioIncluido ? ' (producto + flete por separado)' : ''}. No se descuenta de tu billetera.
-                    </p>
+                    {mode === 'dropshipping' && clientePago ? (
+                      <p className="-mt-1.5 mb-2 text-xs" style={{ color: '#6b7280' }}>
+                        {totalRecaudo > 0
+                          ? <>El mensajero cobra <strong>{formatCOPMoneda(totalRecaudo)}</strong> de flete al entregar (el producto ya te lo pagaron).</>
+                          : 'Envío 100% prepagado: el mensajero no cobra nada al entregar.'}
+                      </p>
+                    ) : (
+                      <p className="-mt-1.5 mb-2 text-xs" style={{ color: '#6b7280' }}>
+                        Cobras <strong>{formatCOPMoneda(totalRecaudo)}</strong> contra entrega al recibir el pedido
+                        {mode === 'dropshipping' && !envioIncluido ? ' (producto + flete por separado)' : ''}. No se descuenta de tu billetera.
+                      </p>
+                    )}
+                    {mode === 'dropshipping' && clientePago && (
+                      <div className="flex items-center justify-between py-1.5 text-sm">
+                        <span style={{ color: '#6b7280' }}>Producto (ya pagado por tu cliente)</span>
+                        <strong>+ {formatCOPMoneda(subtotal)}</strong>
+                      </div>
+                    )}
                     {mode === 'dropshipping' && seguroActivo && (
                       <div className="flex items-center justify-between py-1.5 text-sm">
                         <span style={{ color: '#6b7280' }}>Seguro antidevoluciones</span>
@@ -802,7 +900,7 @@ export function DropshippingCheckoutModal({
                       </div>
                     )}
                     <div className="mt-1 flex items-center justify-between border-t border-dashed pt-2.5 text-base font-bold" style={{ borderColor: '#e5e7eb' }}>
-                      <span>{mode === 'dropshipping' && seguroActivo ? 'Flete + seguro · se descuenta de tu billetera' : 'Flete · se descuenta de tu billetera'}</span>
+                      <span>Total · se descuenta de tu billetera</span>
                       <span>{formatCOPMoneda(totalAPagar)}</span>
                     </div>
                     <div className="flex items-center justify-between pt-1 text-xs" style={{ color: '#6b7280' }}>
@@ -810,24 +908,6 @@ export function DropshippingCheckoutModal({
                       <strong style={saldoInsuficiente ? { color: '#dc2626' } : undefined}>{formatCOPMoneda(saldo)}</strong>
                     </div>
                   </div>
-
-                  {mode === 'dropshipping' && (
-                    <label
-                      className="mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3.5"
-                      style={{ background: seguroActivo ? '#fffbeb' : '#fff', borderColor: seguroActivo ? '#fde68a' : '#e5e7eb' }}
-                    >
-                      <input type="checkbox" checked={seguroActivo} onChange={() => setSeguroActivo((v) => !v)} className="mt-0.5" />
-                      <div>
-                        <p className="m-0 text-[13px] font-bold" style={{ color: '#1f2937' }}>
-                          🛡️ Seguro antidevoluciones <span style={{ color: '#92400e' }}>+ {formatCOPMoneda(5000)}</span>
-                        </p>
-                        <p className="mt-1 text-xs leading-relaxed" style={{ color: '#6b7280' }}>
-                          Si el pedido se marca como devolución, con este seguro <strong>igual se te devuelve el flete completo</strong>. Sin el seguro, una devolución{' '}
-                          <strong>no te devuelve el flete</strong> que ya prepagaste.
-                        </p>
-                      </div>
-                    </label>
-                  )}
 
                   {saldoInsuficiente && !mostrarRecarga && (
                     <div className="mt-2.5 rounded-[10px] p-3.5 text-[13px]" style={{ background: '#fef2f2', color: '#dc2626' }}>

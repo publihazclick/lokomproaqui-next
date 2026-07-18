@@ -29,6 +29,7 @@ interface DatosPedidoDropshipping {
   ven_totalManual?: number;
   shipping_included?: boolean;
   insurance_active?: boolean;
+  customer_prepaid_product?: boolean;
   nombreProducto: string;
   ven_nombre_cliente: string;
   ven_telefono_cliente: string;
@@ -92,6 +93,7 @@ export async function crearPedidoDropshipping(data: DatosPedidoDropshipping): Pr
   if (data.ven_totalManual != null) patch.price_total = Number(data.ven_totalManual);
   if (data.shipping_included !== undefined) patch.shipping_included = data.shipping_included;
   if (data.insurance_active !== undefined) patch.insurance_active = data.insurance_active;
+  if (data.customer_prepaid_product !== undefined) patch.customer_prepaid_product = data.customer_prepaid_product;
   if (Object.keys(patch).length) await supabase.from('orders').update(patch).eq('id', orderId as number);
 
   return { success: true, id: orderId as number };
