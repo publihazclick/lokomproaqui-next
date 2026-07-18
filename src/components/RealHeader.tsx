@@ -146,43 +146,36 @@ export function RealHeader() {
 
   return (
     <>
+      {/* Banner promo del Acelerador de Ventas, solo en /info -- pedido explicito del usuario:
+          va ANTES de la cabecera (no dentro), por eso vive aca y no en info/page.tsx. */}
+      {pathname === '/info' && (
+        <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 px-3 py-2 text-center text-white">
+          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <span className="text-xs font-bold sm:text-sm">🚀 Acelerador de Ventas</span>
+            <Link
+              href="/acelerador"
+              className="whitespace-nowrap rounded-full bg-white px-3 py-1 text-xs font-bold text-fuchsia-700 shadow transition hover:scale-105 sm:px-4 sm:py-1.5 sm:text-sm"
+            >
+              Ver ahora
+            </Link>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-50 bg-[#02a0e3] shadow-md">
         <div className="mx-auto flex h-20 max-w-[1200px] items-center gap-2 px-3 sm:h-32 sm:px-4">
           <button type="button" onClick={() => setMenuAbierto(true)} className="rounded p-2 text-white hover:bg-white/10" aria-label="Abrir menú">
             <Menu className="h-6 w-6" />
           </button>
 
-          <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
-            {logo === '/assets/logo.svg' ? (
-              // Wordmark en texto (degradado fucsia-morado) en vez del SVG con fondo rosa solido --
-              // pedido explicito del usuario. Solo para el caso "sin foto de perfil" (logo sigue en
-              // su valor default) -- un usuario logueado con avatar real sigue mostrando SU FOTO
-              // (rama de abajo), nunca el wordmark de marca, igual que el comportamiento original.
-              <span className="whitespace-nowrap bg-gradient-to-r from-fuchsia-500 to-purple-600 bg-clip-text text-sm font-extrabold text-transparent sm:text-5xl">
-                LoKomproAqui.com
-              </span>
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- avatar real del usuario, Supabase Storage
-              <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full rounded-full object-cover sm:h-[116px]" />
-            )}
-          </Link>
-
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
+          <div className="ml-auto flex min-w-0 shrink items-center gap-2 sm:gap-4">
             {rol === 'visitante' ? (
-              <>
-                {/* Oculto en mobile (queda disponible en el menu hamburguesa, MENUS_PIE mas abajo):
-                    un wordmark de texto grande + 2 botones no entran juntos en 390px sin que algo
-                    se corte -- se prioriza que el logo y el CTA principal se vean completos. */}
-                <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
-                  Iniciar Sesión
-                </Link>
-                <Link
-                  href="/singUp"
-                  className="whitespace-nowrap rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-pink-900/30 transition hover:scale-105 hover:brightness-110 sm:rounded-2xl sm:px-8 sm:py-4 sm:text-lg"
-                >
-                  EMPEZAR GRATIS
-                </Link>
-              </>
+              // Pedido explicito del usuario: el logo va al lado opuesto del menu hamburguesa
+              // (no pegado a el) y sin el boton "EMPEZAR GRATIS" en la cabecera -- ese CTA sigue
+              // disponible en otras partes de la pagina (hero de /info, MENUS_PIE, etc.).
+              <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
+                Iniciar Sesión
+              </Link>
             ) : (
               <>
                 {balance !== null && (
@@ -208,6 +201,21 @@ export function RealHeader() {
                 </Link>
               </>
             )}
+
+            <Link href={rol === 'visitante' ? '/info' : '/articulo'} className="min-w-0 shrink">
+              {logo === '/assets/logo.svg' ? (
+                // Wordmark en texto (degradado fucsia-morado) en vez del SVG con fondo rosa solido --
+                // pedido explicito del usuario. Solo para el caso "sin foto de perfil" (logo sigue en
+                // su valor default) -- un usuario logueado con avatar real sigue mostrando SU FOTO
+                // (rama de abajo), nunca el wordmark de marca, igual que el comportamiento original.
+                <span className="whitespace-nowrap bg-gradient-to-r from-fuchsia-500 to-purple-600 bg-clip-text text-sm font-extrabold text-transparent sm:text-5xl">
+                  LoKomproAqui.com
+                </span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- avatar real del usuario, Supabase Storage
+                <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full rounded-full object-cover sm:h-[116px]" />
+              )}
+            </Link>
           </div>
         </div>
       </header>
