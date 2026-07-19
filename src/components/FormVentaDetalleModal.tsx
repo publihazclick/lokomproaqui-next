@@ -146,19 +146,52 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
           <div className="space-y-4 px-4 py-4">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">Estado de la Venta</label>
-              <select
-                value={venta.estado}
-                onChange={(e) => cambiarEstado(Number(e.target.value))}
-                disabled={cambiandoEstado}
-                className="w-full max-w-xs rounded border border-gray-300 px-2 py-2 text-sm"
-              >
-                {ESTADOS_DISPONIBLES(esAdmin).map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-400">Actual: {VENTA_ESTADO_LABEL[venta.estado]}</p>
+              {esAdmin ? (
+                <>
+                  <select
+                    value={venta.estado}
+                    onChange={(e) => cambiarEstado(Number(e.target.value))}
+                    disabled={cambiandoEstado}
+                    className="w-full max-w-xs rounded border border-gray-300 px-2 py-2 text-sm"
+                  >
+                    {ESTADOS_DISPONIBLES(esAdmin).map((op) => (
+                      <option key={op.value} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-400">Actual: {VENTA_ESTADO_LABEL[venta.estado]}</p>
+                </>
+              ) : venta.estado === 0 ? (
+                // Pedido explicito del usuario 2026-07-19: el vendedor NO decide "Despachado" ni
+                // "Venta exitosa" -- eso lo sabe el proveedor (genera la guia real) y el tracking
+                // real de Mipaquete (que ya dispara approve_order/reject_order solo, ver
+                // mipaquete-sync-tracking). Aca solo autoriza o rechaza. Autorizar = pasa a
+                // "Preparacion", que es el unico estado que /config/misDespacho ya usa para
+                // mostrarle el pedido al proveedor -- en 'Pendiente' es invisible para el.
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => cambiarEstado(6)}
+                    disabled={cambiandoEstado}
+                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                  >
+                    ✅ Autorizar y enviar a despacho
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('¿Rechazar este pedido? El vendedor va a ver que la venta no se autorizo.')) cambiarEstado(2);
+                    }}
+                    disabled={cambiandoEstado}
+                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-60"
+                  >
+                    ❌ Rechazar pedido
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-700">{VENTA_ESTADO_LABEL[venta.estado]}</p>
+              )}
             </div>
 
             <div>
