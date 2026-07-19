@@ -12,23 +12,6 @@ export async function getBalanceDropshipper(profileId: string): Promise<number> 
   return data?.balance || 0;
 }
 
-export async function debitWalletDropshipper(profileId: string, amount: number, orderId: number, kind = 'flete_pedido'): Promise<{ success: boolean; message?: string }> {
-  const { error } = await supabase.rpc('debit_wallet', {
-    p_profile_id: profileId,
-    p_wallet_type: 'dropshipper',
-    p_amount: amount,
-    p_order_id: orderId,
-    p_kind: kind,
-  });
-  if (error) {
-    const msg = error.message && error.message.includes('saldo_insuficiente')
-      ? 'Saldo insuficiente en tu billetera, recarga para continuar'
-      : 'No pudimos procesar el pago con tu billetera';
-    return { success: false, message: msg };
-  }
-  return { success: true };
-}
-
 export async function refundWalletDropshipper(profileId: string, amount: number, orderId: number, kind = 'flete_cancelado'): Promise<boolean> {
   const { error } = await supabase.rpc('credit_wallet', {
     p_profile_id: profileId,

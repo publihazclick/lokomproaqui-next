@@ -10,7 +10,7 @@ import {
   actualizarFleteYTransportadora,
   actualizarCondicionesEntrega,
   marcarPedidoEnPreparacion,
-  marcarFleteDesdeWallet,
+  cobrarWalletPedidoSiNoCobrado,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
@@ -18,7 +18,7 @@ import {
   type CiudadMipaquete,
   type CotizacionFlete,
 } from '@/lib/ventas';
-import { getBalanceDropshipper, debitWalletDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
+import { getBalanceDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port SIMPLIFICADO de FormventasComponent (Angular, 812 lineas) -- decision explicita del usuario
@@ -177,18 +177,19 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     setAutorizando(true);
     setError('');
     const kind = seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
-    const deb = await debitWalletDropshipper(venta!.sellerId!, totalAPagarWallet, orderId, kind);
+    // Flete SIEMPRE pagado desde la wallet en este formulario (a diferencia de
+    // DropshippingCheckoutModal, aca no existe la excepcion "envio aparte"). cobrarWalletPedidoSiNoCobrado
+    // cobra una sola vez por pedido -- si ya se habia cobrado (reintento tras fallo de guia), no
+    // vuelve a debitar.
+    const deb = await cobrarWalletPedidoSiNoCobrado(orderId, venta!.sellerId!, totalAPagarWallet, kind, true);
     if (!deb.success) {
       setAutorizando(false);
       setError(deb.message || 'No pudimos cobrar el flete de la billetera');
       return;
     }
-    setSaldo((s) => s - totalAPagarWallet);
+    if (!deb.alreadyCharged) setSaldo((s) => s - totalAPagarWallet);
     await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, seguroActivo);
     await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
-    // Flete SIEMPRE pagado desde la wallet en este formulario (a diferencia de
-    // DropshippingCheckoutModal, aca no existe la excepcion "envio aparte" -- ver nota arriba).
-    await marcarFleteDesdeWallet(orderId, true);
     const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug);
     if (!res.ok) {
       setAutorizando(false);

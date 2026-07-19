@@ -106,14 +106,35 @@ export async function actualizarFleteYTransportadora(orderId: number, fleteTotal
   return !error;
 }
 
-// Marca EXPLICITAMENTE si el flete de este pedido salio de la wallet del vendedor -- se llama en
-// el momento exacto en que el debito real sucede (nunca se infiere despues a partir de otras
-// columnas). approve_order/reject_order leen este flag tal cual para decidir si hay algo que
-// devolver. Pedido explicito del usuario 2026-07-19, tras encontrar 2 bugs reales (migraciones 043
-// y 044) causados por tratar de ADIVINAR esto a partir de customer_prepaid_product/shipping_included.
-export async function marcarFleteDesdeWallet(orderId: number, valor: boolean): Promise<boolean> {
-  const { error } = await supabase.from('orders').update({ freight_wallet_funded: valor }).eq('id', orderId);
-  return !error;
+// Cobra el flete/seguro/producto de la wallet del vendedor EXACTAMENTE UNA VEZ por pedido, sin
+// importar cuantas veces se llame (reintento tras un error de Mipaquete, doble-clic, o el mismo
+// pedido abierto en dos pestañas). El RPC bloquea la fila del pedido y solo debita si todavia no
+// se habia debitado -- si ya se cobro, es un no-op (alreadyCharged=true) y el flujo puede seguir
+// directo a generar la guia sin volver a tocar la wallet. Pedido explicito del usuario 2026-07-19,
+// tras encontrar un bug real: "intenta de nuevo" despues de un fallo de guia volvia a cobrar todo
+// desde cero en FormVentaDetalleModal (Autorizar Despacho no tenia el mismo guard que ya existia
+// en DropshippingCheckoutModal via reintentarGuia()).
+export async function cobrarWalletPedidoSiNoCobrado(
+  orderId: number,
+  profileId: string,
+  amount: number,
+  kind: string,
+  freightFunded: boolean
+): Promise<{ success: boolean; alreadyCharged?: boolean; message?: string }> {
+  const { data, error } = await supabase.rpc('charge_order_wallet_if_needed', {
+    p_order_id: orderId,
+    p_profile_id: profileId,
+    p_amount: amount,
+    p_kind: kind,
+    p_freight_funded: freightFunded,
+  });
+  if (error) {
+    const msg = error.message && error.message.includes('saldo_insuficiente')
+      ? 'Saldo insuficiente en tu billetera, recarga para continuar'
+      : 'No pudimos procesar el pago con tu billetera';
+    return { success: false, message: msg };
+  }
+  return { success: true, alreadyCharged: data === false };
 }
 
 // Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al

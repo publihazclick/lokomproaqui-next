@@ -7,7 +7,6 @@ import { type ProductoLegacy } from '@/lib/productos';
 import { type DataUserCompleto } from '@/lib/usuarios';
 import {
   getBalanceDropshipper,
-  debitWalletDropshipper,
   refundWalletDropshipper,
   createTopup,
   getTopupStatus,
@@ -18,7 +17,7 @@ import {
   actualizarFleteYTransportadora,
   marcarPedidoRechazadoSinReembolso,
   marcarPedidoEnPreparacion,
-  marcarFleteDesdeWallet,
+  cobrarWalletPedidoSiNoCobrado,
   cotizarFlete,
   generarGuiaEnvio,
   buscarCiudadesMipaquete,
@@ -332,7 +331,11 @@ export function DropshippingCheckoutModal({
     setLoader(true);
     setError('');
     const kind = mode === 'dropshipping' && seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
-    const res = await debitWalletDropshipper(dataUser.id, totalAPagar, orderId, kind);
+    // cobrarWalletPedidoSiNoCobrado cobra una sola vez por pedido -- si "Confirmar" se reintenta
+    // tras un fallo de guia (ver generarGuia), o si el pedido queda abierto en dos pestañas, no
+    // vuelve a debitar. fleteDesdeWallet=false solo en dropshipping con "cliente ya pago" + "envio
+    // aparte" (el mensajero cobra el flete directo).
+    const res = await cobrarWalletPedidoSiNoCobrado(orderId, dataUser.id, totalAPagar, kind, fleteDesdeWallet);
     if (!res.success) {
       setLoader(false);
       setError(res.message || 'No pudimos procesar el pago');
@@ -340,10 +343,6 @@ export function DropshippingCheckoutModal({
       return;
     }
     await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
-    // Marca EXPLICITAMENTE si el flete salio de la wallet en ESTE debito -- approve_order/
-    // reject_order ya no lo adivinan (ver marcarFleteDesdeWallet). fleteDesdeWallet=false solo en
-    // dropshipping con "cliente ya pago" + "envio aparte" (el mensajero cobra el flete directo).
-    await marcarFleteDesdeWallet(orderId, fleteDesdeWallet);
     await generarGuia(orderId, fleteSeleccionado.slug);
   }
 
