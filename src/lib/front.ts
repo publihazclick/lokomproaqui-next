@@ -110,7 +110,14 @@ export async function crearPedidoRapido(sellerId: string, comprador: DatosCompra
       buyer_address: comprador.direccion,
       buyer_city: comprador.ciudad,
       buyer_neighborhood: comprador.barrio,
-      order_type: 'whatsapp',
+      // BUG REAL CORREGIDO 2026-07-19: este flujo ("Comprar ahora (pago contra entrega)") creaba el
+      // pedido con order_type='whatsapp' -- un valor que NO existe en ningun otro lugar del codigo
+      // (unico match en todo el repo). mipaquete-create-shipment solo reconoce 'contraentrega' /
+      // 'dropshipping' / 'muestra' como flete autofinanciado -- con 'whatsapp' caia al default
+      // (valueCollection=0), es decir le decia al mensajero que NO cobrara nada al entregar. El
+      // cliente recibia el producto gratis en cada compra por esta via. Se usa el mismo valor que ya
+      // usa correctamente el otro checkout publico (carrito, ver crearPedidoCarrito).
+      order_type: 'contraentrega',
       freight_payer: 'cliente',
     },
     items: [
