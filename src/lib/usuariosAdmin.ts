@@ -23,8 +23,11 @@ import { supabase } from './supabase';
 // (mismos campos no mapeados que en /config/perfil) -- ya se resuelven de verdad para el PROPIO
 // usuario en /config/perfil, no hace falta duplicarlos aca para editar a otros.
 
-const ROLES_ASIGNABLES = ['admin', 'vendedor', 'proveedor', 'bodega'];
-const ROL_LABEL: Record<string, string> = { admin: 'Administrador', vendedor: 'Vendedor', proveedor: 'Proveedor', bodega: 'Bodega' };
+// 'bodega' y 'proveedor' son el mismo rol/alcance -- el usuario solo los nombra distinto (pedido
+// explicito 2026-07-19). Se unificaron: 'bodega' ya no es un rol asignable aparte (tenia 0 usuarios
+// reales en produccion), 'proveedor' es la unica opcion real desde ahora.
+const ROLES_ASIGNABLES = ['admin', 'vendedor', 'proveedor'];
+const ROL_LABEL: Record<string, string> = { admin: 'Administrador', vendedor: 'Vendedor', proveedor: 'Proveedor' };
 
 export interface RolOpcion {
   id: number;
