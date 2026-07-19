@@ -55,16 +55,13 @@ function CursosCarousel({ lecciones }: { lecciones: Leccion[] }) {
     <Link href={`/acelerador/leccion/${actual.id}`} className="relative block aspect-video w-full overflow-hidden rounded bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de Supabase Storage, tamaño variable */}
       <img src={actual.thumbnailUrl || ''} alt={actual.titulo} className="h-full w-full object-contain" />
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
-        <p className="min-w-0 truncate text-xs font-bold text-white sm:text-sm">{actual.titulo}</p>
-        {lecciones.length > 1 && (
-          <div className="flex shrink-0 gap-1.5">
-            {lecciones.map((l, i) => (
-              <span key={l.id} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
-            ))}
-          </div>
-        )}
-      </div>
+      {lecciones.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+          {lecciones.map((l, i) => (
+            <span key={l.id} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
+          ))}
+        </div>
+      )}
     </Link>
   );
 }
