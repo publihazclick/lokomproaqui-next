@@ -52,7 +52,11 @@ function CursosCarousel({ lecciones }: { lecciones: Leccion[] }) {
   const actual = lecciones[idx % lecciones.length];
 
   return (
-    <Link href={`/acelerador/leccion/${actual.id}`} className="relative block aspect-video w-full overflow-hidden rounded bg-black">
+    // Alto fijo por breakpoint (no aspect-video a lo ancho completo del contenedor) -- pedido
+    // explicito del usuario 2026-07-19: se veia muy grande tanto en celular como en computador.
+    // object-contain se encarga de que la miniatura completa se siga viendo sin recortarse, solo
+    // mas chica.
+    <Link href={`/acelerador/leccion/${actual.id}`} className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded bg-black sm:h-48">
       {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de Supabase Storage, tamaño variable */}
       <img src={actual.thumbnailUrl || ''} alt={actual.titulo} className="h-full w-full object-contain" />
       {lecciones.length > 1 && (
