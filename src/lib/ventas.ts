@@ -218,6 +218,33 @@ export async function fetchRiesgoComprador(telefono: string | null): Promise<Rie
   return { totalOrders: data.total_orders, totalReturns: data.total_returns };
 }
 
+// Fase 1 del plan de reduccion de devoluciones: umbral para considerar "alto riesgo" un vendedor o
+// producto -- exige minimo 5 pedidos ya resueltos (evita juzgar con una muestra minuscula, ej. el
+// primer pedido rechazado de un vendedor nuevo) y 30%+ de tasa de devolucion real.
+const MINIMO_PEDIDOS_RIESGO = 5;
+const TASA_DEVOLUCION_ALTO_RIESGO = 0.3;
+
+// Consulta seller_return_stats/product_return_stats (migracion 050, vistas en vivo sobre
+// orders/order_items -- no hace falta tabla mantenida aparte) para decidir si el seguro
+// antidevolucion debe quedar obligatorio (no se puede desactivar) en este pedido. "Te protege a ti
+// como plataforma" -- pedido explicito del usuario 2026-07-19.
+export async function fetchSeguroObligatorio(sellerId: string | null, productIds: (number | null)[]): Promise<boolean> {
+  const consultas: PromiseLike<{ total_orders: number; return_rate: number } | null>[] = [];
+  if (sellerId) {
+    consultas.push(
+      supabase.from('seller_return_stats').select('total_orders, return_rate').eq('seller_id', sellerId).maybeSingle().then((r) => r.data as any),
+    );
+  }
+  for (const productId of productIds) {
+    if (!productId) continue;
+    consultas.push(
+      supabase.from('product_return_stats').select('total_orders, return_rate').eq('product_id', productId).maybeSingle().then((r) => r.data as any),
+    );
+  }
+  const resultados = await Promise.all(consultas);
+  return resultados.some((r) => r && r.total_orders >= MINIMO_PEDIDOS_RIESGO && r.return_rate >= TASA_DEVOLUCION_ALTO_RIESGO);
+}
+
 export async function marcarPedidoEnPreparacion(orderId: number): Promise<boolean> {
   const { error } = await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
   return !error;
@@ -511,6 +538,7 @@ export async function eliminarVenta(orderId: number): Promise<{ success: boolean
 
 export interface VentaItem {
   id: number;
+  productoId: number | null;
   titulo: string | null;
   cantidad: number;
   talla: string | null;
@@ -571,6 +599,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     envioIncluido: order.shipping_included !== false,
     items: (items || []).map((i: any) => ({
       id: i.id,
+      productoId: i.product_id,
       titulo: i.title,
       cantidad: i.quantity,
       talla: i.size,

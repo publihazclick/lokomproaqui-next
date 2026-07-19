@@ -14,6 +14,7 @@ import {
   guardarMotivoDevolucion,
   MOTIVOS_DEVOLUCION,
   fetchRiesgoComprador,
+  fetchSeguroObligatorio,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
@@ -102,6 +103,9 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   // Fase 1 del plan de reduccion de devoluciones: historial cross-seller del comprador (por
   // telefono), puramente informativo -- se muestra como advertencia, no bloquea autorizar.
   const [riesgoComprador, setRiesgoComprador] = useState<RiesgoComprador | null>(null);
+  // Fase 1: si el vendedor o alguno de los productos tiene tasa de devolucion historica alta, el
+  // seguro antidevolucion queda obligatorio (no se puede desactivar) -- protege a la plataforma.
+  const [seguroObligatorio, setSeguroObligatorio] = useState(false);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -113,7 +117,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
       setClientePago(res.clientePago);
       setEnvioIncluido(res.envioIncluido);
       if (res.sellerId) getBalanceDropshipper(res.sellerId).then(setSaldo);
-      if (!res.numeroGuia) fetchRiesgoComprador(res.telefonoCliente).then(setRiesgoComprador);
+      if (!res.numeroGuia) {
+        fetchRiesgoComprador(res.telefonoCliente).then(setRiesgoComprador);
+        fetchSeguroObligatorio(res.sellerId, res.items.map((i) => i.productoId)).then((ob) => {
+          setSeguroObligatorio(ob);
+          if (ob) setSeguroActivo(true);
+        });
+      }
       // Autobusqueda: la ciudad ya viene del pedido (buyer_city, texto libre del cliente) -- se
       // busca de una vez contra Mipaquete para que el vendedor solo tenga que hacer click en la
       // sugerencia correcta, en vez de tener que escribir todo de nuevo. Sigue pudiendo buscar
@@ -434,12 +444,26 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                       className="flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3"
                       style={{ background: seguroActivo ? '#fffbeb' : '#fef2f2', borderColor: seguroActivo ? '#fde68a' : '#fecaca' }}
                     >
-                      <input type="checkbox" checked={seguroActivo} onChange={() => setSeguroActivo((v) => !v)} className="mt-0.5" />
+                      <input
+                        type="checkbox"
+                        checked={seguroActivo}
+                        disabled={seguroObligatorio}
+                        onChange={() => setSeguroActivo((v) => !v)}
+                        className="mt-0.5"
+                      />
                       <div>
                         <p className="m-0 text-[13px] font-bold text-gray-800">
                           🛡️ Protección de flete (recomendado) <span className="text-amber-800">+ $5.000</span>
                         </p>
-                        {seguroActivo ? (
+                        {seguroObligatorio ? (
+                          // Fase 1 del plan de reduccion de devoluciones: este vendedor o alguno de
+                          // los productos tiene tasa de devolucion historica alta (ver
+                          // seller_return_stats/product_return_stats, migracion 050) -- el seguro
+                          // queda obligatorio, protege a la plataforma de asumir el flete completo.
+                          <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-700">
+                            Obligatorio en este pedido: la tasa de devolución histórica es alta.
+                          </p>
+                        ) : seguroActivo ? (
                           <p className="mt-1 text-xs leading-relaxed text-gray-500">
                             Activada: si el pedido se devuelve, igual recuperas el flete completo en tu billetera.
                           </p>

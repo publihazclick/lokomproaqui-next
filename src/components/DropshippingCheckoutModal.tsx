@@ -18,6 +18,7 @@ import {
   marcarPedidoEnPreparacion,
   cobrarWalletPedidoSiNoCobrado,
   reembolsarWalletPedidoSiCobrado,
+  fetchSeguroObligatorio,
   cotizarFlete,
   generarGuiaEnvio,
   buscarCiudadesMipaquete,
@@ -99,6 +100,11 @@ export function DropshippingCheckoutModal({
   // mayoria" active la proteccion -- el default es la palanca mas fuerte de adopcion, la mayoria
   // de vendedores no va a tocar algo que ya viene marcado. El vendedor puede desmarcarlo.
   const [seguroActivo, setSeguroActivo] = useState(true);
+  // Fase 1 del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19): si el
+  // vendedor o el producto tienen tasa de devolucion historica alta, el seguro queda obligatorio
+  // (no se puede desactivar) -- protege a la plataforma. Solo aplica a 'dropshipping' (mismo alcance
+  // que el seguro en si, ver arriba).
+  const [seguroObligatorio, setSeguroObligatorio] = useState(false);
 
   const [cliente, setCliente] = useState<Cliente>(() =>
     mode === 'muestra'
@@ -150,6 +156,12 @@ export function DropshippingCheckoutModal({
 
   useEffect(() => {
     refrescarSaldo();
+    if (mode === 'dropshipping') {
+      fetchSeguroObligatorio(dataUser.id, [producto.id]).then((ob) => {
+        setSeguroObligatorio(ob);
+        if (ob) setSeguroActivo(true);
+      });
+    }
     return () => {
       if (ciudadDebounce.current) clearTimeout(ciudadDebounce.current);
       if (campoDebounce.current) clearTimeout(campoDebounce.current);
@@ -781,12 +793,25 @@ export function DropshippingCheckoutModal({
                     className="mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3.5"
                     style={{ background: seguroActivo ? '#fffbeb' : '#fef2f2', borderColor: seguroActivo ? '#fde68a' : '#fecaca' }}
                   >
-                    <input type="checkbox" checked={seguroActivo} onChange={() => setSeguroActivo((v) => !v)} className="mt-0.5" />
+                    <input
+                      type="checkbox"
+                      checked={seguroActivo}
+                      disabled={seguroObligatorio}
+                      onChange={() => setSeguroActivo((v) => !v)}
+                      className="mt-0.5"
+                    />
                     <div>
                       <p className="m-0 text-[13px] font-bold" style={{ color: '#1f2937' }}>
                         🛡️ Protección de flete (recomendado) <span style={{ color: '#92400e' }}>+ {formatCOPMoneda(5000)}</span>
                       </p>
-                      {seguroActivo ? (
+                      {seguroObligatorio ? (
+                        // Fase 1 del plan de reduccion de devoluciones: este vendedor o este
+                        // producto tienen tasa de devolucion historica alta -- el seguro queda
+                        // obligatorio, protege a la plataforma.
+                        <p className="mt-1 text-xs font-semibold leading-relaxed" style={{ color: '#92400e' }}>
+                          Obligatorio en este pedido: la tasa de devolución histórica es alta.
+                        </p>
+                      ) : seguroActivo ? (
                         <p className="mt-1 text-xs leading-relaxed" style={{ color: '#6b7280' }}>
                           Activada: si el pedido se devuelve, de todas formas te devolvemos el flete completo a tu billetera.
                         </p>
