@@ -137,6 +137,17 @@ export async function cobrarWalletPedidoSiNoCobrado(
   return { success: true, alreadyCharged: data === false };
 }
 
+// Reembolsa un pedido cancelado antes de tener guia SOLO si de verdad se le cobro algo -- lee
+// order_wallet_debited y el monto real en wallet_ledger, nunca confia en un total calculado en el
+// frontend. Bug real encontrado 2026-07-19: cancelarYReembolsar() en DropshippingCheckoutModal
+// devolvia `totalAPagar` de forma incondicional, incluso cuando el debito nunca habia llegado a
+// pasar (ej. charge_order_wallet_if_needed fallo por saldo insuficiente en una condicion de
+// carrera) -- eso permitia recibir plata gratis en la wallet con solo darle "Cancelar pedido".
+export async function reembolsarWalletPedidoSiCobrado(orderId: number): Promise<boolean> {
+  const { error } = await supabase.rpc('refund_order_wallet_if_charged', { p_order_id: orderId });
+  return !error;
+}
+
 // Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al
 // autorizar el despacho, antes de generar la guia real -- mipaquete-create-shipment las lee de la
 // base de datos para saber cuanto debe recaudar el mensajero (ver nota ampliada en ese archivo).

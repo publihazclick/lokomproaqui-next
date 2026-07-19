@@ -7,7 +7,6 @@ import { type ProductoLegacy } from '@/lib/productos';
 import { type DataUserCompleto } from '@/lib/usuarios';
 import {
   getBalanceDropshipper,
-  refundWalletDropshipper,
   createTopup,
   getTopupStatus,
   SALDO_MINIMO_DROPSHIPPING,
@@ -18,6 +17,7 @@ import {
   marcarPedidoRechazadoSinReembolso,
   marcarPedidoEnPreparacion,
   cobrarWalletPedidoSiNoCobrado,
+  reembolsarWalletPedidoSiCobrado,
   cotizarFlete,
   generarGuiaEnvio,
   buscarCiudadesMipaquete,
@@ -368,9 +368,12 @@ export function DropshippingCheckoutModal({
 
   async function cancelarYReembolsar() {
     if (!orderId) return;
-    if (!window.confirm('Cancelar pedido: se te devolvera el saldo debitado a tu billetera. ¿Continuar?')) return;
+    if (!window.confirm('Cancelar pedido: si ya se alcanzo a cobrar algo de tu billetera, se te devuelve. ¿Continuar?')) return;
     setLoader(true);
-    await refundWalletDropshipper(dataUser.id, totalAPagar, orderId);
+    // Solo devuelve si de verdad hubo un cobro real (ver reembolsarWalletPedidoSiCobrado) -- este
+    // boton tambien puede aparecer cuando el debito FALLO (ej. saldo insuficiente en el momento del
+    // cobro), y ahi no hay nada que reembolsar.
+    await reembolsarWalletPedidoSiCobrado(orderId);
     await marcarPedidoRechazadoSinReembolso(orderId);
     setLoader(false);
     onClose();

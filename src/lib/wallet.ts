@@ -12,18 +12,6 @@ export async function getBalanceDropshipper(profileId: string): Promise<number> 
   return data?.balance || 0;
 }
 
-export async function refundWalletDropshipper(profileId: string, amount: number, orderId: number, kind = 'flete_cancelado'): Promise<boolean> {
-  const { error } = await supabase.rpc('credit_wallet', {
-    p_profile_id: profileId,
-    p_wallet_type: 'dropshipper',
-    p_amount: amount,
-    p_order_id: orderId,
-    p_pct: null,
-    p_kind: kind,
-  });
-  return !error;
-}
-
 export async function createTopup(profileId: string, amount: number, code: string): Promise<boolean> {
   const { error } = await supabase.from('wallet_topups').insert({ profile_id: profileId, amount, code, status: 0 });
   return !error;
