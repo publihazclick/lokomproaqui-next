@@ -149,33 +149,35 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   }
 
   const esContraentrega = venta?.tipoPedido === 'contraentrega';
-  const totalSeguro = fleteSeleccionado ? fleteSeleccionado.fleteTotal + 5000 : 0;
-  const saldoInsuficienteSeguro = esContraentrega && seguroActivo && (saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalSeguro);
+  // Pedido explicito del usuario 2026-07-19: ya no existe "contra entrega sin prepago" -- TODO
+  // pedido, con o sin seguro, exige saldo suficiente en la wallet para el flete antes de poder
+  // autorizar/generar la guia. Antes esto solo se cobraba si el vendedor activaba el seguro; ahora
+  // el flete SIEMPRE sale de la wallet (el seguro solo agrega los +5.000 y la proteccion ante una
+  // devolucion, ver reject_order -- ya no decide si se cobra o no).
+  const totalAPagarWallet = fleteSeleccionado ? fleteSeleccionado.fleteTotal + (seguroActivo ? 5000 : 0) : 0;
+  const saldoInsuficiente = esContraentrega && (saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalAPagarWallet);
 
-  // Un solo click al final del formulario: guarda condiciones de entrega + transportadora
-  // elegida, cobra el seguro de la wallet si aplica, genera la guia real, y (si funciona) mueve
-  // el pedido a "Preparacion" -- pedido explicito del usuario: "el vendedor genera la guia cuando
-  // da click a autorizar despacho".
+  // Un solo click al final del formulario: cobra el flete (+seguro si aplica) de la wallet, guarda
+  // condiciones de entrega + transportadora elegida, genera la guia real, y (si funciona) mueve el
+  // pedido a "Preparacion" -- pedido explicito del usuario: "el vendedor genera la guia cuando da
+  // click a autorizar despacho".
   async function autorizarDespacho() {
     if (!fleteSeleccionado || autorizando) return;
-    // Seguro en 'contraentrega' (MISMA logica que Hacer Dropshipping/Pedir muestra): cobra
-    // flete+5000 de la wallet ANTES de generar la guia -- si no alcanza, no se genera nada, mismo
-    // candado que ya existe en DropshippingCheckoutModal. dropshipping/muestra no pasan por aca
-    // (ya cobraron esto en su propio checkout al crear el pedido).
-    if (esContraentrega && seguroActivo) {
-      if (saldoInsuficienteSeguro) {
-        setError(`Saldo insuficiente para el seguro: necesitas ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo mínimo y ${totalSeguro.toLocaleString('es-CO')} para cubrir flete+seguro. Recarga en "Recargar Saldo" e intenta de nuevo.`);
+    if (esContraentrega) {
+      if (saldoInsuficiente) {
+        setError(`Saldo insuficiente: necesitas mínimo ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo y ${totalAPagarWallet.toLocaleString('es-CO')} para cubrir el flete${seguroActivo ? ' + seguro' : ''}. Recarga en "Recargar Saldo" e intenta de nuevo.`);
         return;
       }
       setAutorizando(true);
       setError('');
-      const deb = await debitWalletDropshipper(venta!.sellerId!, totalSeguro, orderId, 'flete_seguro_pedido');
+      const kind = seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
+      const deb = await debitWalletDropshipper(venta!.sellerId!, totalAPagarWallet, orderId, kind);
       if (!deb.success) {
         setAutorizando(false);
-        setError(deb.message || 'No pudimos cobrar el seguro de la billetera');
+        setError(deb.message || 'No pudimos cobrar el flete de la billetera');
         return;
       }
-      setSaldo((s) => s - totalSeguro);
+      setSaldo((s) => s - totalAPagarWallet);
     } else {
       setAutorizando(true);
       setError('');
@@ -444,6 +446,16 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     </div>
                   )}
                   {ciudadSeleccionada && !cotizando && cotizaciones.length === 0 && <p className="text-xs text-gray-500">No hay transportadoras disponibles para esa ciudad.</p>}
+                  {esContraentrega && fleteSeleccionado && (
+                    // Pedido explicito del usuario 2026-07-19: el flete siempre se descuenta de la
+                    // wallet ahora (con o sin seguro) -- se muestra el total exacto y el saldo
+                    // disponible antes de autorizar, mismo nivel de transparencia que
+                    // DropshippingCheckoutModal.
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs">
+                      <span className="text-gray-600">Se descontará de tu billetera{seguroActivo ? ' (flete + seguro)' : ' (flete)'}</span>
+                      <span className={`font-bold ${saldoInsuficiente ? 'text-red-600' : 'text-gray-800'}`}>$ {totalAPagarWallet.toLocaleString('es-CO')}</span>
+                    </div>
+                  )}
                   {error && <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
                 </div>
               )}
@@ -461,7 +473,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     <button
                       type="button"
                       onClick={autorizarDespacho}
-                      disabled={!fleteSeleccionado || autorizando || saldoInsuficienteSeguro}
+                      disabled={!fleteSeleccionado || autorizando || saldoInsuficiente}
                       className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                     >
                       {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
@@ -475,9 +487,9 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                       ❌ Rechazar pedido
                     </button>
                     {!fleteSeleccionado && <p className="w-full text-xs text-gray-400">Confirma la ciudad y elige una transportadora para poder autorizar.</p>}
-                    {fleteSeleccionado && saldoInsuficienteSeguro && (
+                    {fleteSeleccionado && saldoInsuficiente && (
                       <p className="w-full text-xs font-semibold text-red-600">
-                        Saldo insuficiente para el seguro -- recarga en &quot;Recargar Saldo&quot; o desmarca la protección de flete para continuar.
+                        Saldo insuficiente para el flete -- recarga en &quot;Recargar Saldo&quot; para continuar.
                       </p>
                     )}
                   </div>
