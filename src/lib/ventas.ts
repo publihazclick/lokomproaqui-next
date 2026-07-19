@@ -256,10 +256,20 @@ export async function fetchVentas(opts: {
   search?: string;
   page: number;
   limit: number;
+  // "Autorizar Despacho" (ventasPosibles) pedido explicito del usuario 2026-07-19: los pedidos que
+  // el propio vendedor genera manualmente por "Hacer Dropshipping"/"Pedir muestra" nunca deben
+  // pasar por ahi -- el vendedor ya decidio y pago el pedido el mismo, no hay nada que "autorizar".
+  // Al completarse con exito ya caen solos en estado 'preparing' (marcarPedidoEnPreparacion, ver
+  // DropshippingCheckoutModal), que es justo lo que /config/misDespacho -> "Guias en preparacion"
+  // muestra al proveedor/bodega dueno del producto para que despache. Este filtro solo saca a esos
+  // 2 tipos de pedido de ESTA cola de autorizacion -- siguen visibles en /config/ventas (listado
+  // general del admin), que NO pasa este parametro.
+  excludeOrderTypes?: string[];
 }): Promise<{ data: VentaRow[]; count: number }> {
   let q = supabase.from('orders').select('*, profiles!orders_seller_id_fkey(full_name, phone, city)', { count: 'exact' });
 
   if (opts.sellerId) q = q.eq('seller_id', opts.sellerId);
+  if (opts.excludeOrderTypes?.length) q = q.not('order_type', 'in', `(${opts.excludeOrderTypes.join(',')})`);
 
   if (!opts.estadoFiltro || opts.estadoFiltro === 'todos') {
     q = q.not('status', 'in', '(invoiced,rejected,deleted)');

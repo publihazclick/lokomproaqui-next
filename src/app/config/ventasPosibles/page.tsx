@@ -62,6 +62,10 @@ export default function VentasPosiblesPage() {
       search: termino.trim() || undefined,
       page: paginaActual,
       limit: LIMIT,
+      // Pedido explicito del usuario 2026-07-19: los pedidos manuales del propio vendedor
+      // ("Hacer Dropshipping"/"Pedir muestra") no requieren autorizacion -- ver nota completa en
+      // fetchVentas (lib/ventas.ts).
+      excludeOrderTypes: ['dropshipping', 'muestra'],
     });
     setVentas(res.data);
     setCount(res.count);
