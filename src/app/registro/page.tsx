@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { departamento } from '@/lib/departamentos';
+import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
 
 // Port desde src/app/components/registro (Angular): registro de PROVEEDOR unicamente (ver
 // memoria lokomproaqui-nextjs-migration -- la variante "vendedor" de este formulario en
@@ -128,6 +129,11 @@ export default function RegistroPage() {
     }
 
     if (!data.session) await supabase.auth.signInWithPassword({ email: email.trim(), password: clave });
+
+    // Pedido explicito del usuario 2026-07-19: abre WhatsApp (pestaña nueva) con un aviso
+    // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el redirect
+    // normal de abajo, las dos cosas pasan juntas.
+    notificarRegistroWhatsapp({ nombre: titular, telefono, rol: 'proveedor' });
 
     // Mismo redirect que el RegistroComponent original (distinto del de /singUp): proveedor -> /config/perfil.
     window.location.href = '/config/perfil';

@@ -26,6 +26,9 @@ import { extraerIdYoutube } from './cursos';
 export interface SiteConfigForm {
   clInformacion: string;
   cdVentas: string;
+  // Pedido explicito del usuario 2026-07-19: numero de WhatsApp de la empresa al que se le avisa
+  // cada vez que alguien se registra -- ver notificarRegistroWhatsapp() mas abajo.
+  cdRegistro: string;
   aceleradorVideoGancho1: string;
   aceleradorVideoGancho2: string;
   tituloPrimero: string;
@@ -42,6 +45,7 @@ export async function fetchSiteConfig(): Promise<SiteConfigForm> {
   return {
     clInformacion: info.clInformacion || '',
     cdVentas: info.cdVentas || '',
+    cdRegistro: info.cdRegistro || '',
     aceleradorVideoGancho1: info.aceleradorVideoGancho1 || '',
     aceleradorVideoGancho2: info.aceleradorVideoGancho2 || '',
     tituloPrimero: info.tituloPrimero || '',
@@ -51,6 +55,21 @@ export async function fetchSiteConfig(): Promise<SiteConfigForm> {
     tituloTercero: info.tituloTercero || '',
     urlTercero: info.urlTercero || '',
   };
+}
+
+// Pedido explicito del usuario 2026-07-19: apenas alguien se registra, se le abre WhatsApp (pestaña
+// nueva, sin interrumpir el redirect normal post-registro) con un mensaje pre-armado hacia el
+// numero configurado desde el admin (arriba, cdRegistro) -- mismo patron "click to chat" que ya usa
+// el resto de la plataforma (wa.me), no requiere ninguna API/credencial externa, funciona ya mismo.
+// Si el admin no configuro un numero todavia, no hace nada (no tiene sentido abrir un chat sin
+// destino).
+export async function notificarRegistroWhatsapp(datos: { nombre: string; telefono: string; rol: string }): Promise<void> {
+  const config = await fetchSiteConfig();
+  const numero = (config.cdRegistro || '').replace(/\D/g, '');
+  if (!numero) return;
+  const mensaje = `Nuevo registro en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nRol: ${datos.rol}`;
+  const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
 }
 
 export async function guardarSiteConfig(patch: Partial<SiteConfigForm>): Promise<boolean> {

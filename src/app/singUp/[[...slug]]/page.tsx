@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail, User, Users, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
+import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
 
 // Port desde src/app/layout/sign-up (Angular), ruta [[...slug]] para cubrir tanto /singUp como
 // /singUp/:type/:cel (mismo componente en Angular). Se replica el formulario COMPLETO tal cual
@@ -121,6 +122,12 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
 
     const { data: profile } = await supabase.from('profiles').select('roles(name)').eq('id', data.user!.id).single();
     const rolReal = (profile?.roles as unknown as { name: string } | null)?.name;
+
+    // Pedido explicito del usuario 2026-07-19: abre WhatsApp (pestaña nueva) con un aviso
+    // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el redirect
+    // normal de abajo, las dos cosas pasan juntas.
+    notificarRegistroWhatsapp({ nombre: `${nombre} ${apellido}`.trim(), telefono, rol: rolReal || rol });
+
     window.location.href = rolReal === 'proveedor' ? '/infoSupplier' : rolReal === 'vendedor' ? '/articulo' : '/pedidos';
   }
 

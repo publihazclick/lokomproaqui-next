@@ -110,6 +110,17 @@ export default function ConfiguracionPage() {
           <input value={data.cdVentas} onChange={(e) => setCampo('cdVentas', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
         </div>
         <div>
+          {/* Pedido explicito del usuario 2026-07-19: numero de WhatsApp de la empresa que recibe un
+              aviso cada vez que alguien se registra (ver notificarRegistroWhatsapp en adminConfig.ts). */}
+          <label className="mb-1 block text-xs font-medium text-gray-700">Numero de WhatsApp para avisos de nuevos registros</label>
+          <input
+            value={data.cdRegistro}
+            onChange={(e) => setCampo('cdRegistro', e.target.value)}
+            placeholder="Ej: 3001234567 (sin indicativo 57)"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-gray-700">Video gancho 1 (link de YouTube, no listado)</label>
           <input
             value={data.aceleradorVideoGancho1}
