@@ -201,6 +201,23 @@ export async function guardarMotivoDevolucion(orderId: number, motivo: string): 
   return !error;
 }
 
+export interface RiesgoComprador {
+  totalOrders: number;
+  totalReturns: number;
+}
+
+// Fase 1 del plan de reduccion de devoluciones: consulta el historial CROSS-SELLER del comprador
+// (ver customer_risk_profile, migracion 049) por telefono normalizado -- el mismo comprador que ya
+// devolvio pedidos con OTRO vendedor de la plataforma tambien aparece aca. Puramente informativo,
+// no bloquea nada -- el vendedor decide si autoriza o no con esta info.
+export async function fetchRiesgoComprador(telefono: string | null): Promise<RiesgoComprador | null> {
+  const normalizado = (telefono || '').replace(/\D/g, '').slice(-10);
+  if (normalizado.length < 10) return null;
+  const { data, error } = await supabase.from('customer_risk_profile').select('total_orders, total_returns').eq('phone_normalized', normalizado).maybeSingle();
+  if (error || !data) return null;
+  return { totalOrders: data.total_orders, totalReturns: data.total_returns };
+}
+
 export async function marcarPedidoEnPreparacion(orderId: number): Promise<boolean> {
   const { error } = await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
   return !error;

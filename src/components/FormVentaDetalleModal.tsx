@@ -13,12 +13,14 @@ import {
   cobrarWalletPedidoSiNoCobrado,
   guardarMotivoDevolucion,
   MOTIVOS_DEVOLUCION,
+  fetchRiesgoComprador,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
   type VentaDetalle,
   type CiudadMipaquete,
   type CotizacionFlete,
+  type RiesgoComprador,
 } from '@/lib/ventas';
 import { getBalanceDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
 import { useToast, Toast } from '@/components/Toast';
@@ -97,6 +99,9 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   // dispara un rechazo (vendedor cancelando su pedido pendiente, o admin marcando "Devolucion"
   // desde el dropdown) -- el tracking automatico de Mipaquete ya se auto-clasifica solo.
   const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
+  // Fase 1 del plan de reduccion de devoluciones: historial cross-seller del comprador (por
+  // telefono), puramente informativo -- se muestra como advertencia, no bloquea autorizar.
+  const [riesgoComprador, setRiesgoComprador] = useState<RiesgoComprador | null>(null);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,6 +113,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
       setClientePago(res.clientePago);
       setEnvioIncluido(res.envioIncluido);
       if (res.sellerId) getBalanceDropshipper(res.sellerId).then(setSaldo);
+      if (!res.numeroGuia) fetchRiesgoComprador(res.telefonoCliente).then(setRiesgoComprador);
       // Autobusqueda: la ciudad ya viene del pedido (buyer_city, texto libre del cliente) -- se
       // busca de una vez contra Mipaquete para que el vendedor solo tenga que hacer click en la
       // sugerencia correcta, en vez de tener que escribir todo de nuevo. Sigue pudiendo buscar
@@ -486,6 +492,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                 </div>
               )}
             </div>
+
+            {!esAdmin && riesgoComprador && riesgoComprador.totalReturns >= 2 && riesgoComprador.totalReturns / riesgoComprador.totalOrders >= 0.4 && (
+              // Fase 1 del plan de reduccion de devoluciones: aviso, no bloqueo -- el vendedor decide.
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                ⚠️ Este comprador tiene {riesgoComprador.totalReturns} de {riesgoComprador.totalOrders} pedidos devueltos en toda la plataforma. Revisa bien antes de autorizar.
+              </div>
+            )}
 
             {!esAdmin && (
               <div className="border-t border-gray-100 pt-4">
