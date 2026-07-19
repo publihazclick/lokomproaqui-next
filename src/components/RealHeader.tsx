@@ -86,6 +86,12 @@ export function RealHeader() {
   // Pedido explicito del usuario 2026-07-19: "lider general" -- vendedor normal (mismo rol de
   // siempre) con funciones extra, ver profiles.es_lider_general.
   const [esLiderGeneral, setEsLiderGeneral] = useState(false);
+  // Pedido explicito del usuario 2026-07-19: el logo se ve "saltar" de un lado al otro apenas carga
+  // la pagina, porque `rol` arranca en 'visitante' (valor por defecto) y recien cambia cuando la
+  // sesion real termina de resolverse -- un usuario logueado ve el logo del lado de "visitante" un
+  // instante y despues lo ve saltar al lado correcto. Con este flag, el logo NO se renderiza hasta
+  // saber de verdad si hay sesion o no -- aparece una sola vez, ya en su posicion final, nunca salta.
+  const [sesionResuelta, setSesionResuelta] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -94,6 +100,7 @@ export function RealHeader() {
       if (!activo) return;
       if (!data.session) {
         setRol('visitante');
+        setSesionResuelta(true);
         return;
       }
       const userId = data.session.user.id;
@@ -116,6 +123,7 @@ export function RealHeader() {
       setEsLiderGeneral(!!(profile as any).es_lider_general);
       if (profile.avatar_url) setLogo(profile.avatar_url);
       setBalance(wallet?.balance ?? 0);
+      setSesionResuelta(true);
     }
     cargar();
     const { data: sub } = supabase.auth.onAuthStateChange(() => cargar());
@@ -198,8 +206,12 @@ export function RealHeader() {
 
           {/* Logueado (cualquier rol): el logo va pegado al menu hamburguesa (posicion original) --
               pedido explicito del usuario. Solo para visitante (sin loguear) se mueve al otro lado,
-              junto a "Iniciar Sesion" mas abajo, como se pidio en un cambio anterior. */}
-          {rol !== 'visitante' && (
+              junto a "Iniciar Sesion" mas abajo, como se pidio en un cambio anterior.
+              sesionResuelta evita que se vea "saltar" de un lado al otro: `rol` arranca en
+              'visitante' por defecto incluso para un usuario ya logueado, hasta que la sesion real
+              termina de resolverse -- sin este chequeo, el logo aparecia un instante del lado de
+              visitante y despues saltaba al lado correcto. Pedido explicito del usuario 2026-07-19. */}
+          {sesionResuelta && rol !== 'visitante' && (
             <Link href="/articulo" className="min-w-0 shrink">
               {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
               <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
@@ -207,7 +219,7 @@ export function RealHeader() {
           )}
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-2 sm:gap-4">
-            {rol === 'visitante' ? (
+            {!sesionResuelta ? null : rol === 'visitante' ? (
               <>
                 {/* Pedido explicito del usuario: el logo va al lado opuesto del menu hamburguesa
                     (no pegado a el) y sin el boton "EMPEZAR GRATIS" en la cabecera -- ese CTA sigue
