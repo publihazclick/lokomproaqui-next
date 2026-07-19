@@ -568,6 +568,11 @@ export interface VentaDetalle {
   // definir al autorizar el despacho de una venta normal, ver actualizarCondicionesEntrega.
   clientePago: boolean;
   envioIncluido: boolean;
+  // Fase 1d del plan de reduccion de devoluciones: null = todavia no se le pidio confirmacion al
+  // comprador (dropshipping/muestra, o contraentrega mientras las credenciales de Meta no existan
+  // -- ver whatsapp-send-confirmation) -- en ese caso NO bloquea nada. 'pending'/'invalid_number' SI
+  // bloquean autorizar despacho. 'confirmed' desbloquea. 'cancelled' ya viene con status='rejected'.
+  confirmationStatus: string | null;
   items: VentaItem[];
 }
 
@@ -597,6 +602,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     vendedorCiudad: order.profiles ? order.profiles.city : null,
     clientePago: !!order.customer_prepaid_product,
     envioIncluido: order.shipping_included !== false,
+    confirmationStatus: order.confirmation_status,
     items: (items || []).map((i: any) => ({
       id: i.id,
       productoId: i.product_id,

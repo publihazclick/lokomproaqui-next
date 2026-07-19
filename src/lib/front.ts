@@ -139,7 +139,16 @@ export async function crearPedidoRapido(sellerId: string, comprador: DatosCompra
     const msg = error?.message?.includes('stock_insuficiente') ? 'Uno de los productos ya no tiene stock disponible en esa talla' : 'No pudimos procesar tu pedido, intenta de nuevo';
     return { success: false, message: msg };
   }
+  dispararConfirmacionWhatsapp(orderId as number);
   return { success: true, id: orderId as number };
+}
+
+// Fase 1d del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19): dispara
+// la confirmacion real por WhatsApp apenas se crea el pedido -- fire and forget a proposito, un
+// fallo aca (o que las credenciales de Meta todavia no existan) NUNCA debe romper la creacion del
+// pedido en si (ver whatsapp-send-confirmation, diseño auto-activable).
+function dispararConfirmacionWhatsapp(orderId: number): void {
+  supabase.functions.invoke('whatsapp-send-confirmation', { body: { order_id: orderId } }).catch(() => {});
 }
 
 export interface ItemCarritoFront {
@@ -185,6 +194,7 @@ export async function crearPedidoCarrito(sellerId: string, comprador: DatosCompr
     const msg = error?.message?.includes('stock_insuficiente') ? 'Uno de los productos ya no tiene stock disponible' : 'No pudimos procesar tu pedido, intenta de nuevo';
     return { success: false, message: msg };
   }
+  dispararConfirmacionWhatsapp(orderId as number);
   return { success: true, id: orderId as number };
 }
 

@@ -185,13 +185,17 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     ? fleteSeleccionado.fleteTotal + (seguroActivo ? 5000 : 0) + (clientePago ? (venta?.precioTotal || 0) : 0)
     : 0;
   const saldoInsuficiente = saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalAPagarWallet;
+  // Fase 1d del plan de reduccion de devoluciones: bloquea autorizar SOLO si de verdad se le pidio
+  // confirmacion al comprador y no la dio -- si confirmationStatus es null (dropshipping/muestra, o
+  // contraentrega mientras las credenciales de Meta no existan), no bloquea nada.
+  const confirmacionPendiente = venta?.confirmationStatus === 'pending' || venta?.confirmationStatus === 'invalid_number';
 
   // Un solo click al final del formulario: cobra el flete (+seguro si aplica) de la wallet, guarda
   // condiciones de entrega + transportadora elegida, genera la guia real, y (si funciona) mueve el
   // pedido a "Preparacion" -- pedido explicito del usuario: "el vendedor genera la guia cuando da
   // click a autorizar despacho". Se cobra SIEMPRE, sin importar el tipo de pedido -- ver nota arriba.
   async function autorizarDespacho() {
-    if (!fleteSeleccionado || autorizando) return;
+    if (!fleteSeleccionado || autorizando || confirmacionPendiente) return;
     if (saldoInsuficiente) {
       setError(`Saldo insuficiente: necesitas mínimo ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo y ${totalAPagarWallet.toLocaleString('es-CO')} para cubrir el flete${seguroActivo ? ' + seguro' : ''}. Recarga en "Recargar Saldo" e intenta de nuevo.`);
       return;
@@ -536,7 +540,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     <button
                       type="button"
                       onClick={autorizarDespacho}
-                      disabled={!fleteSeleccionado || autorizando || saldoInsuficiente}
+                      disabled={!fleteSeleccionado || autorizando || saldoInsuficiente || confirmacionPendiente}
                       className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                     >
                       {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
@@ -553,6 +557,17 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     {fleteSeleccionado && saldoInsuficiente && (
                       <p className="w-full text-xs font-semibold text-red-600">
                         Saldo insuficiente para el flete -- recarga en &quot;Recargar Saldo&quot; para continuar.
+                      </p>
+                    )}
+                    {fleteSeleccionado && !saldoInsuficiente && venta.confirmationStatus === 'pending' && (
+                      // Fase 1d del plan de reduccion de devoluciones.
+                      <p className="w-full text-xs font-semibold text-amber-600">
+                        ⏳ Esperando que el cliente confirme el pedido por WhatsApp. Autorizar se habilita apenas responda.
+                      </p>
+                    )}
+                    {fleteSeleccionado && !saldoInsuficiente && venta.confirmationStatus === 'invalid_number' && (
+                      <p className="w-full text-xs font-semibold text-red-600">
+                        ⚠️ No pudimos confirmar por WhatsApp: el número parece inválido o no tiene WhatsApp. Verifica el teléfono con el cliente antes de autorizar.
                       </p>
                     )}
                   </div>
