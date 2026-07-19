@@ -53,7 +53,7 @@ const MENUS: MenuItem[] = [
   { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
   { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
   { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
-  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
+  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/store/stores', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r === 'vendedor' },
   { Icon: RefreshCw, nombre: 'Integración WooCommerce', href: '/config/woocommerce', mostrar: (r) => r === 'vendedor' },
@@ -83,6 +83,9 @@ export function RealHeader() {
   const [balance, setBalance] = useState<number | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
+  // Pedido explicito del usuario 2026-07-19: "lider general" -- vendedor normal (mismo rol de
+  // siempre) con funciones extra, ver profiles.es_lider_general.
+  const [esLiderGeneral, setEsLiderGeneral] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -95,14 +98,22 @@ export function RealHeader() {
       }
       const userId = data.session.user.id;
       const [{ data: profile }, { data: wallet }] = await Promise.all([
-        supabase.from('profiles').select('phone, avatar_url, roles(name)').eq('id', userId).single(),
+        supabase.from('profiles').select('phone, avatar_url, roles(name), es_lider_general').eq('id', userId).single(),
         supabase.from('wallet_balances').select('balance').eq('profile_id', userId).eq('wallet_type', 'referral').maybeSingle(),
       ]);
       if (!activo || !profile) return;
-      const rolReal = ((profile.roles as unknown as { name: string } | null)?.name ?? 'vendedor') as Rol;
+      // BUG REAL CORREGIDO 2026-07-19: roles.name usa el nombre nuevo ('admin'), pero TODO este
+      // archivo compara contra el nombre viejo ('administrador') -- sin esta traduccion, un
+      // administrador real nunca ve sus propias opciones de admin en el menu hamburguesa (aunque
+      // las paginas en si funcionan bien si entra por URL directa, porque fetchDataUserCompleto en
+      // usuarios.ts SI aplica esta misma traduccion). Mismo unico punto de traduccion que
+      // legacyRoleName en usuarios.ts/usuariosAdmin.ts.
+      const rolCrudo = (profile.roles as unknown as { name: string } | null)?.name ?? 'vendedor';
+      const rolReal = (rolCrudo === 'admin' ? 'administrador' : rolCrudo) as Rol;
       setRol(rolReal);
       setUserId(userId);
       setTelefono(profile.phone);
+      setEsLiderGeneral(!!(profile as any).es_lider_general);
       if (profile.avatar_url) setLogo(profile.avatar_url);
       setBalance(wallet?.balance ?? 0);
     }
@@ -121,7 +132,21 @@ export function RealHeader() {
     };
   }, [menuAbierto, carritoAbierto]);
 
-  const menusVisibles = useMemo(() => MENUS.filter((m) => m.mostrar(rol)), [rol]);
+  // "Miembros Acelerador" no usa el patron MenuItem.mostrar(rol) normal a proposito -- depende del
+  // flag es_lider_general, no del rol (que se queda en 'vendedor' de siempre), ver nota en
+  // profiles.es_lider_general / migracion 058.
+  const menusVisibles = useMemo(() => {
+    const base = MENUS.filter((m) => m.mostrar(rol));
+    if (esLiderGeneral || rol === 'administrador') {
+      base.push({
+        Icon: Users,
+        nombre: 'Miembros Acelerador',
+        href: '/config/aceleradorMiembros',
+        mostrar: () => true,
+      });
+    }
+    return base;
+  }, [rol, esLiderGeneral]);
   const menusPieVisibles = useMemo(() => MENUS_PIE.filter((m) => m.mostrar(rol)), [rol]);
 
   async function salir() {
