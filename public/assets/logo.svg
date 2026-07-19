@@ -11,8 +11,8 @@
     <linearGradient id="logoGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="149.87" y2="62.94">
       <animate attributeName="x1" values="-40;190;-40" dur="5s" repeatCount="indefinite" />
       <animate attributeName="x2" values="110;340;110" dur="5s" repeatCount="indefinite" />
-      <stop offset="0%" stop-color="#EC4899" />
-      <stop offset="100%" stop-color="#8B5CF6" />
+      <stop offset="0%" stop-color="#02a0e3" />
+      <stop offset="100%" stop-color="#0177a8" />
     </linearGradient>
     <style>
       .cls-1 {
