@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
-import { fetchBannerActivo, type BannerRow } from '@/lib/adminConfig';
 
 // Port FIEL del header real de Angular (src/app/extra/header) -- a diferencia del SiteHeader
 // simplificado de Fase 2 (paginas publicas), Fase 3 en adelante el usuario pidio que se vea
@@ -27,12 +26,6 @@ import { fetchBannerActivo, type BannerRow } from '@/lib/adminConfig';
 // !== 'singUp'), mas /mvid8x2qz1, /introduccion y /imprimirTarjeta, que viven en app-routing.module.ts
 // a nivel raiz (nunca bajo TiendaComponent, por lo tanto sin el header compartido).
 const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta', '/front', '/publico'];
-
-// Pedido explicito del usuario 2026-07-19: el anuncio (antes solo en /info) ahora se ve tambien
-// logueado. Se oculta ademas en las pantallas de tarea critica (hacer una venta, ver pedidos) para
-// no competir por atencion justo cuando el usuario esta enfocado en algo puntual -- mismo criterio
-// de diseño "no dañar el enfoque unicornio" que pidio el usuario.
-const RUTAS_SIN_BANNER = ['/realizarventa', '/pedidos'];
 
 type Rol = 'visitante' | 'vendedor' | 'proveedor' | 'lider' | 'subAdministrador' | 'administrador' | 'mentor';
 
@@ -90,24 +83,6 @@ export function RealHeader() {
   const [balance, setBalance] = useState<number | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
-  const [banner, setBanner] = useState<BannerRow | null>(null);
-  const [bannerCerrado, setBannerCerrado] = useState(true);
-
-  useEffect(() => {
-    fetchBannerActivo().then((b) => {
-      if (!b) return;
-      setBanner(b);
-      // Cerrable: una vez el usuario lo cierra, no vuelve a molestar -- pero si el admin publica
-      // un banner NUEVO (id distinto), se muestra de nuevo aunque el anterior ya se hubiera cerrado.
-      const cerradoId = typeof window !== 'undefined' ? window.localStorage.getItem('bannerCerradoId') : null;
-      setBannerCerrado(String(b.id) === cerradoId);
-    });
-  }, []);
-
-  function cerrarBanner() {
-    if (banner) window.localStorage.setItem('bannerCerradoId', String(banner.id));
-    setBannerCerrado(true);
-  }
 
   useEffect(() => {
     let activo = true;
@@ -169,39 +144,24 @@ export function RealHeader() {
 
   if (RUTAS_SIN_HEADER.some((r) => pathname === r || pathname.startsWith(`${r}/`))) return null;
 
-  const bannerVisible = banner && !bannerCerrado && !RUTAS_SIN_BANNER.some((r) => pathname === r || pathname.startsWith(`${r}/`));
-
   return (
     <>
-      {/* Anuncio editable desde /config/configuracion (tabla notifications, type=3) -- antes vivia
-          hardcodeado aca y solo se veia en /info; pedido explicito del usuario 2026-07-19: que se
-          vea tambien logueado. Va ANTES de la cabecera (no dentro), mismo lugar de siempre. Cerrable
-          (X) para no sentirse invasivo -- recuerda el cierre por id de banner, asi un anuncio NUEVO
-          se vuelve a mostrar aunque el anterior ya se hubiera cerrado. */}
-      {bannerVisible && (
+      {/* Banner promo del Acelerador de Ventas, solo en /info -- pedido explicito del usuario:
+          va ANTES de la cabecera (no dentro), por eso vive aca y no en info/page.tsx. */}
+      {pathname === '/info' && (
         <div className="banner-mirror relative overflow-hidden px-3 py-2.5 text-center shadow-[0_2px_16px_rgba(0,0,0,0.25)] sm:py-3">
-          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 pr-7 sm:gap-3 sm:pr-8">
-            <span className="flex min-w-0 items-center gap-1.5 truncate text-xs font-extrabold uppercase tracking-wide text-[#0177a8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] sm:text-base">
+          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-[#0177a8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] sm:text-base">
               <span className="animate-pulse text-base sm:text-lg">🔥</span>
-              <span className="truncate">{banner!.titulo}</span>
+              Acelerador de Ventas
             </span>
-            {banner!.linkUrl && (
-              <Link
-                href={banner!.linkUrl}
-                className="whitespace-nowrap rounded-full bg-[#0177a8] px-4 py-1.5 text-xs font-extrabold text-white shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
-              >
-                {banner!.descripcion || 'Ver ahora'} →
-              </Link>
-            )}
+            <Link
+              href="/acelerador"
+              className="whitespace-nowrap rounded-full bg-[#0177a8] px-4 py-1.5 text-xs font-extrabold text-white shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
+            >
+              Ver ahora →
+            </Link>
           </div>
-          <button
-            type="button"
-            onClick={cerrarBanner}
-            aria-label="Cerrar anuncio"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#0177a8] hover:bg-black/5"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
       )}
 
