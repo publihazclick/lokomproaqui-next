@@ -10,6 +10,8 @@ import styles from './info.module.css';
 export const metadata = {
   title: 'LokomproAqui | Vende, compra y gana sin invertir',
   description: 'Tu socio confiable en el mundo del dropshipping. Vende, compra, publica y genera ingresos de forma rápida y segura.',
+  keywords: 'dropshipping, dropshipping colombia, ventas por internet, vender por internet, negocio por internet',
+  alternates: { canonical: '/info' },
 };
 
 // Port CASI literal de info.component.html/.scss (Angular) -- pedido explicito del usuario

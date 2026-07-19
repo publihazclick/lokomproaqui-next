@@ -2,8 +2,10 @@ import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 
 export const metadata = {
-  title: 'Proveedores Verificados | LokomproAqui',
-  description: 'Conoce a nuestros proveedores verificados y arma dropshipping con ellos.',
+  title: 'Proveedores Verificados de Dropshipping | LokomproAqui',
+  description: 'Conoce a nuestros proveedores verificados y arma tu negocio de dropshipping con productos listos para vender por internet.',
+  keywords: 'proveedores dropshipping, catalogo dropshipping colombia, productos para vender por internet',
+  alternates: { canonical: '/infoSupplier' },
 };
 
 // CORREGIDO 2026-07-16: force-dynamic causaba timeouts reales (la consulta a Supabase a veces

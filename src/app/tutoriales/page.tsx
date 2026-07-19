@@ -4,8 +4,10 @@ import { TutorialesClient } from './TutorialesClient';
 import type { CategoriaConVideos, CursoVideo } from './types';
 
 export const metadata = {
-  title: 'Tutoriales | LokomproAqui',
+  title: 'Tutoriales para Vender por Internet con Dropshipping | LokomproAqui',
   description: 'Aprende a usar LokomproAqui paso a paso: como vender, como comprar, como despachar y mucho mas.',
+  keywords: 'tutoriales dropshipping, como vender por internet, tutorial ventas online',
+  alternates: { canonical: '/tutoriales' },
 };
 
 // El admin edita los tutoriales desde /config/cursos sin volver a deployar Next.js -- sin esto,

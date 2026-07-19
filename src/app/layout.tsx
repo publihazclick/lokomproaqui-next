@@ -14,9 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Base compartida por TODAS las paginas: cada page/layout hijo solo define su propio
+// title/description y hereda de aca site name, imagen OG y tarjeta de Twitter -- antes no
+// habia openGraph/twitter en ningun lado, asi que compartir un link se veia sin imagen/preview.
 export const metadata: Metadata = {
-  title: "LokomproAqui",
-  description: "Marketplace LokomproAqui",
+  metadataBase: new URL("https://www.lokomproaqui.com"),
+  title: "LokomproAqui | Dropshipping en Colombia sin Inventario",
+  description: "Vende por internet sin invertir en inventario. Catálogo dropshipping con envío y pago contra entrega.",
+  robots: { index: true, follow: true },
+  openGraph: {
+    siteName: "LokomproAqui",
+    locale: "es_CO",
+    type: "website",
+    images: [{ url: "https://www.lokomproaqui.com/assets/logo.jpeg", width: 600, height: 600 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
