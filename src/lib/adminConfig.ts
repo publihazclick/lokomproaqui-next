@@ -76,22 +76,31 @@ export interface BannerRow {
   id: number;
   titulo: string | null;
   descripcion: string | null;
+  linkUrl: string | null;
 }
 
 export async function fetchBanners(): Promise<BannerRow[]> {
   const { data, error } = await supabase.from('notifications').select('*').eq('type', 3).order('created_at', { ascending: false }).limit(50);
   if (error || !data) return [];
-  return data.map((n: any) => ({ id: n.id, titulo: n.title, descripcion: n.description }));
+  return data.map((n: any) => ({ id: n.id, titulo: n.title, descripcion: n.description, linkUrl: n.link_url }));
 }
 
-export async function crearBanner(titulo: string, descripcion: string): Promise<number | null> {
-  const { data, error } = await supabase.from('notifications').insert({ title: titulo, description: descripcion, type: 3, is_admin: true }).select('id').single();
+// Pedido explicito del usuario 2026-07-19: el anuncio (antes hardcodeado, solo /info) ahora se
+// muestra tambien logueado -- ver RealHeader.tsx. Se muestra el mas reciente (el mismo orden que ya
+// usa este listado admin), por eso solo hace falta el primero.
+export async function fetchBannerActivo(): Promise<BannerRow | null> {
+  const banners = await fetchBanners();
+  return banners[0] || null;
+}
+
+export async function crearBanner(titulo: string, descripcion: string, linkUrl: string): Promise<number | null> {
+  const { data, error } = await supabase.from('notifications').insert({ title: titulo, description: descripcion, link_url: linkUrl || null, type: 3, is_admin: true }).select('id').single();
   if (error || !data) return null;
   return data.id;
 }
 
-export async function actualizarBanner(id: number, titulo: string, descripcion: string): Promise<boolean> {
-  const { error } = await supabase.from('notifications').update({ title: titulo, description: descripcion }).eq('id', id);
+export async function actualizarBanner(id: number, titulo: string, descripcion: string, linkUrl: string): Promise<boolean> {
+  const { error } = await supabase.from('notifications').update({ title: titulo, description: descripcion, link_url: linkUrl || null }).eq('id', id);
   return !error;
 }
 

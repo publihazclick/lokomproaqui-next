@@ -58,7 +58,7 @@ export default function ConfiguracionPage() {
   }
 
   function nuevoComentario() {
-    setBanners((prev) => [{ id: -Date.now(), titulo: '', descripcion: '', esNuevo: true }, ...prev]);
+    setBanners((prev) => [{ id: -Date.now(), titulo: '', descripcion: '', linkUrl: '', esNuevo: true }, ...prev]);
   }
 
   function actualizarLocal(idx: number, patch: Partial<BannerLocal>) {
@@ -68,14 +68,14 @@ export default function ConfiguracionPage() {
   async function crearBanners() {
     const nuevos = banners.filter((b) => b.esNuevo);
     for (const banner of nuevos) {
-      const nuevoId = await crearBanner(banner.titulo || '', banner.descripcion || '');
+      const nuevoId = await crearBanner(banner.titulo || '', banner.descripcion || '', banner.linkUrl || '');
       if (nuevoId) mostrar('Creando...');
     }
     setBanners(await fetchBanners());
   }
 
   async function guardarBanner(banner: BannerLocal) {
-    const ok = await actualizarBanner(banner.id, banner.titulo || '', banner.descripcion || '');
+    const ok = await actualizarBanner(banner.id, banner.titulo || '', banner.descripcion || '', banner.linkUrl || '');
     mostrar(ok ? 'Actualizado' : 'Error de servidor');
   }
 
@@ -138,7 +138,11 @@ export default function ConfiguracionPage() {
 
       <hr className="my-8" />
 
-      <div className="flex flex-wrap justify-end gap-2">
+      <p className="mt-2 text-xs text-gray-400">
+        El banner de arriba de todo (visible para todos los usuarios, logueados o no, ver RealHeader) es siempre el más reciente de la lista de abajo.
+      </p>
+
+      <div className="mt-2 flex flex-wrap justify-end gap-2">
         <button onClick={nuevoComentario} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white">
           +
         </button>
@@ -164,6 +168,12 @@ export default function ConfiguracionPage() {
               onChange={(e) => actualizarLocal(idx, { descripcion: e.target.value })}
               placeholder="Descripcion"
               rows={3}
+              className="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <input
+              value={banner.linkUrl || ''}
+              onChange={(e) => actualizarLocal(idx, { linkUrl: e.target.value })}
+              placeholder="Link al hacer click (opcional, ej: /acelerador)"
               className="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
             <div className="mt-2 flex items-center justify-between">
