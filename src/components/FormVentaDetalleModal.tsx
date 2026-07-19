@@ -11,6 +11,8 @@ import {
   actualizarCondicionesEntrega,
   marcarPedidoEnPreparacion,
   cobrarWalletPedidoSiNoCobrado,
+  guardarMotivoDevolucion,
+  MOTIVOS_DEVOLUCION,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
@@ -91,6 +93,10 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   // definieron esto en su propio checkout, este modal no los vuelve a cobrar.
   const [seguroActivo, setSeguroActivo] = useState(true);
   const [saldo, setSaldo] = useState(0);
+  // Fase 0 del plan de reduccion de devoluciones: pide el motivo real cada vez que un humano
+  // dispara un rechazo (vendedor cancelando su pedido pendiente, o admin marcando "Devolucion"
+  // desde el dropdown) -- el tracking automatico de Mipaquete ya se auto-clasifica solo.
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -206,6 +212,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   async function rechazarPedido() {
     if (!confirm('¿Rechazar este pedido? El vendedor va a ver que la venta no se autorizó.')) return;
     await cambiarEstado(2);
+    setPidiendoMotivo(true);
+  }
+
+  async function elegirMotivoDevolucion(motivo: string) {
+    await guardarMotivoDevolucion(orderId, motivo);
+    setPidiendoMotivo(false);
+    mostrar('Motivo guardado, gracias');
   }
 
   async function actualizarTracking() {
@@ -243,7 +256,11 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                 <label className="mb-1 block text-xs font-medium text-gray-700">Estado de la Venta</label>
                 <select
                   value={venta.estado}
-                  onChange={(e) => cambiarEstado(Number(e.target.value))}
+                  onChange={(e) => {
+                    const nuevo = Number(e.target.value);
+                    cambiarEstado(nuevo);
+                    if (nuevo === 2) setPidiendoMotivo(true);
+                  }}
                   disabled={cambiandoEstado}
                   className="w-full max-w-xs rounded border border-gray-300 px-2 py-2 text-sm"
                 >
@@ -505,6 +522,24 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                 ) : (
                   <p className="text-sm font-semibold text-gray-700">Estado: {VENTA_ESTADO_LABEL[venta.estado]}</p>
                 )}
+              </div>
+            )}
+
+            {pidiendoMotivo && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="mb-2 text-xs font-bold text-amber-800">¿Por qué se rechazó/devolvió? (nos ayuda a bajar la tasa de devoluciones)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MOTIVOS_DEVOLUCION.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => elegirMotivoDevolucion(m.value)}
+                      className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

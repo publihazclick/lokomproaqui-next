@@ -181,6 +181,26 @@ export async function marcarPedidoRechazadoSinReembolso(orderId: number): Promis
   return !error;
 }
 
+// Fase 0 del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19): motivo
+// capturado a mano cuando el rechazo lo dispara una persona (vendedor cancelando su propio pedido
+// pendiente, o admin marcando "Devolucion" desde el dropdown) en vez del tracking automatico de
+// Mipaquete (que ya se auto-clasifica en mipaquete-sync-tracking/mipaquete-track). Sin esto, el
+// dashboard de causas (Fase 4) queda ciego para todo rechazo manual.
+export const MOTIVOS_DEVOLUCION: { value: string; label: string }[] = [
+  { value: 'no_contesto', label: 'Cliente no contestó' },
+  { value: 'no_encontrado', label: 'No lo encontraron / no estaba' },
+  { value: 'se_arrepintio', label: 'Cliente se arrepintió' },
+  { value: 'direccion_invalida', label: 'Dirección incorrecta' },
+  { value: 'producto_no_esperado', label: 'Producto no era lo esperado' },
+  { value: 'fraude_sospechado', label: 'Pedido falso / broma' },
+  { value: 'otro', label: 'Otro motivo' },
+];
+
+export async function guardarMotivoDevolucion(orderId: number, motivo: string): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ return_reason: motivo }).eq('id', orderId);
+  return !error;
+}
+
 export async function marcarPedidoEnPreparacion(orderId: number): Promise<boolean> {
   const { error } = await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
   return !error;
