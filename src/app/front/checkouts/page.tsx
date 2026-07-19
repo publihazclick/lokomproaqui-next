@@ -17,7 +17,7 @@ export default function FrontChecktPage() {
   const [items, setItems] = useState<ItemCarritoFront[]>([]);
   const [tienda, setTienda] = useState<TiendaFront | null>(null);
   const [vista, setVista] = useState<'inicial' | 'segunda' | 'completado'>('inicial');
-  const [data, setData] = useState({ nombre: '', telefono: '', ciudad: '', barrio: '', direccion: '', apartamento: '', departamento: '' });
+  const [data, setData] = useState({ nombre: '', telefono: '', ciudad: '', barrio: '', direccion: '', apartamento: '', referencia: '', departamento: '' });
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -53,6 +53,12 @@ export default function FrontChecktPage() {
       mostrar('Error Por Favor Completar campos direccion');
       return false;
     }
+    // Fase 1 del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19):
+    // punto de referencia obligatorio, mismo motivo que en FrontProductoDetalle.tsx.
+    if (!data.referencia) {
+      mostrar('Error Por Favor Completar el punto de referencia (ayuda al mensajero a encontrar la casa)');
+      return false;
+    }
     if (!data.departamento) {
       mostrar('Error Por Favor Completar campos departamento');
       return false;
@@ -67,7 +73,8 @@ export default function FrontChecktPage() {
   async function finalizar() {
     if (!tienda || enviando) return;
     setEnviando(true);
-    const res = await crearPedidoCarrito(tienda.id, { nombre: data.nombre, telefono: data.telefono, ciudad: data.ciudad, barrio: data.barrio, direccion: `${data.direccion}${data.apartamento ? ' Apto ' + data.apartamento : ''}` }, items);
+    const direccionCompleta = `${data.direccion}${data.apartamento ? ' Apto ' + data.apartamento : ''} (Referencia: ${data.referencia})`;
+    const res = await crearPedidoCarrito(tienda.id, { nombre: data.nombre, telefono: data.telefono, ciudad: data.ciudad, barrio: data.barrio, direccion: direccionCompleta }, items);
     setEnviando(false);
     if (!res.success) {
       mostrar(res.message || 'No pudimos procesar tu pedido');
@@ -115,6 +122,12 @@ export default function FrontChecktPage() {
                 <input value={data.barrio} onChange={(e) => setData({ ...data, barrio: e.target.value })} placeholder="Barrio" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
                 <input value={data.direccion} onChange={(e) => setData({ ...data, direccion: e.target.value })} placeholder="Direccion" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
                 <input value={data.apartamento} onChange={(e) => setData({ ...data, apartamento: e.target.value })} placeholder="Apartamento (opcional)" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                <input
+                  value={data.referencia}
+                  onChange={(e) => setData({ ...data, referencia: e.target.value })}
+                  placeholder="Punto de referencia (ej: casa azul, al lado de la tienda X)"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
                 <button onClick={siguiente} className="w-full rounded-full bg-[#0d6efd] px-4 py-2.5 text-sm font-bold text-white">
                   Siguiente
                 </button>
@@ -127,6 +140,7 @@ export default function FrontChecktPage() {
                   <p>
                     {data.direccion} {data.apartamento && `Apto ${data.apartamento}`}, {data.barrio}, {data.ciudad} ({data.departamento})
                   </p>
+                  <p className="mt-1 text-xs text-gray-500">Referencia: {data.referencia}</p>
                 </div>
                 <div className="mt-4 flex gap-2">
                   <button onClick={() => setVista('inicial')} className="flex-1 rounded-full bg-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700">

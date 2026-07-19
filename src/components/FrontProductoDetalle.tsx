@@ -32,7 +32,7 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
   const [colorSeleccionado, setColorSeleccionado] = useState<string | null>(null);
   const [tallaSeleccionada, setTallaSeleccionada] = useState<string | null>(null);
   const [cantidad, setCantidad] = useState(1);
-  const [form, setForm] = useState({ nombre: '', telefono: '', ciudad: '', barrio: '', direccion: '' });
+  const [form, setForm] = useState({ nombre: '', telefono: '', ciudad: '', barrio: '', direccion: '', referencia: '' });
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -83,6 +83,18 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
       mostrar('Error falta la ciudad');
       return false;
     }
+    // Fase 1 del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19):
+    // "no encontrado"/"direccion invalida" son las causas #1 de devolucion en contra entrega en
+    // Colombia. Barrio y punto de referencia pasan de opcionales a obligatorios -- son la diferencia
+    // real entre que el mensajero encuentre la casa o no.
+    if (!form.barrio) {
+      mostrar('Error falta el barrio');
+      return false;
+    }
+    if (!form.referencia) {
+      mostrar('Error falta el punto de referencia (ayuda al mensajero a encontrar la casa)');
+      return false;
+    }
     if (producto && producto.listColor.length && !colorSeleccionado) {
       mostrar('Error falta el color');
       return false;
@@ -93,9 +105,12 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
   async function comprarAhora() {
     if (!validar() || !producto || !tienda) return;
     setEnviando(true);
+    // Punto de referencia se guarda dentro de buyer_address (orders no tiene columna propia para
+    // esto) -- mismo patron ya usado por "apartamento" en el checkout del carrito.
+    const direccionCompleta = `${form.direccion} (Referencia: ${form.referencia})`;
     const res = await crearPedidoRapido(
       tienda.id,
-      { nombre: form.nombre, telefono: form.telefono, ciudad: form.ciudad, barrio: form.barrio, direccion: form.direccion },
+      { nombre: form.nombre, telefono: form.telefono, ciudad: form.ciudad, barrio: form.barrio, direccion: direccionCompleta },
       { productId: producto.id, nombre: producto.pro_nombre, precio: producto.pro_uni_venta, cantidad, talla: tallaSeleccionada, color: colorSeleccionado },
     );
     setEnviando(false);
@@ -105,7 +120,7 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
     }
     mostrar('Exitoso! Tu pedido esta en proceso. Un asesor se pondra en contacto contigo.');
     const url = `https://wa.me/57${tienda.telefono}?text=${encodeURIComponent(
-      `DATOS DE CONFIRMACIÓN DE COMPRA:\nNombre: ${form.nombre}\nCelular: ${form.telefono}\nDireccion: ${form.direccion}\nCiudad: ${form.ciudad}\nCantidad: ${cantidad}\nTalla: ${tallaSeleccionada || '-'}\nColor: ${colorSeleccionado || '-'}\nTotal a pagar: ${producto.pro_uni_venta * cantidad} (PAGO CONTRA ENTREGA)`,
+      `DATOS DE CONFIRMACIÓN DE COMPRA:\nNombre: ${form.nombre}\nCelular: ${form.telefono}\nDireccion: ${direccionCompleta}\nCiudad: ${form.ciudad}\nCantidad: ${cantidad}\nTalla: ${tallaSeleccionada || '-'}\nColor: ${colorSeleccionado || '-'}\nTotal a pagar: ${producto.pro_uni_venta * cantidad} (PAGO CONTRA ENTREGA)`,
     )}`;
     window.open(url);
   }
@@ -189,6 +204,12 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
               <input value={form.ciudad} onChange={(e) => setForm({ ...form, ciudad: e.target.value })} placeholder="Ciudad" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
               <input value={form.barrio} onChange={(e) => setForm({ ...form, barrio: e.target.value })} placeholder="Barrio" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
               <input value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} placeholder="Direccion" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              <input
+                value={form.referencia}
+                onChange={(e) => setForm({ ...form, referencia: e.target.value })}
+                placeholder="Punto de referencia (ej: casa azul, al lado de la tienda X)"
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              />
             </div>
             <button onClick={comprarAhora} disabled={enviando} className="mt-3 w-full rounded-full bg-green-600 px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
               {enviando ? 'Procesando…' : 'Comprar ahora'}
