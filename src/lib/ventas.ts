@@ -106,6 +106,16 @@ export async function actualizarFleteYTransportadora(orderId: number, fleteTotal
   return !error;
 }
 
+// Marca EXPLICITAMENTE si el flete de este pedido salio de la wallet del vendedor -- se llama en
+// el momento exacto en que el debito real sucede (nunca se infiere despues a partir de otras
+// columnas). approve_order/reject_order leen este flag tal cual para decidir si hay algo que
+// devolver. Pedido explicito del usuario 2026-07-19, tras encontrar 2 bugs reales (migraciones 043
+// y 044) causados por tratar de ADIVINAR esto a partir de customer_prepaid_product/shipping_included.
+export async function marcarFleteDesdeWallet(orderId: number, valor: boolean): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ freight_wallet_funded: valor }).eq('id', orderId);
+  return !error;
+}
+
 // Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al
 // autorizar el despacho, antes de generar la guia real -- mipaquete-create-shipment las lee de la
 // base de datos para saber cuanto debe recaudar el mensajero (ver nota ampliada en ese archivo).

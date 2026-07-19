@@ -18,6 +18,7 @@ import {
   actualizarFleteYTransportadora,
   marcarPedidoRechazadoSinReembolso,
   marcarPedidoEnPreparacion,
+  marcarFleteDesdeWallet,
   cotizarFlete,
   generarGuiaEnvio,
   buscarCiudadesMipaquete,
@@ -339,6 +340,10 @@ export function DropshippingCheckoutModal({
       return;
     }
     await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
+    // Marca EXPLICITAMENTE si el flete salio de la wallet en ESTE debito -- approve_order/
+    // reject_order ya no lo adivinan (ver marcarFleteDesdeWallet). fleteDesdeWallet=false solo en
+    // dropshipping con "cliente ya pago" + "envio aparte" (el mensajero cobra el flete directo).
+    await marcarFleteDesdeWallet(orderId, fleteDesdeWallet);
     await generarGuia(orderId, fleteSeleccionado.slug);
   }
 

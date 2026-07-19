@@ -10,6 +10,7 @@ import {
   actualizarFleteYTransportadora,
   actualizarCondicionesEntrega,
   marcarPedidoEnPreparacion,
+  marcarFleteDesdeWallet,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
@@ -148,12 +149,12 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     setCotizando(false);
   }
 
-  const esContraentrega = venta?.tipoPedido === 'contraentrega';
-  // Pedido explicito del usuario 2026-07-19: ya no existe "contra entrega sin prepago" -- TODO
-  // pedido, con o sin seguro, exige saldo suficiente en la wallet para el flete antes de poder
-  // autorizar/generar la guia. Antes esto solo se cobraba si el vendedor activaba el seguro; ahora
-  // el flete SIEMPRE sale de la wallet (el seguro solo agrega los +5.000 y la proteccion ante una
-  // devolucion, ver reject_order -- ya no decide si se cobra o no).
+  // Pedido explicito del usuario 2026-07-19: ya no existe "pedido sin prepago" -- TODO pedido que
+  // se autoriza desde ESTA pantalla, sin importar el tipo (contraentrega/dropshipping/muestra),
+  // exige saldo suficiente en la wallet para el flete antes de poder generar la guia. Antes solo
+  // 'contraentrega' cobraba aca -- un pedido de dropshipping/muestra atascado sin guia, abierto
+  // desde /config/ventas, se autorizaba SIN cobrar nada (bug real encontrado y cerrado el mismo
+  // dia). El seguro agrega los +5.000 y la proteccion ante una devolucion (ver reject_order).
   // BUG REAL CORREGIDO 2026-07-19: si "cliente ya pago" esta activo, el mensajero deja de recaudar
   // el producto (ver mipaquete-create-shipment) pero antes esta wallet NUNCA cobraba ese valor --
   // el producto no lo pagaba nadie. Mismo patron que ya existia en DropshippingCheckoutModal
@@ -161,35 +162,33 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   const totalAPagarWallet = fleteSeleccionado
     ? fleteSeleccionado.fleteTotal + (seguroActivo ? 5000 : 0) + (clientePago ? (venta?.precioTotal || 0) : 0)
     : 0;
-  const saldoInsuficiente = esContraentrega && (saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalAPagarWallet);
+  const saldoInsuficiente = saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalAPagarWallet;
 
   // Un solo click al final del formulario: cobra el flete (+seguro si aplica) de la wallet, guarda
   // condiciones de entrega + transportadora elegida, genera la guia real, y (si funciona) mueve el
   // pedido a "Preparacion" -- pedido explicito del usuario: "el vendedor genera la guia cuando da
-  // click a autorizar despacho".
+  // click a autorizar despacho". Se cobra SIEMPRE, sin importar el tipo de pedido -- ver nota arriba.
   async function autorizarDespacho() {
     if (!fleteSeleccionado || autorizando) return;
-    if (esContraentrega) {
-      if (saldoInsuficiente) {
-        setError(`Saldo insuficiente: necesitas mínimo ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo y ${totalAPagarWallet.toLocaleString('es-CO')} para cubrir el flete${seguroActivo ? ' + seguro' : ''}. Recarga en "Recargar Saldo" e intenta de nuevo.`);
-        return;
-      }
-      setAutorizando(true);
-      setError('');
-      const kind = seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
-      const deb = await debitWalletDropshipper(venta!.sellerId!, totalAPagarWallet, orderId, kind);
-      if (!deb.success) {
-        setAutorizando(false);
-        setError(deb.message || 'No pudimos cobrar el flete de la billetera');
-        return;
-      }
-      setSaldo((s) => s - totalAPagarWallet);
-    } else {
-      setAutorizando(true);
-      setError('');
+    if (saldoInsuficiente) {
+      setError(`Saldo insuficiente: necesitas mínimo ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo y ${totalAPagarWallet.toLocaleString('es-CO')} para cubrir el flete${seguroActivo ? ' + seguro' : ''}. Recarga en "Recargar Saldo" e intenta de nuevo.`);
+      return;
     }
-    await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, esContraentrega ? seguroActivo : undefined);
+    setAutorizando(true);
+    setError('');
+    const kind = seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
+    const deb = await debitWalletDropshipper(venta!.sellerId!, totalAPagarWallet, orderId, kind);
+    if (!deb.success) {
+      setAutorizando(false);
+      setError(deb.message || 'No pudimos cobrar el flete de la billetera');
+      return;
+    }
+    setSaldo((s) => s - totalAPagarWallet);
+    await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, seguroActivo);
     await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
+    // Flete SIEMPRE pagado desde la wallet en este formulario (a diferencia de
+    // DropshippingCheckoutModal, aca no existe la excepcion "envio aparte" -- ver nota arriba).
+    await marcarFleteDesdeWallet(orderId, true);
     const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug);
     if (!res.ok) {
       setAutorizando(false);
@@ -401,11 +400,12 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     </div>
                   )}
 
-                  {esContraentrega && (
+                  {(
                     // Seguro antidevoluciones (pedido explicito del usuario 2026-07-19, MISMA
                     // logica que Hacer Dropshipping/Pedir muestra): activado por defecto, visible
                     // antes de elegir transportadora -- mismo principio de diseño ya aplicado ahi
-                    // para que "la gran mayoria" lo elija.
+                    // para que "la gran mayoria" lo elija. Visible para CUALQUIER tipo de pedido que
+                    // llegue a esta pantalla, ya que el flete+seguro ahora siempre se cobra aca.
                     <label
                       className="flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3"
                       style={{ background: seguroActivo ? '#fffbeb' : '#fef2f2', borderColor: seguroActivo ? '#fde68a' : '#fecaca' }}
@@ -452,11 +452,11 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     </div>
                   )}
                   {ciudadSeleccionada && !cotizando && cotizaciones.length === 0 && <p className="text-xs text-gray-500">No hay transportadoras disponibles para esa ciudad.</p>}
-                  {esContraentrega && fleteSeleccionado && (
+                  {fleteSeleccionado && (
                     // Pedido explicito del usuario 2026-07-19: el flete siempre se descuenta de la
-                    // wallet ahora (con o sin seguro) -- se muestra el total exacto y el saldo
-                    // disponible antes de autorizar, mismo nivel de transparencia que
-                    // DropshippingCheckoutModal.
+                    // wallet ahora (con o sin seguro), sin importar el tipo de pedido -- se muestra
+                    // el total exacto y el saldo disponible antes de autorizar, mismo nivel de
+                    // transparencia que DropshippingCheckoutModal.
                     <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs">
                       <span className="text-gray-600">
                         Se descontará de tu billetera (flete{seguroActivo ? ' + seguro' : ''}{clientePago ? ' + producto' : ''})
