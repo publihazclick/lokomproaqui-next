@@ -89,3 +89,46 @@ export async function fetchReferidosNivel(
 
   return { data: mapped, count: count ?? mapped.length };
 }
+
+// Pedido explicito del usuario 2026-07-19: el rol "lider general" (vendedor normal + esta unica
+// funcion extra, ver profiles.es_lider_general) necesita ver a TODOS los vendedores registrados en
+// la plataforma aca, no solo su propia cadena de referidos -- es el encargado de la empresa que
+// contacta a cualquier vendedor registrado (se haya registrado con su link o no) para enseñarle a
+// vender. Mismo shape de fila / paginacion / busqueda que fetchReferidosNivel, pero sin filtrar por
+// referrer_id -- filtra por role_id = 'vendedor' en su lugar (no tiene sentido mostrar aca
+// administradores o proveedores, este es un directorio de vendedores para hacer seguimiento).
+export async function fetchTodosLosVendedores(
+  opts: { page: number; limit: number; search?: string },
+): Promise<{ data: ReferidoRow[]; count: number }> {
+  const { data: rolVendedor } = await supabase.from('roles').select('id').eq('name', 'vendedor').single();
+  if (!rolVendedor) return { data: [], count: 0 };
+
+  let q = supabase
+    .from('profiles')
+    .select(SELECT, { count: 'exact' })
+    .eq('role_id', rolVendedor.id)
+    .order('created_at', { ascending: false });
+
+  if (opts.search && opts.search.trim()) {
+    const s = opts.search.trim();
+    q = q.or(`full_name.ilike.%${s}%,last_name.ilike.%${s}%,phone.ilike.%${s}%`);
+  }
+
+  q = q.range(opts.page * opts.limit, opts.page * opts.limit + opts.limit - 1);
+
+  const { data, error, count } = await q;
+  if (error || !data) return { data: [], count: 0 };
+
+  const mapped: ReferidoRow[] = data.map((p: any) => ({
+    id: p.id,
+    nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
+    liderNombre: p.referrer ? p.referrer.full_name : null,
+    telefono: p.phone,
+    ciudad: p.city,
+    nivelVendedor: p.seller_tiers ? p.seller_tiers.name : null,
+    fechaRegistro: p.created_at,
+    activo: p.status !== 0,
+  }));
+
+  return { data: mapped, count: count ?? mapped.length };
+}

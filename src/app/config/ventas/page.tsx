@@ -51,6 +51,10 @@ export default function VentasPage() {
   const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const esAdmin = dataUser?.rolname === 'administrador';
+  // Pedido explicito del usuario 2026-07-19: "lider general" ve todas las ventas de la plataforma,
+  // igual que un admin -- pero SOLO eso (visibilidad), no gana ningun permiso de administrador real
+  // (por eso esAdmin se deja intacto para "Dar puntos" y el modal de detalle, ver mas abajo).
+  const veTodasLasVentas = esAdmin || !!dataUser?.esLiderGeneral;
 
   const [vendedores, setVendedores] = useState<VendedorBasico[]>([]);
   const [vendedorFiltro, setVendedorFiltro] = useState('');
@@ -77,7 +81,7 @@ export default function VentasPage() {
     const setLoader = page === 0 ? setCargando : setCargandoMas;
     setLoader(true);
     const res = await fetchVentas({
-      sellerId: esAdmin ? vendedorFiltro || undefined : dataUserRef.current.id,
+      sellerId: veTodasLasVentas ? vendedorFiltro || undefined : dataUserRef.current.id,
       estadoFiltro: estadoFiltro || 'todos',
       fechaInicio: fechaInicio || undefined,
       fechaFinal: fechaFinal || undefined,
@@ -94,7 +98,7 @@ export default function VentasPage() {
     setNotEmptyPost(res.data.length > 0);
     setPage(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esAdmin, vendedorFiltro, estadoFiltro, fechaInicio, fechaFinal, busqueda]);
+  }, [veTodasLasVentas, vendedorFiltro, estadoFiltro, fechaInicio, fechaFinal, busqueda]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -105,7 +109,7 @@ export default function VentasPage() {
       const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
       dataUserRef.current = usuario;
       setDataUser(usuario);
-      if (usuario.rolname === 'administrador') setVendedores(await fetchVendedores());
+      if (usuario.rolname === 'administrador' || usuario.esLiderGeneral) setVendedores(await fetchVendedores());
       setEstado('listo');
       cargar(0, true);
       // eslint-disable-next-line react-hooks/exhaustive-deps

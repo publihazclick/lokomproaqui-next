@@ -88,10 +88,13 @@ export interface UsuarioAdminDetalle {
   direccion: string | null;
   roleId: number | null;
   activo: boolean;
+  // Pedido explicito del usuario 2026-07-19: "lider general" -- ver nota ampliada en
+  // src/lib/usuarios.ts (DataUserCompleto.esLiderGeneral) y la migracion 058 del repo lokomproaqui.
+  esLiderGeneral: boolean;
 }
 
 export async function fetchUsuarioAdminDetalle(userId: string): Promise<UsuarioAdminDetalle | null> {
-  const { data, error } = await supabase.from('profiles').select('id, full_name, last_name, referral_code, document_id, phone, city, address, role_id, status').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('id, full_name, last_name, referral_code, document_id, phone, city, address, role_id, status, es_lider_general').eq('id', userId).maybeSingle();
   if (error || !data) return null;
   return {
     id: data.id,
@@ -104,6 +107,7 @@ export async function fetchUsuarioAdminDetalle(userId: string): Promise<UsuarioA
     direccion: data.address,
     roleId: data.role_id,
     activo: data.status !== 0,
+    esLiderGeneral: !!(data as any).es_lider_general,
   };
 }
 
@@ -116,6 +120,7 @@ export interface PatchUsuarioAdmin {
   direccion?: string;
   roleId?: number;
   activo?: boolean;
+  esLiderGeneral?: boolean;
 }
 
 export async function actualizarUsuarioAdmin(userId: string, patch: PatchUsuarioAdmin): Promise<boolean> {
@@ -128,6 +133,7 @@ export async function actualizarUsuarioAdmin(userId: string, patch: PatchUsuario
   if (patch.direccion !== undefined) dbPatch.address = patch.direccion;
   if (patch.roleId !== undefined) dbPatch.role_id = patch.roleId;
   if (patch.activo !== undefined) dbPatch.status = patch.activo ? 1 : 0;
+  if (patch.esLiderGeneral !== undefined) dbPatch.es_lider_general = patch.esLiderGeneral;
 
   const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
   return !error;

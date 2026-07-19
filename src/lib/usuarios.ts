@@ -12,6 +12,12 @@ export interface DataUserCompleto {
   ciudad: string | null;
   email: string | null;
   rolname: string;
+  // Pedido explicito del usuario 2026-07-19: "lider general" es un vendedor normal (mismo rolname
+  // 'vendedor', mismos menus) con esta unica funcion extra -- ve todos los vendedores en Referidos
+  // y todas las ventas de la plataforma, sin ganar ningun permiso de administrador real. Se modela
+  // como flag (profiles.es_lider_general), no como un rol nuevo -- evita tener que revisar cada uno
+  // de los ~20 lugares del codigo que comparan rolname==='vendedor' por separado.
+  esLiderGeneral: boolean;
 }
 
 // roles.name usa nombres nuevos ('admin'); el resto de la app compara contra el nombre viejo
@@ -22,7 +28,7 @@ function legacyRoleName(name: string): string {
 
 export async function fetchDataUserCompleto(userId: string): Promise<DataUserCompleto> {
   const [{ data: profile }, { data: userAuth }] = await Promise.all([
-    supabase.from('profiles').select('full_name, last_name, phone, city, address, roles(name)').eq('id', userId).maybeSingle(),
+    supabase.from('profiles').select('full_name, last_name, phone, city, address, roles(name), es_lider_general').eq('id', userId).maybeSingle(),
     supabase.auth.getUser(),
   ]);
   const rolRow = profile?.roles as unknown as { name: string } | null;
@@ -35,6 +41,7 @@ export async function fetchDataUserCompleto(userId: string): Promise<DataUserCom
     ciudad: profile?.city ?? null,
     email: userAuth?.user?.email ?? null,
     rolname: rolRow ? legacyRoleName(rolRow.name) : 'vendedor',
+    esLiderGeneral: !!(profile as any)?.es_lider_general,
   };
 }
 

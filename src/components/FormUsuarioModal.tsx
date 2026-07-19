@@ -27,6 +27,7 @@ export function FormUsuarioModal({ userId, roles, onClose, onGuardado }: FormUsu
   const [direccion, setDireccion] = useState('');
   const [roleId, setRoleId] = useState<number | null>(null);
   const [activo, setActivo] = useState(true);
+  const [esLiderGeneral, setEsLiderGeneral] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function FormUsuarioModal({ userId, roles, onClose, onGuardado }: FormUsu
         setDireccion(d.direccion || '');
         setRoleId(d.roleId);
         setActivo(d.activo);
+        setEsLiderGeneral(d.esLiderGeneral);
       }
       setCargando(false);
     });
@@ -56,6 +58,7 @@ export function FormUsuarioModal({ userId, roles, onClose, onGuardado }: FormUsu
       direccion,
       roleId: roleId ?? undefined,
       activo,
+      esLiderGeneral,
     });
     setGuardando(false);
     if (!ok) return mostrar('Error de servidor');
@@ -117,6 +120,15 @@ export function FormUsuarioModal({ userId, roles, onClose, onGuardado }: FormUsu
                 <option value="1">Activo</option>
                 <option value="0">Inactivo</option>
               </select>
+            </div>
+            <div className="sm:col-span-2">
+              {/* Pedido explicito del usuario 2026-07-19: "lider general" -- vendedor normal con una
+                  funcion extra (ve todos los vendedores en Referidos y todas las ventas de la
+                  plataforma). No es un rol nuevo, es este flag -- ver src/lib/usuariosAdmin.ts. */}
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={esLiderGeneral} onChange={(e) => setEsLiderGeneral(e.target.checked)} />
+                Líder General (ve todos los vendedores en Referidos y todas las ventas de la plataforma)
+              </label>
             </div>
           </div>
         )}

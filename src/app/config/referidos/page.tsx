@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { fetchReferidosNivel, fetchIdsReferidosNivel, type ReferidoRow } from '@/lib/referidos';
+import { fetchReferidosNivel, fetchIdsReferidosNivel, fetchTodosLosVendedores, type ReferidoRow } from '@/lib/referidos';
+import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fechaMedium } from '@/lib/format';
 
 // Port 1:1 (diseno) de ReferidosComponent (Angular, "Referidos"). Verificado el mismo estandar de
@@ -20,6 +21,11 @@ import { fechaMedium } from '@/lib/format';
 // de diseno, se sigue corrigiendo aca (ver src/lib/referidos.ts).
 const TABS = ['primer nivel', 'segundo nivel', 'tercer nivel', 'cuarto nivel', 'quinto nivel'];
 const LIMIT = 20;
+// Pedido explicito del usuario 2026-07-19: el rol "lider general" (vendedor normal + esta funcion
+// extra, profiles.es_lider_general) tiene una 6ta pestaña que muestra a TODOS los vendedores de la
+// plataforma, se hayan registrado con su link o no -- distinto de las 5 pestañas normales, que solo
+// muestran la cadena de referidos real (referrer_id).
+const TAB_TODOS = 5;
 
 interface TabState {
   dataRows: ReferidoRow[];
@@ -36,7 +42,8 @@ function tabVacio(): TabState {
 export default function ReferidosPage() {
   const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUserId, setDataUserId] = useState<string | null>(null);
-  const [tabs, setTabs] = useState<TabState[]>(() => Array.from({ length: 5 }, tabVacio));
+  const [esLiderGeneral, setEsLiderGeneral] = useState(false);
+  const [tabs, setTabs] = useState<TabState[]>(() => Array.from({ length: 6 }, tabVacio));
   const [activeTab, setActiveTab] = useState(0);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -49,6 +56,8 @@ export default function ReferidosPage() {
         return;
       }
       setDataUserId(sessionData.session.user.id);
+      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      setEsLiderGeneral(usuario.esLiderGeneral);
       setEstado('listo');
     });
   }, []);
@@ -66,6 +75,29 @@ export default function ReferidosPage() {
   }
 
   async function cargarTab(tabIndex: number, page: number, reemplazar: boolean, search: string) {
+    // Pestaña "todos los vendedores" (solo lider general) -- fuente de datos distinta, sin cadena
+    // de referidos de por medio.
+    if (tabIndex === TAB_TODOS) {
+      const setLoader = page === 0 ? setCargando : setCargandoMas;
+      setLoader(true);
+      const res = await fetchTodosLosVendedores({ page, limit: LIMIT, search });
+      setLoader(false);
+      setTabs((prev) => {
+        const next = [...prev];
+        const base = reemplazar ? [] : next[tabIndex].dataRows;
+        const existentes = new Set(base.map((r) => r.id));
+        next[tabIndex] = {
+          dataRows: [...base, ...res.data.filter((r) => !existentes.has(r.id))],
+          idsCompletos: [],
+          page,
+          notEmptyPost: res.data.length > 0,
+          cargado: true,
+        };
+        return next;
+      });
+      return;
+    }
+
     const referrerIds = referrerIdsPara(tabIndex, tabs);
     if (!referrerIds.length) {
       setTabs((prev) => {
@@ -135,6 +167,17 @@ export default function ReferidosPage() {
             Referidos {label}
           </button>
         ))}
+        {esLiderGeneral && (
+          <button
+            type="button"
+            onClick={() => cambiarTab(TAB_TODOS)}
+            className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-semibold ${
+              activeTab === TAB_TODOS ? 'border-b-2 border-[#0066FF] text-[#0066FF]' : 'text-gray-500'
+            }`}
+          >
+            Todos los vendedores
+          </button>
+        )}
       </div>
 
       <div className="mt-4">
@@ -186,7 +229,9 @@ export default function ReferidosPage() {
           </table>
         )}
 
-        {!cargando && tabActual.dataRows.length === 0 && <p className="py-10 text-center text-gray-500">No hay referidos en este nivel.</p>}
+        {!cargando && tabActual.dataRows.length === 0 && (
+          <p className="py-10 text-center text-gray-500">{activeTab === TAB_TODOS ? 'No hay vendedores registrados.' : 'No hay referidos en este nivel.'}</p>
+        )}
       </div>
 
       {!cargando && tabActual.notEmptyPost && tabActual.dataRows.length > 0 && (
