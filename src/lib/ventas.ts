@@ -106,6 +106,14 @@ export async function actualizarFleteYTransportadora(orderId: number, fleteTotal
   return !error;
 }
 
+// Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al
+// autorizar el despacho, antes de generar la guia real -- mipaquete-create-shipment las lee de la
+// base de datos para saber cuanto debe recaudar el mensajero (ver nota ampliada en ese archivo).
+export async function actualizarCondicionesEntrega(orderId: number, clientePago: boolean, envioIncluido: boolean): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ customer_prepaid_product: clientePago, shipping_included: envioIncluido }).eq('id', orderId);
+  return !error;
+}
+
 // reject_order: marca el pedido como devolucion/cancelado y (si tenia seguro antidevoluciones)
 // devuelve el flete prepagado -- pensado para el flujo admin (marcar "Devolucion" sobre un pedido
 // YA despachado, donde nadie reembolso nada todavia).
@@ -430,6 +438,7 @@ export interface VentaItem {
 export interface VentaDetalle {
   id: number;
   estado: number;
+  tipoPedido: string;
   nombreCliente: string | null;
   telefonoCliente: string | null;
   direccionCliente: string | null;
@@ -442,6 +451,11 @@ export interface VentaDetalle {
   vendedorNombre: string | null;
   vendedorTelefono: string | null;
   vendedorCiudad: string | null;
+  // Condiciones de entrega, pedido explicito del usuario 2026-07-19: antes solo existian para
+  // dropshipping/muestra (ver DropshippingCheckoutModal) -- ahora el vendedor tambien las puede
+  // definir al autorizar el despacho de una venta normal, ver actualizarCondicionesEntrega.
+  clientePago: boolean;
+  envioIncluido: boolean;
   items: VentaItem[];
 }
 
@@ -455,6 +469,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
   return {
     id: order.id,
     estado: STATUS_TO_LEGACY[order.status] ?? 0,
+    tipoPedido: order.order_type,
     nombreCliente: order.buyer_name,
     telefonoCliente: order.buyer_phone,
     direccionCliente: order.buyer_address,
@@ -467,6 +482,8 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     vendedorNombre: order.profiles ? order.profiles.full_name : null,
     vendedorTelefono: order.profiles ? order.profiles.phone : null,
     vendedorCiudad: order.profiles ? order.profiles.city : null,
+    clientePago: !!order.customer_prepaid_product,
+    envioIncluido: order.shipping_included !== false,
     items: (items || []).map((i: any) => ({
       id: i.id,
       titulo: i.title,

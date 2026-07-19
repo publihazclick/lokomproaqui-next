@@ -8,6 +8,8 @@ import {
   cotizarFlete,
   generarGuiaEnvio,
   actualizarFleteYTransportadora,
+  actualizarCondicionesEntrega,
+  marcarPedidoEnPreparacion,
   buscarCiudadesMipaquete,
   refreshTracking,
   VENTA_ESTADO_LABEL,
@@ -27,15 +29,26 @@ import { useToast, Toast } from '@/components/Toast';
 // rota).
 //
 // Esta version muestra el detalle real (vendedor, cliente, items) y permite:
-// 1) Cambiar el estado de la venta (dropdown real, dispara approve_order/reject_order via RPC).
+// 1) Cambiar el estado de la venta (dropdown real para admin, dispara approve_order/reject_order).
 // 2) Si falta guia: cotizar y generarla con el flujo REAL de Mipaquete (mismo que ya se uso en
 //    DropshippingCheckoutModal), no la cotizacion vieja rota.
 // 3) Si ya hay guia: boton "Actualizar estado" (tracking real), igual que en /config/ventas.
 //
+// REDISEÑO 2026-07-19 (pedido explicito del usuario): antes el vendedor cambiaba el estado desde
+// un dropdown arriba, sin relacion con la guia. Ahora, para un pedido pendiente sin guia, el
+// vendedor tiene que: confirmar/editar la ciudad de destino (autocompletada con la ciudad real del
+// pedido), definir las condiciones de entrega (mismo toggle "cliente ya pago"/"envio incluido" que
+// ya existia en DropshippingCheckoutModal, ahora disponible para CUALQUIER tipo de venta, no solo
+// dropshipping), elegir transportadora, y recien ahi aparece el boton "Autorizar y enviar a
+// despacho" al final del formulario -- ese click genera la guia real Y mueve el pedido a
+// "Preparacion" en un solo paso. El vendedor ya no puede saltar directo a "Despachado"/"Venta
+// exitosa" (eso lo decide el proveedor generando la guia -- que con este cambio ya lo hace el
+// vendedor aca mismo -- y el tracking real via approve_order/reject_order automatico).
+//
 // Campos del original que NUNCA se guardaban de verdad (UsuariosService.update()/VentasService.update()
 // solo mapean status/tracking_number/withdrawn/freight_value/carrier) se omiten en vez de mostrar
 // inputs editables que no sirven para nada: numero de cedula del cliente, barrio/direccion editables,
-// info de "cubre envio", "pago anticipado", etc.
+// info de "cubre envio", "pago anticipado" (columnas viejas, distintas de customer_prepaid_product).
 
 const ESTADOS_DISPONIBLES = (esAdmin: boolean) => [
   { value: 0, label: 'Pendiente' },
@@ -63,14 +76,32 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   const [ciudadSeleccionada, setCiudadSeleccionada] = useState<CiudadMipaquete | null>(null);
   const [cotizando, setCotizando] = useState(false);
   const [cotizaciones, setCotizaciones] = useState<CotizacionFlete[]>([]);
-  const [generando, setGenerando] = useState(false);
+  const [fleteSeleccionado, setFleteSeleccionado] = useState<CotizacionFlete | null>(null);
+  const [autorizando, setAutorizando] = useState(false);
+  const [error, setError] = useState('');
+
+  const [clientePago, setClientePago] = useState(false);
+  const [envioIncluido, setEnvioIncluido] = useState(true);
+
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchVentaDetalle(orderId).then((res) => {
       setVenta(res);
-      setCiudadQuery(res?.ciudad || '');
       setCargando(false);
+      if (!res) return;
+      setClientePago(res.clientePago);
+      setEnvioIncluido(res.envioIncluido);
+      // Autobusqueda: la ciudad ya viene del pedido (buyer_city, texto libre del cliente) -- se
+      // busca de una vez contra Mipaquete para que el vendedor solo tenga que hacer click en la
+      // sugerencia correcta, en vez de tener que escribir todo de nuevo. Sigue pudiendo buscar
+      // otra ciudad si la sugerencia no coincide.
+      if (res.ciudad && !res.numeroGuia) {
+        setCiudadQuery(res.ciudad);
+        buscarCiudadesMipaquete(res.ciudad).then(setSugerencias);
+      } else {
+        setCiudadQuery(res.ciudad || '');
+      }
     });
   }, [orderId]);
 
@@ -90,6 +121,8 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   function onCiudadInput(v: string) {
     setCiudadQuery(v);
     setCiudadSeleccionada(null);
+    setFleteSeleccionado(null);
+    setCotizaciones([]);
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       setSugerencias(v.trim().length >= 2 ? await buscarCiudadesMipaquete(v) : []);
@@ -100,23 +133,37 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     setCiudadSeleccionada(c);
     setCiudadQuery(c.name);
     setSugerencias([]);
+    setFleteSeleccionado(null);
     setCotizando(true);
     setCotizaciones(await cotizarFlete(orderId, c.code));
     setCotizando(false);
   }
 
-  async function generarGuia(c: CotizacionFlete) {
-    setGenerando(true);
-    await actualizarFleteYTransportadora(orderId, c.fleteTotal, c.slug);
-    const res = await generarGuiaEnvio(orderId, c.slug);
-    setGenerando(false);
+  // Un solo click al final del formulario: guarda condiciones de entrega + transportadora
+  // elegida, genera la guia real, y (si funciona) mueve el pedido a "Preparacion" -- pedido
+  // explicito del usuario: "el vendedor genera la guia cuando da click a autorizar despacho".
+  async function autorizarDespacho() {
+    if (!fleteSeleccionado || autorizando) return;
+    setAutorizando(true);
+    setError('');
+    await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido);
+    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
+    const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug);
     if (!res.ok) {
-      mostrar(res.message || 'No se pudo generar la guia');
+      setAutorizando(false);
+      setError(res.message || 'No se pudo generar la guía, intenta de nuevo');
       return;
     }
-    setVenta((v) => (v ? { ...v, numeroGuia: res.guia || '', transportadora: c.slug, estado: 6 } : v));
-    mostrar('Guía generada');
+    await marcarPedidoEnPreparacion(orderId);
+    setAutorizando(false);
+    setVenta((v) => (v ? { ...v, numeroGuia: res.guia || '', transportadora: fleteSeleccionado.slug, estado: 6 } : v));
+    mostrar('Guía generada, pedido autorizado y enviado a despacho');
     onCambio();
+  }
+
+  async function rechazarPedido() {
+    if (!confirm('¿Rechazar este pedido? El vendedor va a ver que la venta no se autorizó.')) return;
+    await cambiarEstado(2);
   }
 
   async function actualizarTracking() {
@@ -129,6 +176,11 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     }
     mostrar('Estado actualizado');
   }
+
+  // Solo tiene efecto real cuando clientePago esta activo (cualquier tipo de pedido) o en
+  // dropshipping sin prepago (comportamiento historico) -- ver mipaquete-create-shipment. En el
+  // resto de casos (contraentrega normal, muestra) no cambia nada, se oculta para no confundir.
+  const mostrarToggleEnvio = clientePago || venta?.tipoPedido === 'dropshipping';
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={onClose}>
@@ -144,55 +196,24 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
           <p className="px-4 py-10 text-center text-sm text-gray-500">{cargando ? 'Cargando…' : 'No se encontró la venta.'}</p>
         ) : (
           <div className="space-y-4 px-4 py-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Estado de la Venta</label>
-              {esAdmin ? (
-                <>
-                  <select
-                    value={venta.estado}
-                    onChange={(e) => cambiarEstado(Number(e.target.value))}
-                    disabled={cambiandoEstado}
-                    className="w-full max-w-xs rounded border border-gray-300 px-2 py-2 text-sm"
-                  >
-                    {ESTADOS_DISPONIBLES(esAdmin).map((op) => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-400">Actual: {VENTA_ESTADO_LABEL[venta.estado]}</p>
-                </>
-              ) : venta.estado === 0 ? (
-                // Pedido explicito del usuario 2026-07-19: el vendedor NO decide "Despachado" ni
-                // "Venta exitosa" -- eso lo sabe el proveedor (genera la guia real) y el tracking
-                // real de Mipaquete (que ya dispara approve_order/reject_order solo, ver
-                // mipaquete-sync-tracking). Aca solo autoriza o rechaza. Autorizar = pasa a
-                // "Preparacion", que es el unico estado que /config/misDespacho ya usa para
-                // mostrarle el pedido al proveedor -- en 'Pendiente' es invisible para el.
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => cambiarEstado(6)}
-                    disabled={cambiandoEstado}
-                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-                  >
-                    ✅ Autorizar y enviar a despacho
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm('¿Rechazar este pedido? El vendedor va a ver que la venta no se autorizo.')) cambiarEstado(2);
-                    }}
-                    disabled={cambiandoEstado}
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-60"
-                  >
-                    ❌ Rechazar pedido
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm font-semibold text-gray-700">{VENTA_ESTADO_LABEL[venta.estado]}</p>
-              )}
-            </div>
+            {esAdmin && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Estado de la Venta</label>
+                <select
+                  value={venta.estado}
+                  onChange={(e) => cambiarEstado(Number(e.target.value))}
+                  disabled={cambiandoEstado}
+                  className="w-full max-w-xs rounded border border-gray-300 px-2 py-2 text-sm"
+                >
+                  {ESTADOS_DISPONIBLES(esAdmin).map((op) => (
+                    <option key={op.value} value={op.value}>
+                      {op.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-400">Actual: {VENTA_ESTADO_LABEL[venta.estado]}</p>
+              </div>
+            )}
 
             <div>
               <h5 className="mb-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-bold text-white">Información del Vendedor</h5>
@@ -269,38 +290,135 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <input
-                      value={ciudadQuery}
-                      onChange={(e) => onCiudadInput(e.target.value)}
-                      placeholder="Buscar ciudad destino…"
-                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                    />
-                    {sugerencias.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg">
-                        {sugerencias.map((c, i) => (
-                          <div key={`${c.code}-${i}`} onMouseDown={() => seleccionarCiudad(c)} className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50">
-                            {c.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {cotizando && <p className="text-xs text-gray-500">Cotizando…</p>}
-                  {cotizaciones.map((c, i) => (
-                    <div key={`${c.slug}-${i}`} className="flex items-center justify-between rounded border border-gray-200 px-3 py-2 text-sm">
-                      <span>{c.nombre}</span>
-                      <span className="font-medium">$ {c.fleteTotal.toLocaleString('es-CO')}</span>
-                      <button onClick={() => generarGuia(c)} disabled={generando} className="rounded bg-[#198754] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
-                        {generando ? 'Generando…' : 'Generar guía'}
-                      </button>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Ciudad destino <span className="text-red-500">*</span> (confirma la ciudad del pedido o busca otra)
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={ciudadQuery}
+                        onChange={(e) => onCiudadInput(e.target.value)}
+                        placeholder="Buscar ciudad destino…"
+                        className={`w-full rounded border px-3 py-2 text-sm ${ciudadSeleccionada ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
+                      />
+                      {sugerencias.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg">
+                          {sugerencias.map((c, i) => (
+                            <div key={`${c.code}-${i}`} onMouseDown={() => seleccionarCiudad(c)} className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50">
+                              {c.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    {ciudadSeleccionada && <p className="mt-1 text-xs text-green-600">✓ Ciudad confirmada: {ciudadSeleccionada.name}</p>}
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3" style={{ borderColor: clientePago ? '#02a0e3' : '#e5e7eb', background: clientePago ? 'rgba(2,160,227,0.06)' : '#fff' }}>
+                    <input type="checkbox" checked={clientePago} onChange={() => setClientePago((v) => !v)} className="mt-0.5" />
+                    <div>
+                      <p className="m-0 text-[13px] font-bold text-gray-800">💰 Mi cliente ya me pagó el producto</p>
+                      <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                        {clientePago
+                          ? 'El mensajero NO cobrará el producto -- ya se lo pagaron por fuera de la plataforma.'
+                          : 'Actívalo si el cliente ya te pagó/transfirió el producto antes del envío.'}
+                      </p>
+                    </div>
+                  </label>
+
+                  {mostrarToggleEnvio && (
+                    <div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEnvioIncluido(true)}
+                          className="rounded-[10px] border px-1.5 py-2.5 text-[13px] font-bold"
+                          style={envioIncluido ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.08)', color: '#0288c2' } : { borderColor: '#e5e7eb', color: '#1f2937' }}
+                        >
+                          {clientePago ? 'También pagó el envío' : 'Envío incluido'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEnvioIncluido(false)}
+                          className="rounded-[10px] border px-1.5 py-2.5 text-[13px] font-bold"
+                          style={!envioIncluido ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.08)', color: '#0288c2' } : { borderColor: '#e5e7eb', color: '#1f2937' }}
+                        >
+                          {clientePago ? 'Envío lo paga aparte' : 'Envío aparte'}
+                        </button>
+                      </div>
+                      <p className="mx-0.5 mt-1.5 text-[11.5px] text-gray-500">
+                        {clientePago
+                          ? envioIncluido
+                            ? 'El cliente ya pagó todo: no se cobra nada contra entrega.'
+                            : 'El cliente ya pagó el producto, pero el envío lo paga aparte al mensajero.'
+                          : envioIncluido
+                            ? 'El mensajero solo cobra el producto, el flete va incluido.'
+                            : 'El mensajero cobrará el producto MÁS el flete, por separado.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {cotizando && <p className="text-xs text-gray-500">Cotizando…</p>}
+                  {cotizaciones.length > 0 && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">Elige transportadora</label>
+                      <div className="space-y-1.5">
+                        {cotizaciones.map((c, i) => {
+                          const activa = fleteSeleccionado === c;
+                          return (
+                            <div
+                              key={`${c.slug}-${i}`}
+                              onClick={() => setFleteSeleccionado(c)}
+                              className="flex cursor-pointer items-center justify-between rounded border px-3 py-2 text-sm"
+                              style={activa ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.06)' } : { borderColor: '#e5e7eb' }}
+                            >
+                              <span>{c.nombre}</span>
+                              <span className="font-medium">$ {c.fleteTotal.toLocaleString('es-CO')}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {ciudadSeleccionada && !cotizando && cotizaciones.length === 0 && <p className="text-xs text-gray-500">No hay transportadoras disponibles para esa ciudad.</p>}
+                  {error && <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
                 </div>
               )}
             </div>
+
+            {!esAdmin && (
+              <div className="border-t border-gray-100 pt-4">
+                {venta.estado === 0 ? (
+                  // Pedido explicito del usuario 2026-07-19: el vendedor NO decide "Despachado" ni
+                  // "Venta exitosa" a mano -- eso lo confirma el tracking real de Mipaquete
+                  // (approve_order/reject_order automatico, ver mipaquete-sync-tracking). Aca solo
+                  // autoriza (genera la guia real + pasa a "Preparacion" en un solo click) o
+                  // rechaza. Autorizar exige haber elegido transportadora primero.
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={autorizarDespacho}
+                      disabled={!fleteSeleccionado || autorizando}
+                      className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    >
+                      {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={rechazarPedido}
+                      disabled={cambiandoEstado || autorizando}
+                      className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-60"
+                    >
+                      ❌ Rechazar pedido
+                    </button>
+                    {!fleteSeleccionado && <p className="w-full text-xs text-gray-400">Confirma la ciudad y elige una transportadora para poder autorizar.</p>}
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-700">Estado: {VENTA_ESTADO_LABEL[venta.estado]}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
