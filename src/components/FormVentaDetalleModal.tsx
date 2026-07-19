@@ -154,7 +154,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
   // autorizar/generar la guia. Antes esto solo se cobraba si el vendedor activaba el seguro; ahora
   // el flete SIEMPRE sale de la wallet (el seguro solo agrega los +5.000 y la proteccion ante una
   // devolucion, ver reject_order -- ya no decide si se cobra o no).
-  const totalAPagarWallet = fleteSeleccionado ? fleteSeleccionado.fleteTotal + (seguroActivo ? 5000 : 0) : 0;
+  // BUG REAL CORREGIDO 2026-07-19: si "cliente ya pago" esta activo, el mensajero deja de recaudar
+  // el producto (ver mipaquete-create-shipment) pero antes esta wallet NUNCA cobraba ese valor --
+  // el producto no lo pagaba nadie. Mismo patron que ya existia en DropshippingCheckoutModal
+  // (totalAPagar suma el producto cuando clientePago esta activo), replicado aca.
+  const totalAPagarWallet = fleteSeleccionado
+    ? fleteSeleccionado.fleteTotal + (seguroActivo ? 5000 : 0) + (clientePago ? (venta?.precioTotal || 0) : 0)
+    : 0;
   const saldoInsuficiente = esContraentrega && (saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalAPagarWallet);
 
   // Un solo click al final del formulario: cobra el flete (+seguro si aplica) de la wallet, guarda
@@ -452,7 +458,9 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     // disponible antes de autorizar, mismo nivel de transparencia que
                     // DropshippingCheckoutModal.
                     <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs">
-                      <span className="text-gray-600">Se descontará de tu billetera{seguroActivo ? ' (flete + seguro)' : ' (flete)'}</span>
+                      <span className="text-gray-600">
+                        Se descontará de tu billetera (flete{seguroActivo ? ' + seguro' : ''}{clientePago ? ' + producto' : ''})
+                      </span>
                       <span className={`font-bold ${saldoInsuficiente ? 'text-red-600' : 'text-gray-800'}`}>$ {totalAPagarWallet.toLocaleString('es-CO')}</span>
                     </div>
                   )}
