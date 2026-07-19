@@ -17,6 +17,7 @@ import {
   type CiudadMipaquete,
   type CotizacionFlete,
 } from '@/lib/ventas';
+import { getBalanceDropshipper, debitWalletDropshipper, SALDO_MINIMO_DROPSHIPPING } from '@/lib/wallet';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port SIMPLIFICADO de FormventasComponent (Angular, 812 lineas) -- decision explicita del usuario
@@ -82,6 +83,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
 
   const [clientePago, setClientePago] = useState(false);
   const [envioIncluido, setEnvioIncluido] = useState(true);
+  // Seguro antidevoluciones (pedido explicito del usuario 2026-07-19): MISMA logica que
+  // Hacer Dropshipping/Pedir muestra -- activado por defecto para que "la gran mayoria" lo elija
+  // (mismo principio ya aplicado ahi: el default es la palanca de adopcion mas fuerte). Solo tiene
+  // consecuencia real (cobra de la wallet) en pedidos 'contraentrega' -- dropshipping/muestra ya
+  // definieron esto en su propio checkout, este modal no los vuelve a cobrar.
+  const [seguroActivo, setSeguroActivo] = useState(true);
+  const [saldo, setSaldo] = useState(0);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,6 +100,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
       if (!res) return;
       setClientePago(res.clientePago);
       setEnvioIncluido(res.envioIncluido);
+      if (res.sellerId) getBalanceDropshipper(res.sellerId).then(setSaldo);
       // Autobusqueda: la ciudad ya viene del pedido (buyer_city, texto libre del cliente) -- se
       // busca de una vez contra Mipaquete para que el vendedor solo tenga que hacer click en la
       // sugerencia correcta, en vez de tener que escribir todo de nuevo. Sigue pudiendo buscar
@@ -139,14 +148,39 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     setCotizando(false);
   }
 
+  const esContraentrega = venta?.tipoPedido === 'contraentrega';
+  const totalSeguro = fleteSeleccionado ? fleteSeleccionado.fleteTotal + 5000 : 0;
+  const saldoInsuficienteSeguro = esContraentrega && seguroActivo && (saldo < SALDO_MINIMO_DROPSHIPPING || saldo < totalSeguro);
+
   // Un solo click al final del formulario: guarda condiciones de entrega + transportadora
-  // elegida, genera la guia real, y (si funciona) mueve el pedido a "Preparacion" -- pedido
-  // explicito del usuario: "el vendedor genera la guia cuando da click a autorizar despacho".
+  // elegida, cobra el seguro de la wallet si aplica, genera la guia real, y (si funciona) mueve
+  // el pedido a "Preparacion" -- pedido explicito del usuario: "el vendedor genera la guia cuando
+  // da click a autorizar despacho".
   async function autorizarDespacho() {
     if (!fleteSeleccionado || autorizando) return;
-    setAutorizando(true);
-    setError('');
-    await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido);
+    // Seguro en 'contraentrega' (MISMA logica que Hacer Dropshipping/Pedir muestra): cobra
+    // flete+5000 de la wallet ANTES de generar la guia -- si no alcanza, no se genera nada, mismo
+    // candado que ya existe en DropshippingCheckoutModal. dropshipping/muestra no pasan por aca
+    // (ya cobraron esto en su propio checkout al crear el pedido).
+    if (esContraentrega && seguroActivo) {
+      if (saldoInsuficienteSeguro) {
+        setError(`Saldo insuficiente para el seguro: necesitas ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} de saldo mínimo y ${totalSeguro.toLocaleString('es-CO')} para cubrir flete+seguro. Recarga en "Recargar Saldo" e intenta de nuevo.`);
+        return;
+      }
+      setAutorizando(true);
+      setError('');
+      const deb = await debitWalletDropshipper(venta!.sellerId!, totalSeguro, orderId, 'flete_seguro_pedido');
+      if (!deb.success) {
+        setAutorizando(false);
+        setError(deb.message || 'No pudimos cobrar el seguro de la billetera');
+        return;
+      }
+      setSaldo((s) => s - totalSeguro);
+    } else {
+      setAutorizando(true);
+      setError('');
+    }
+    await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, esContraentrega ? seguroActivo : undefined);
     await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
     const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug);
     if (!res.ok) {
@@ -359,6 +393,34 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     </div>
                   )}
 
+                  {esContraentrega && (
+                    // Seguro antidevoluciones (pedido explicito del usuario 2026-07-19, MISMA
+                    // logica que Hacer Dropshipping/Pedir muestra): activado por defecto, visible
+                    // antes de elegir transportadora -- mismo principio de diseño ya aplicado ahi
+                    // para que "la gran mayoria" lo elija.
+                    <label
+                      className="flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3"
+                      style={{ background: seguroActivo ? '#fffbeb' : '#fef2f2', borderColor: seguroActivo ? '#fde68a' : '#fecaca' }}
+                    >
+                      <input type="checkbox" checked={seguroActivo} onChange={() => setSeguroActivo((v) => !v)} className="mt-0.5" />
+                      <div>
+                        <p className="m-0 text-[13px] font-bold text-gray-800">
+                          🛡️ Protección de flete (recomendado) <span className="text-amber-800">+ $5.000</span>
+                        </p>
+                        {seguroActivo ? (
+                          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                            Activada: si el pedido se devuelve, igual recuperas el flete completo en tu billetera.
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs font-semibold leading-relaxed text-red-600">
+                            ⚠️ Sin protección: si el pedido se devuelve, no recuperas nada del flete.
+                          </p>
+                        )}
+                        <p className="mt-1 text-[11px] text-gray-400">Saldo en tu billetera: $ {saldo.toLocaleString('es-CO')}</p>
+                      </div>
+                    </label>
+                  )}
+
                   {cotizando && <p className="text-xs text-gray-500">Cotizando…</p>}
                   {cotizaciones.length > 0 && (
                     <div>
@@ -399,7 +461,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                     <button
                       type="button"
                       onClick={autorizarDespacho}
-                      disabled={!fleteSeleccionado || autorizando}
+                      disabled={!fleteSeleccionado || autorizando || saldoInsuficienteSeguro}
                       className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                     >
                       {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
@@ -413,6 +475,11 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                       ❌ Rechazar pedido
                     </button>
                     {!fleteSeleccionado && <p className="w-full text-xs text-gray-400">Confirma la ciudad y elige una transportadora para poder autorizar.</p>}
+                    {fleteSeleccionado && saldoInsuficienteSeguro && (
+                      <p className="w-full text-xs font-semibold text-red-600">
+                        Saldo insuficiente para el seguro -- recarga en &quot;Recargar Saldo&quot; o desmarca la protección de flete para continuar.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm font-semibold text-gray-700">Estado: {VENTA_ESTADO_LABEL[venta.estado]}</p>

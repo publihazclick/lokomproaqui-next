@@ -109,8 +109,12 @@ export async function actualizarFleteYTransportadora(orderId: number, fleteTotal
 // Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al
 // autorizar el despacho, antes de generar la guia real -- mipaquete-create-shipment las lee de la
 // base de datos para saber cuanto debe recaudar el mensajero (ver nota ampliada en ese archivo).
-export async function actualizarCondicionesEntrega(orderId: number, clientePago: boolean, envioIncluido: boolean): Promise<boolean> {
-  const { error } = await supabase.from('orders').update({ customer_prepaid_product: clientePago, shipping_included: envioIncluido }).eq('id', orderId);
+export async function actualizarCondicionesEntrega(orderId: number, clientePago: boolean, envioIncluido: boolean, seguroActivo?: boolean): Promise<boolean> {
+  const patch: Record<string, boolean> = { customer_prepaid_product: clientePago, shipping_included: envioIncluido };
+  // seguroActivo solo se toca para 'contraentrega' (ver FormVentaDetalleModal) -- dropshipping/
+  // muestra ya definieron esto en su propio checkout, no hay que pisarlo aca.
+  if (seguroActivo !== undefined) patch.insurance_active = seguroActivo;
+  const { error } = await supabase.from('orders').update(patch).eq('id', orderId);
   return !error;
 }
 
@@ -439,6 +443,7 @@ export interface VentaDetalle {
   id: number;
   estado: number;
   tipoPedido: string;
+  sellerId: string | null;
   nombreCliente: string | null;
   telefonoCliente: string | null;
   direccionCliente: string | null;
@@ -470,6 +475,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     id: order.id,
     estado: STATUS_TO_LEGACY[order.status] ?? 0,
     tipoPedido: order.order_type,
+    sellerId: order.seller_id,
     nombreCliente: order.buyer_name,
     telefonoCliente: order.buyer_phone,
     direccionCliente: order.buyer_address,
