@@ -360,13 +360,23 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
             <div>
               <h5 className="mb-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-bold text-white">Guía de envío</h5>
               {venta.numeroGuia ? (
-                <div className="flex items-center gap-3 text-sm">
-                  <p>
-                    Guía: <strong>{venta.numeroGuia}</strong> ({venta.transportadora})
-                  </p>
-                  <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
-                    <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 text-sm">
+                    <p>
+                      Guía: <strong>{venta.numeroGuia}</strong> ({venta.transportadora})
+                    </p>
+                    <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
+                      <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
+                    </button>
+                  </div>
+                  {venta.deliveryRescheduleRequested && (
+                    // Fase 2 del plan de reduccion de devoluciones: el cliente pidio reagendar la
+                    // entrega por WhatsApp -- no se reagenda solo con Mipaquete, coordina con el
+                    // cliente/mensajero a mano.
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                      📅 El cliente avisó que no puede recibir el pedido hoy. Coordina un nuevo día con él antes de que se reporte como no entregado.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">

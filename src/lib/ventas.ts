@@ -573,6 +573,10 @@ export interface VentaDetalle {
   // -- ver whatsapp-send-confirmation) -- en ese caso NO bloquea nada. 'pending'/'invalid_number' SI
   // bloquean autorizar despacho. 'confirmed' desbloquea. 'cancelled' ya viene con status='rejected'.
   confirmationStatus: string | null;
+  // Fase 2 del plan de reduccion de devoluciones: el cliente respondio "No puedo recibir hoy" a la
+  // notificacion de "va en camino" -- no se reagenda automatico con Mipaquete, el vendedor coordina
+  // a mano (ver whatsapp-webhook).
+  deliveryRescheduleRequested: boolean;
   items: VentaItem[];
 }
 
@@ -603,6 +607,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     clientePago: !!order.customer_prepaid_product,
     envioIncluido: order.shipping_included !== false,
     confirmationStatus: order.confirmation_status,
+    deliveryRescheduleRequested: !!order.delivery_reschedule_requested,
     items: (items || []).map((i: any) => ({
       id: i.id,
       productoId: i.product_id,
