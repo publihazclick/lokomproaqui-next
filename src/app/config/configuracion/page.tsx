@@ -121,6 +121,18 @@ export default function ConfiguracionPage() {
           />
         </div>
         <div>
+          {/* Pedido explicito del usuario 2026-07-19: numero de WhatsApp que recibe el aviso cada
+              vez que alguien paga el curso Acelerador (ver notificarPagoAceleradorWhatsapp en
+              adminConfig.ts). */}
+          <label className="mb-1 block text-xs font-medium text-gray-700">Numero de WhatsApp para avisos de pago del curso Acelerador</label>
+          <input
+            value={data.cdAcelerador}
+            onChange={(e) => setCampo('cdAcelerador', e.target.value)}
+            placeholder="Ej: 3001234567 (sin indicativo 57)"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-gray-700">Video gancho 1 (link de YouTube, no listado)</label>
           <input
             value={data.aceleradorVideoGancho1}

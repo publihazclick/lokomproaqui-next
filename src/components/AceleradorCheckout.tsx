@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { supabase } from '@/lib/supabase';
 import { crearIntentoPago, fetchEstadoPago } from '@/lib/acelerador';
+import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
 
 // Port de AceleradorCheckoutComponent (Angular) -- boton "Suscribirme" + flujo de pago del curso
 // Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador. Mismo
@@ -236,6 +237,15 @@ export function AceleradorCheckout({
         clearInterval(pollingRef.current!);
         pollingRef.current = null;
         setProcesandoPago(false);
+        // Pedido explicito del usuario 2026-07-19: abre WhatsApp (pestaña nueva) con un aviso
+        // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el
+        // flujo normal de abajo, las dos cosas pasan juntas.
+        notificarPagoAceleradorWhatsapp({
+          nombre: `${dataUser?.nombre || ''} ${dataUser?.apellido || ''}`.trim(),
+          telefono: dataUser?.telefono || '',
+          email: dataUser?.email || '',
+          montoUsd: PRECIO_USD,
+        });
         if (pagoFueAnonimo) {
           alert(`Suscripcion activada. Guardamos tu acceso con el correo ${dataUser?.email}. Para volver a entrar mas adelante desde otro dispositivo, usa "Olvide mi contrasena" en el login con ese mismo correo.`);
         } else {

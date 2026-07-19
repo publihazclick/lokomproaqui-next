@@ -29,6 +29,9 @@ export interface SiteConfigForm {
   // Pedido explicito del usuario 2026-07-19: numero de WhatsApp de la empresa al que se le avisa
   // cada vez que alguien se registra -- ver notificarRegistroWhatsapp() mas abajo.
   cdRegistro: string;
+  // Pedido explicito del usuario 2026-07-19: numero de WhatsApp que recibe el aviso cada vez que
+  // alguien paga el curso Acelerador -- ver notificarPagoAceleradorWhatsapp() mas abajo.
+  cdAcelerador: string;
   aceleradorVideoGancho1: string;
   aceleradorVideoGancho2: string;
   tituloPrimero: string;
@@ -46,6 +49,7 @@ export async function fetchSiteConfig(): Promise<SiteConfigForm> {
     clInformacion: info.clInformacion || '',
     cdVentas: info.cdVentas || '',
     cdRegistro: info.cdRegistro || '',
+    cdAcelerador: info.cdAcelerador || '',
     aceleradorVideoGancho1: info.aceleradorVideoGancho1 || '',
     aceleradorVideoGancho2: info.aceleradorVideoGancho2 || '',
     tituloPrimero: info.tituloPrimero || '',
@@ -68,6 +72,18 @@ export async function notificarRegistroWhatsapp(datos: { nombre: string; telefon
   const numero = (config.cdRegistro || '').replace(/\D/g, '');
   if (!numero) return;
   const mensaje = `Nuevo registro en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nRol: ${datos.rol}`;
+  const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+}
+
+// Pedido explicito del usuario 2026-07-19: mismo patron que notificarRegistroWhatsapp, pero para
+// cuando alguien paga el curso Acelerador -- se llama justo cuando el polling de AceleradorCheckout
+// detecta el pago confirmado (status===2), antes de que se cierre el flujo.
+export async function notificarPagoAceleradorWhatsapp(datos: { nombre: string; telefono: string; email: string; montoUsd: number }): Promise<void> {
+  const config = await fetchSiteConfig();
+  const numero = (config.cdAcelerador || '').replace(/\D/g, '');
+  if (!numero) return;
+  const mensaje = `Nuevo pago del curso Acelerador en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nCorreo: ${datos.email}\nMonto: $${datos.montoUsd} USD`;
   const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
 }
