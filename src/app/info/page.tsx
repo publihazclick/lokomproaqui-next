@@ -152,7 +152,8 @@ export default async function InfoPage() {
 
                   <div className={styles.cursoAdPriceRow}>
                     <span className={styles.cursoAdPrice}>
-                      Tan solo <strong>$35 USD</strong> al mes
+                      Tan solo <strong>$37 USD</strong>
+                      <span className={styles.cursoAdPriceSuffix}>/mes</span>
                     </span>
                     <Link href="/acelerador?checkout=1" className={styles.cursoAdCta}>
                       Suscribirme

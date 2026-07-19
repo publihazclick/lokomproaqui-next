@@ -83,12 +83,25 @@ function AceleradorPageInterna() {
       {!tieneAcceso ? (
         <div className="mt-6">
           <div className="text-center">
-            <AceleradorCheckout
-              buttonLabel="Pagar Suscripcion"
-              abrirCheckoutInicial={abrirCheckoutInicial}
-              abrirTrigger={abrirPagoTrigger}
-              onActivada={onSuscripcionActivada}
-            />
+            {/* Antes esta pagina no mostraba ningun precio -- el boton solo decia "Pagar
+                Suscripcion" sin monto. Pedido explicito del usuario: precio bien notorio en TODO
+                lugar donde se muestra el curso. */}
+            <div className="mx-auto mb-5 inline-flex flex-col items-center rounded-3xl border border-[#02a0e3]/15 bg-gradient-to-br from-[#f0f9ff] to-white px-10 py-6 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wide text-gray-400">Acceso completo al curso</span>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-5xl font-extrabold text-[#0177a8]">$37</span>
+                <span className="text-xl font-bold text-[#0177a8]">USD</span>
+              </div>
+              <span className="mt-0.5 text-sm font-semibold text-gray-500">por mes</span>
+            </div>
+            <div>
+              <AceleradorCheckout
+                buttonLabel="Pagar $37 USD/mes"
+                abrirCheckoutInicial={abrirCheckoutInicial}
+                abrirTrigger={abrirPagoTrigger}
+                onActivada={onSuscripcionActivada}
+              />
+            </div>
           </div>
 
           <div className="mt-8">

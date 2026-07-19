@@ -701,14 +701,29 @@
 }
 
 .cursoAdPrice {
-  font-size: 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #fff;
 }
 
+/* Precio bien notorio, pedido explicito del usuario -- antes era casi del mismo tamano que el
+   texto alrededor (1.15rem), se pierde entre el resto de la tarjeta. Ahora es claramente el
+   elemento mas grande de la fila. */
 .cursoAdPrice strong {
-  font-size: 1.15rem;
+  font-size: 2.4rem;
+  font-weight: 800;
   color: #fff;
+  line-height: 1;
+}
+
+.cursoAdPriceSuffix {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  opacity: 0.85;
 }
 
 .cursoAdCta {
@@ -770,5 +785,9 @@
   .cursoAdPriceRow {
     flex-direction: column;
     align-items: center;
+  }
+
+  .cursoAdPrice strong {
+    font-size: 2rem;
   }
 }

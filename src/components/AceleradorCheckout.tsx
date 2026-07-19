@@ -12,7 +12,7 @@ import { crearIntentoPago, fetchEstadoPago } from '@/lib/acelerador';
 
 const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
-const PRECIO_USD = 35;
+const PRECIO_USD = 37;
 
 declare global {
   interface Window {
