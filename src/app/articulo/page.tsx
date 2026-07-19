@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
+import { fetchModulosConLecciones, type Leccion } from '@/lib/acelerador';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
 
@@ -25,33 +27,45 @@ import { ViewProductosModal } from '@/components/ViewProductosModal';
 // header real de Angular (1000+ lineas, no portado aun a `RealHeader.tsx`) y llega via el store
 // compartido -- sin esa barra todavia no hay nada que la dispare aca tampoco.
 
-const BANNERS = [
-  '/assets/imagenes/banner2.png',
-  '/assets/imagenes/banner3.png',
-  '/assets/imagenes/banner4.png',
-];
-
 interface DataUserBasico {
   id: string;
   telefono?: string | null;
 }
 
-function BannerCarousel() {
+// Pedido explicito del usuario 2026-07-19: reemplaza los 3 banners promocionales fijos (imagenes
+// estaticas en /assets/imagenes) por las miniaturas REALES de las lecciones del Acelerador,
+// pasando una por una -- cada slide lleva directo a esa leccion (/acelerador/leccion/[id]).
+// aspect-video (16:9) en vez de un alto fijo en pixeles: la proporcion se mantiene igual en celular
+// y en computador, el ancho disponible es lo unico que cambia -- eso es lo que resuelve "que se vea
+// bien" en los dos sin necesitar breakpoints distintos. object-contain + fondo negro (mismo criterio
+// ya usado en /acelerador para estas mismas miniaturas) evita recortar mal una miniatura que no
+// venga exactamente en 16:9.
+function CursosCarousel({ lecciones }: { lecciones: Leccion[] }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % BANNERS.length), 7000);
+    if (lecciones.length < 2) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % lecciones.length), 7000);
     return () => clearInterval(t);
-  }, []);
+  }, [lecciones.length]);
+
+  if (lecciones.length === 0) return null;
+  const actual = lecciones[idx % lecciones.length];
+
   return (
-    <div className="relative w-full overflow-hidden rounded">
-      {/* eslint-disable-next-line @next/next/no-img-element -- banner estatico servido por el dominio Angular */}
-      <img src={BANNERS[idx]} alt="" className="w-full object-cover" />
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-        {BANNERS.map((_, i) => (
-          <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
-        ))}
+    <Link href={`/acelerador/leccion/${actual.id}`} className="relative block aspect-video w-full overflow-hidden rounded bg-black">
+      {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de Supabase Storage, tamaño variable */}
+      <img src={actual.thumbnailUrl || ''} alt={actual.titulo} className="h-full w-full object-contain" />
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
+        <p className="min-w-0 truncate text-xs font-bold text-white sm:text-sm">{actual.titulo}</p>
+        {lecciones.length > 1 && (
+          <div className="flex shrink-0 gap-1.5">
+            {lecciones.map((l, i) => (
+              <span key={l.id} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -92,6 +106,7 @@ export default function ArticuloPage() {
   const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
+  const [leccionesCarousel, setLeccionesCarousel] = useState<Leccion[]>([]);
   const [listProductos, setListProductos] = useState<ProductoLegacy[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -123,8 +138,16 @@ export default function ArticuloPage() {
       setDataUser(usuario);
       setEstado('cargando');
 
-      const [cats] = await Promise.all([fetchCategoriasConSub(), cargarPagina(usuario, 0)]);
+      const [cats, modulos] = await Promise.all([fetchCategoriasConSub(), fetchModulosConLecciones(), cargarPagina(usuario, 0)]);
       setCategorias(cats);
+      // Pedido explicito del usuario 2026-07-19: solo lecciones con miniatura real (thumbnailUrl) --
+      // limite de 10 para que los puntos del carrusel no se vean amontonados con muchas lecciones.
+      setLeccionesCarousel(
+        modulos
+          .flatMap((m) => m.lecciones)
+          .filter((l) => !!l.thumbnailUrl)
+          .slice(0, 10),
+      );
       setEstado('listo');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +173,7 @@ export default function ArticuloPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
-      <BannerCarousel />
+      <CursosCarousel lecciones={leccionesCarousel} />
 
       <div className="mt-4">
         <CategoriaStrip categorias={categorias} />
