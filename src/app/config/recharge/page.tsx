@@ -32,6 +32,11 @@ const ETIQUETAS_MOVIMIENTO: Record<string, string> = {
   flete_devuelto: 'Flete devuelto (entrega exitosa)',
   flete_devuelto_seguro: 'Flete devuelto (seguro antidevoluciones)',
   flete_cancelado: 'Flete devuelto (pedido cancelado)',
+  // Modulo "Generacion de Guias" (guias sueltas, standalone_shipments) -- mismos kinds que
+  // guide-create-shipment/reject_standalone_shipment (migracion 059).
+  flete_guia: 'Flete de guía',
+  flete_seguro_guia: 'Flete + seguro de guía',
+  flete_devuelto_seguro_guia: 'Flete devuelto (seguro antidevoluciones de guía)',
 };
 
 declare global {
@@ -172,7 +177,7 @@ export default function RechargePage() {
         <div className="rounded-lg bg-blue-50 p-3 text-sm text-gray-700">
           <p className="font-semibold">🔁 ¿Cómo funcionan las recargas para generar guías?</p>
           <p className="mt-1">
-            Para poder crear guías de envío en <strong>Hacer Dropshipping</strong> o <strong>Pedir una muestra</strong>, primero debes recargar saldo en tu billetera (solo cubre el{' '}
+            Para poder crear guías de envío (en <strong>Hacer Dropshipping</strong>, <strong>Pedir una muestra</strong> o <strong>Generación de Guías</strong>), primero debes recargar saldo en tu billetera (solo cubre el{' '}
             <strong>flete</strong>, nunca el valor del producto). <strong>Ese dinero no es un gasto</strong> — es un anticipo que se te devuelve apenas el cliente paga.
           </p>
         </div>

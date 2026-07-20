@@ -70,7 +70,7 @@ const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registr
   { Icon: User, nombre: 'Iniciar Sesión', accion: 'login', mostrar: (r) => r === 'visitante' },
   { Icon: UserPlus, nombre: 'Regístrate', accion: 'registrar', mostrar: (r) => r === 'visitante' },
   { Icon: LogOut, nombre: 'Compartir mi tienda', accion: 'compartir', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
-  { Icon: Wallet, nombre: 'Recargar Saldo', accion: 'recargar', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
+  { Icon: Wallet, nombre: 'Recargar Saldo', accion: 'recargar', mostrar: (r) => r === 'administrador' || r === 'vendedor' || r === 'proveedor' },
   { Icon: LogOut, nombre: 'Salir', accion: 'salir', mostrar: (r) => r !== 'visitante' },
 ];
 
