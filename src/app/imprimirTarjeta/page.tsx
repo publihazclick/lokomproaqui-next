@@ -53,7 +53,7 @@ export default function ImprimirTarjetaPage() {
 
       <div
         id="tarjeta"
-        className="w-full overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 print:shadow-none print:ring-0"
+        className="w-full overflow-hidden rounded-3xl bg-[#eaf6fc] shadow-2xl ring-1 ring-black/5 print:shadow-none print:ring-0"
       >
         {/* Banda superior de marca -- mismo degradado azul de header/CTA en todo el sitio
             (#0177a8 -> #02a0e3, ver RealHeader.tsx), nunca morado/fucsia. */}
