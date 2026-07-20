@@ -211,7 +211,8 @@ export function RealHeader() {
               </span>
               <Link
                 href="/acelerador"
-                className="whitespace-nowrap rounded-full bg-[#0177a8] px-4 py-1.5 text-xs font-extrabold text-white shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
+                className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-white transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
+                style={{ background: 'linear-gradient(135deg, #ff4d1c, #ff9800)', boxShadow: '0 4px 14px rgba(255,87,34,0.5)' }}
               >
                 Ver ahora →
               </Link>
