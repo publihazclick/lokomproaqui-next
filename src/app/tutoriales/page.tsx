@@ -1,5 +1,4 @@
 import { supabase, conTimeout } from '@/lib/supabase';
-import { SessionRedirect } from '@/components/SessionRedirect';
 import { TutorialesClient } from './TutorialesClient';
 import type { CategoriaConVideos, CursoVideo } from './types';
 
@@ -31,15 +30,7 @@ export default async function TutorialesPage() {
     .map((cat) => ({ ...cat, videos: todos.filter((v) => v.parent_id === cat.id) }))
     .filter((cat) => cat.videos.length > 0);
 
-  return (
-    <>
-      {/* Pedido explicito del usuario 2026-07-19: esta pagina tiene contenido real (videos de la
-          academia) y estaba enlazada desde la landing publica /info sin exigir sesion -- un
-          visitante anonimo llegaba aca con un click, sin loguearse nunca. Mismo patron "island"
-          cliente que /info (server component con ISR no puede leer la sesion del lado del
-          servidor). */}
-      <SessionRedirect when="logged-out" to="/info" />
-      <TutorialesClient categorias={categorias} />
-    </>
-  );
+  // Pedido explicito del usuario 2026-07-20: "Academia Gratis" debe verse SIN loguearse -- revierte
+  // el <SessionRedirect logged-out -> /info> que se agrego el 2026-07-19 con el criterio contrario.
+  return <TutorialesClient categorias={categorias} />;
 }
