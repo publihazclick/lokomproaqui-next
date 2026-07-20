@@ -100,9 +100,11 @@ export async function crearPedidoDropshipping(data: DatosPedidoDropshipping): Pr
 }
 
 // Persiste freight_value/carrier -- mipaquete-create-shipment los lee de la base de datos, no del
-// formulario, para saber cuanto debe recaudar el mensajero.
-export async function actualizarFleteYTransportadora(orderId: number, fleteTotal: number, transportadoraSelect: string): Promise<boolean> {
-  const { error } = await supabase.from('orders').update({ freight_value: fleteTotal, carrier: transportadoraSelect }).eq('id', orderId);
+// formulario, para saber cuanto debe recaudar el mensajero. `carrier` guarda el NOMBRE legible (no
+// el slug, ver BUG REAL corregido en generarGuiaEnvio) -- el slug solo vive en el estado del
+// componente (CotizacionFlete.slug), orders.carrier nunca se relee como ID en ningun lado.
+export async function actualizarFleteYTransportadora(orderId: number, fleteTotal: number, deliveryCompanyName: string, deliveryCompanyLogoUrl: string | null): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ freight_value: fleteTotal, carrier: deliveryCompanyName, carrier_logo_url: deliveryCompanyLogoUrl }).eq('id', orderId);
   return !error;
 }
 
@@ -279,8 +281,14 @@ export async function cotizarFlete(orderId: number, codeCiudad: string): Promise
   }));
 }
 
-export async function generarGuiaEnvio(orderId: number, transportadoraSelect: string): Promise<{ ok: boolean; guia?: string; message?: string }> {
-  const { data: resp, error } = await supabase.functions.invoke('mipaquete-create-shipment', { body: { order_id: orderId, delivery_company_id: transportadoraSelect } });
+// BUG REAL CORREGIDO 2026-07-20: nunca se mandaba delivery_company_name/logo -- mipaquete-create-shipment
+// ya sabia guardar el nombre legible (`carrier: body.delivery_company_name || deliveryCompanyId`) pero
+// como el frontend solo mandaba el slug, el fallback al slug se activaba SIEMPRE. orders.carrier
+// quedaba con algo como "5fceb46c8229797cb139a7aa" en vez de "SERVIENTREGA" en cada pedido generado.
+export async function generarGuiaEnvio(orderId: number, transportadoraSelect: string, deliveryCompanyName: string, deliveryCompanyLogoUrl: string | null): Promise<{ ok: boolean; guia?: string; message?: string }> {
+  const { data: resp, error } = await supabase.functions.invoke('mipaquete-create-shipment', {
+    body: { order_id: orderId, delivery_company_id: transportadoraSelect, delivery_company_name: deliveryCompanyName, delivery_company_logo_url: deliveryCompanyLogoUrl },
+  });
   if (error || !resp || resp.error) return { ok: false, message: (resp && resp.error) || 'No se pudo generar la guia' };
   return { ok: true, guia: resp.guia || resp.sending_id || '' };
 }
@@ -335,6 +343,7 @@ export interface VentaRow {
   estado: number;
   numeroGuia: string | null;
   transportadora: string | null;
+  transportadoraLogo: string | null;
   nombreCliente: string | null;
   telefonoCliente: string | null;
   fecha: string;
@@ -353,6 +362,7 @@ function mapVentaRow(o: any): VentaRow {
     estado: STATUS_TO_LEGACY[o.status] ?? 0,
     numeroGuia: o.tracking_number,
     transportadora: o.carrier,
+    transportadoraLogo: o.carrier_logo_url,
     nombreCliente: o.buyer_name,
     telefonoCliente: o.buyer_phone,
     fecha: o.created_at,
@@ -558,6 +568,7 @@ export interface VentaDetalle {
   barrio: string | null;
   numeroGuia: string | null;
   transportadora: string | null;
+  transportadoraLogo: string | null;
   precioTotal: number | null;
   gananciaTotal: number | null;
   vendedorNombre: string | null;
@@ -599,6 +610,7 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     barrio: order.buyer_neighborhood,
     numeroGuia: order.tracking_number,
     transportadora: order.carrier,
+    transportadoraLogo: order.carrier_logo_url,
     precioTotal: order.price_total,
     gananciaTotal: order.earnings_total,
     vendedorNombre: order.profiles ? order.profiles.full_name : null,

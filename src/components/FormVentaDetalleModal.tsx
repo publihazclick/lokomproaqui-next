@@ -215,8 +215,8 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     }
     if (!deb.alreadyCharged) setSaldo((s) => s - totalAPagarWallet);
     await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, seguroActivo);
-    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
-    const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug);
+    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.nombre, fleteSeleccionado.imgTrasp);
+    const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug, fleteSeleccionado.nombre, fleteSeleccionado.imgTrasp);
     if (!res.ok) {
       setAutorizando(false);
       setError(res.message || 'No se pudo generar la guía, intenta de nuevo');
@@ -224,7 +224,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
     }
     await marcarPedidoEnPreparacion(orderId);
     setAutorizando(false);
-    setVenta((v) => (v ? { ...v, numeroGuia: res.guia || '', transportadora: fleteSeleccionado.slug, estado: 6 } : v));
+    setVenta((v) => (v ? { ...v, numeroGuia: res.guia || '', transportadora: fleteSeleccionado.nombre, transportadoraLogo: fleteSeleccionado.imgTrasp, estado: 6 } : v));
     mostrar('Guía generada, pedido autorizado y enviado a despacho');
     onCambio();
   }
@@ -362,8 +362,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
               {venta.numeroGuia ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3 text-sm">
-                    <p>
-                      Guía: <strong>{venta.numeroGuia}</strong> ({venta.transportadora})
+                    <p className="flex items-center gap-1.5">
+                      Guía: <strong>{venta.numeroGuia}</strong>
+                      {venta.transportadoraLogo && (
+                        // eslint-disable-next-line @next/next/no-img-element -- logo de transportadora
+                        <img src={venta.transportadoraLogo} alt="" className="h-4 w-4 shrink-0 rounded bg-white object-contain" />
+                      )}
+                      ({venta.transportadora})
                     </p>
                     <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
                       <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}

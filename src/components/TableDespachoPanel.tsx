@@ -80,7 +80,13 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
                     <>
                       {it.numeroGuia}
                       <br />
-                      <span className="text-gray-400">{it.transportadora}</span>
+                      <span className="inline-flex items-center gap-1 text-gray-400">
+                        {it.transportadoraLogo && (
+                          // eslint-disable-next-line @next/next/no-img-element -- logo de transportadora
+                          <img src={it.transportadoraLogo} alt="" className="h-4 w-4 shrink-0 rounded bg-white object-contain" />
+                        )}
+                        {it.transportadora}
+                      </span>
                     </>
                   ) : (
                     <span className="text-gray-400">Sin guía</span>

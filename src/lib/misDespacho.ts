@@ -28,6 +28,7 @@ export interface ItemDespacho {
   ventaEstado: number;
   numeroGuia: string | null;
   transportadora: string | null;
+  transportadoraLogo: string | null;
   telefonoCliente: string | null;
   nombreCliente: string | null;
 }
@@ -55,6 +56,7 @@ async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSi
     ventaEstado: STATUS_TO_LEGACY[item.orders.status] ?? 0,
     numeroGuia: item.orders.tracking_number,
     transportadora: item.orders.carrier,
+    transportadoraLogo: item.orders.carrier_logo_url,
     telefonoCliente: item.orders.buyer_phone,
     nombreCliente: item.orders.buyer_name,
   }));

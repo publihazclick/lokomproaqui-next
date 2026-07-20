@@ -324,7 +324,7 @@ export function DropshippingCheckoutModal({
   async function elegirFlete(c: CotizacionFlete) {
     setFleteSeleccionado(c);
     refrescarSaldo();
-    if (orderIdRef.current) await actualizarFleteYTransportadora(orderIdRef.current, c.fleteTotal, c.slug);
+    if (orderIdRef.current) await actualizarFleteYTransportadora(orderIdRef.current, c.fleteTotal, c.nombre, c.imgTrasp);
   }
 
   async function confirmarPago() {
@@ -354,12 +354,12 @@ export function DropshippingCheckoutModal({
       refrescarSaldo();
       return;
     }
-    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.slug);
-    await generarGuia(orderId, fleteSeleccionado.slug);
+    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.nombre, fleteSeleccionado.imgTrasp);
+    await generarGuia(orderId, fleteSeleccionado);
   }
 
-  async function generarGuia(id: number, transportadoraSelect: string) {
-    const res = await generarGuiaEnvio(id, transportadoraSelect);
+  async function generarGuia(id: number, c: CotizacionFlete) {
+    const res = await generarGuiaEnvio(id, c.slug, c.nombre, c.imgTrasp);
     setLoader(false);
     if (!res.ok) {
       setError('Ya cobramos tu pedido pero no pudimos generar la guia de envio');
@@ -375,7 +375,7 @@ export function DropshippingCheckoutModal({
     if (!orderId || !fleteSeleccionado) return;
     setLoader(true);
     setError('');
-    await generarGuia(orderId, fleteSeleccionado.slug);
+    await generarGuia(orderId, fleteSeleccionado);
   }
 
   async function cancelarYReembolsar() {
