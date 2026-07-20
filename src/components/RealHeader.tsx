@@ -48,7 +48,7 @@ const MENUS: MenuItem[] = [
   { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
-  { Icon: Truck, nombre: 'Generación de Guías', href: '/config/guias', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: Truck, nombre: 'Generación de Guías', href: '/config/guias', mostrar: (r) => r !== 'visitante' },
   { Icon: Wallet, nombre: 'Mis Cobros', href: '/config/cobros', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
   { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
