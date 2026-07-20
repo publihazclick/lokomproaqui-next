@@ -79,7 +79,6 @@ export function RealHeader() {
   const [rol, setRol] = useState<Rol>('visitante');
   const [userId, setUserId] = useState<string | null>(null);
   const [telefono, setTelefono] = useState<string | null>(null);
-  const [logo, setLogo] = useState('/assets/logo.svg');
   const [balance, setBalance] = useState<number | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -104,8 +103,14 @@ export function RealHeader() {
         return;
       }
       const userId = data.session.user.id;
+      // BUG REAL CORREGIDO 2026-07-19: se leia avatar_url y se usaba como logo de la cabecera (ver
+      // mas abajo) -- en el Angular original esa asignacion (urlLogo = usu_imagen) era codigo
+      // MUERTO, la plantilla real siempre mostraba el logo fijo (nunca se uso {{urlLogo}} en el
+      // .html). El port a Next.js conecto por error algo que nunca debia renderizarse -- la foto
+      // que un vendedor sube en su perfil es para la tarjeta de presentacion (asovirtualconected) y
+      // otras vitrinas, nunca para la cabecera del sitio. Se deja de pedir avatar_url aca.
       const [{ data: profile }, { data: wallet }] = await Promise.all([
-        supabase.from('profiles').select('phone, avatar_url, roles(name), es_lider_general').eq('id', userId).single(),
+        supabase.from('profiles').select('phone, roles(name), es_lider_general').eq('id', userId).single(),
         supabase.from('wallet_balances').select('balance').eq('profile_id', userId).eq('wallet_type', 'referral').maybeSingle(),
       ]);
       if (!activo || !profile) return;
@@ -121,7 +126,6 @@ export function RealHeader() {
       setUserId(userId);
       setTelefono(profile.phone);
       setEsLiderGeneral(!!(profile as any).es_lider_general);
-      if (profile.avatar_url) setLogo(profile.avatar_url);
       setBalance(wallet?.balance ?? 0);
       setSesionResuelta(true);
     }
@@ -213,8 +217,8 @@ export function RealHeader() {
               visitante y despues saltaba al lado correcto. Pedido explicito del usuario 2026-07-19. */}
           {sesionResuelta && rol !== 'visitante' && (
             <Link href="/articulo" className="min-w-0 shrink">
-              {/* eslint-disable-next-line @next/next/no-img-element -- logo/avatar de usuario, servido por Angular o Supabase Storage */}
-              <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio, nunca la foto que el vendedor sube en su perfil */}
+              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
             </Link>
           )}
 
@@ -228,8 +232,8 @@ export function RealHeader() {
                   Iniciar Sesión
                 </Link>
                 <Link href="/info" className="min-w-0 shrink">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- logo, servido por Angular */}
-                  <img src={logo} alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio */}
+                  <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
                 </Link>
               </>
             ) : (
