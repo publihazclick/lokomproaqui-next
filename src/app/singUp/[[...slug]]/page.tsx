@@ -128,7 +128,11 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
     // normal de abajo, las dos cosas pasan juntas.
     notificarRegistroWhatsapp({ nombre: `${nombre} ${apellido}`.trim(), telefono, rol: rolReal || rol });
 
-    window.location.href = rolReal === 'proveedor' ? '/infoSupplier' : rolReal === 'vendedor' ? '/articulo' : '/pedidos';
+    // Pedido explicito del usuario 2026-07-20: un proveedor recien registrado debe ver de inmediato
+    // el mensaje de "sube minimo 3 productos y envialos a revision" -- ese banner vive en
+    // /config/productos (ver ProductosPage), asi que se manda ahi directo en vez de a /infoSupplier
+    // (galeria publica de OTROS proveedores, no tenia sentido para alguien que recien se registro).
+    window.location.href = rolReal === 'proveedor' ? '/config/productos' : rolReal === 'vendedor' ? '/articulo' : '/pedidos';
   }
 
   async function resolverReferrerId(phone: string): Promise<string | null> {

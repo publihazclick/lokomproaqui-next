@@ -1,12 +1,26 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
-import { fetchUsuariosAdmin, fetchRolesAsignables, actualizarUsuarioAdmin, type UsuarioAdminRow, type RolOpcion } from '@/lib/usuariosAdmin';
+import { fetchUsuariosAdmin, fetchRolesAsignables, actualizarUsuarioAdmin, revisarProveedor, type UsuarioAdminRow, type RolOpcion } from '@/lib/usuariosAdmin';
+import { MINIMO_PRODUCTOS_PROVEEDOR, type SupplierStatus } from '@/lib/proveedorEstado';
 import { FormUsuarioModal } from '@/components/FormUsuarioModal';
 import { useToast, Toast } from '@/components/Toast';
+
+const ESTADO_LABEL: Record<SupplierStatus, string> = {
+  incompleto: 'Incompleto',
+  en_revision: 'En revisión',
+  aprobado: 'Aprobado',
+  rechazado: 'Rechazado',
+};
+const ESTADO_ESTILO: Record<SupplierStatus, { bg: string; color: string }> = {
+  incompleto: { bg: '#f1f3f5', color: '#6b7280' },
+  en_revision: { bg: '#fef3c7', color: '#b45309' },
+  aprobado: { bg: '#f0fdf4', color: '#16a34a' },
+  rechazado: { bg: '#fef2f2', color: '#dc2626' },
+};
 
 // Port de ProvedoresComponent (Angular, panel admin "Proveedores" -- directorio de usuarios con
 // rol proveedor). Mismo bug de siempre: `UsuariosService.get()` nunca soporto filtrar por rol
@@ -75,6 +89,25 @@ export default function ProvedoresPage() {
     mostrar('Eliminado');
   }
 
+  async function aprobar(u: UsuarioAdminRow) {
+    if ((u.productCount ?? 0) < MINIMO_PRODUCTOS_PROVEEDOR) {
+      if (!window.confirm(`Este proveedor tiene ${u.productCount ?? 0} de ${MINIMO_PRODUCTOS_PROVEEDOR} productos mínimos. ¿Aprobarlo de todas formas?`)) return;
+    }
+    const ok = await revisarProveedor(u.id, true, null);
+    if (!ok) return mostrar('Error de servidor');
+    setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, supplierStatus: 'aprobado', supplierRejectionReason: null } : x)));
+    mostrar('Proveedor aprobado, ya aparece en Explorar Bodegas');
+  }
+
+  async function rechazar(u: UsuarioAdminRow) {
+    const motivo = window.prompt('Motivo del rechazo (el proveedor lo va a ver):', u.supplierRejectionReason || '');
+    if (motivo === null) return;
+    const ok = await revisarProveedor(u.id, false, motivo.trim() || null);
+    if (!ok) return mostrar('Error de servidor');
+    setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, supplierStatus: 'rechazado', supplierRejectionReason: motivo.trim() || null } : x)));
+    mostrar('Proveedor rechazado');
+  }
+
   if (estado === 'no-autorizado') {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
@@ -117,6 +150,8 @@ export default function ProvedoresPage() {
                   <th className="py-2 pr-3">Teléfono</th>
                   <th className="py-2 pr-3">Fecha Registro</th>
                   <th className="py-2 pr-3">Activo</th>
+                  <th className="py-2 pr-3">Productos</th>
+                  <th className="py-2 pr-3">Aprobación</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +174,34 @@ export default function ProvedoresPage() {
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {u.activo ? 'Activo' : 'Inactivo'}
                       </span>
+                    </td>
+                    <td className="py-2 pr-3 text-xs">
+                      <span className={(u.productCount ?? 0) < MINIMO_PRODUCTOS_PROVEEDOR ? 'font-semibold text-red-600' : 'text-gray-700'}>
+                        {u.productCount ?? 0} / {MINIMO_PRODUCTOS_PROVEEDOR}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      {u.supplierStatus && (
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className="w-fit rounded-full px-2 py-0.5 text-[11px] font-bold"
+                            style={ESTADO_ESTILO[u.supplierStatus]}
+                            title={u.supplierStatus === 'rechazado' && u.supplierRejectionReason ? u.supplierRejectionReason : undefined}
+                          >
+                            {ESTADO_LABEL[u.supplierStatus]}
+                          </span>
+                          {u.supplierStatus !== 'aprobado' && (
+                            <div className="flex gap-1">
+                              <button onClick={() => aprobar(u)} className="flex items-center gap-0.5 rounded bg-green-600 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                                <Check className="h-3 w-3" /> Aprobar
+                              </button>
+                              <button onClick={() => rechazar(u)} className="flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                                <X className="h-3 w-3" /> Rechazar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

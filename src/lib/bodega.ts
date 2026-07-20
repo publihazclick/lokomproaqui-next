@@ -22,7 +22,10 @@ export interface TiendaProveedor {
 }
 
 export async function fetchTiendasProveedor(search: string, page: number, limit: number): Promise<{ data: TiendaProveedor[]; count: number }> {
-  let q = supabase.from('profiles').select('*, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor');
+  // Aprobacion de proveedores (migracion 063, pedido explicito del usuario 2026-07-20): solo
+  // aparecen bodegas con supplier_status='aprobado' -- antes cualquier proveedor recien registrado
+  // (sin ningun producto siquiera) ya aparecia aca de inmediato.
+  let q = supabase.from('profiles').select('*, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor').eq('supplier_status', 'aprobado');
   if (search.trim()) {
     const term = search.trim();
     q = q.or(`full_name.ilike.%${term}%,phone.ilike.%${term}%,city.ilike.%${term}%,referral_code.ilike.%${term}%`);

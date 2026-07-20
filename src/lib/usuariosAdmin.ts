@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { SupplierStatus } from './proveedorEstado';
 
 // Port de UsuariosComponent + FormusuariosComponent (Angular, "Usuarios" -- directorio admin).
 //
@@ -48,12 +49,19 @@ export interface UsuarioAdminRow {
   ciudad: string | null;
   fechaRegistro: string;
   activo: boolean;
+  // Solo poblados cuando soloRol === 'proveedor' -- aprobacion de cuenta de proveedor (migracion
+  // 063), ver lib/proveedorEstado.ts.
+  supplierStatus: SupplierStatus | null;
+  supplierRejectionReason: string | null;
+  productCount: number | null;
 }
 
 export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: string; page: number; limit: number }): Promise<{ data: UsuarioAdminRow[]; count: number }> {
+  const esProveedores = opts.soloRol === 'proveedor';
+  const columnas = 'id, full_name, last_name, phone, city, status, created_at, roles(name)' + (esProveedores ? ', supplier_status, supplier_rejection_reason' : '');
   let q = opts.soloRol
-    ? supabase.from('profiles').select('id, full_name, last_name, phone, city, status, created_at, roles!inner(name)', { count: 'exact' }).eq('roles.name', opts.soloRol)
-    : supabase.from('profiles').select('id, full_name, last_name, phone, city, status, created_at, roles(name)', { count: 'exact' });
+    ? supabase.from('profiles').select(columnas, { count: 'exact' }).eq('roles.name', opts.soloRol)
+    : supabase.from('profiles').select(columnas, { count: 'exact' });
   q = q.order('created_at', { ascending: false });
   if (opts.search && opts.search.trim()) {
     const s = opts.search.trim();
@@ -63,8 +71,21 @@ export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: stri
 
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
+
+  // Conteo de productos por proveedor -- una sola consulta batched (owner_profile_id de los
+  // productos de TODOS los ids de esta pagina), no N+1.
+  let conteos: Record<string, number> = {};
+  if (esProveedores && data.length) {
+    const ids = (data as any[]).map((p) => p.id);
+    const { data: productos } = await supabase.from('products').select('owner_profile_id').in('owner_profile_id', ids);
+    conteos = (productos || []).reduce((acc: Record<string, number>, row: any) => {
+      acc[row.owner_profile_id] = (acc[row.owner_profile_id] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
   return {
-    data: data.map((p: any) => ({
+    data: (data as any[]).map((p: any) => ({
       id: p.id,
       nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
       rolNombre: p.roles ? ROL_LABEL[p.roles.name] || p.roles.name : '—',
@@ -72,9 +93,20 @@ export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: stri
       ciudad: p.city,
       fechaRegistro: p.created_at,
       activo: p.status !== 0,
+      supplierStatus: esProveedores ? (p.supplier_status ?? null) : null,
+      supplierRejectionReason: esProveedores ? (p.supplier_rejection_reason ?? null) : null,
+      productCount: esProveedores ? (conteos[p.id] || 0) : null,
     })),
     count: count ?? data.length,
   };
+}
+
+export async function revisarProveedor(profileId: string, aprobado: boolean, motivo: string | null): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ supplier_status: aprobado ? 'aprobado' : 'rechazado', supplier_rejection_reason: aprobado ? null : motivo })
+    .eq('id', profileId);
+  return !error;
 }
 
 export interface UsuarioAdminDetalle {

@@ -20,8 +20,11 @@ interface Supplier {
 }
 
 export default async function InfoSupplierPage() {
+  // Aprobacion de proveedores (migracion 063, pedido explicito del usuario 2026-07-20): la galeria
+  // publica tambien debe mostrar solo bodegas aprobadas -- consistente con Explorar Bodegas
+  // (fetchTiendasProveedor, lib/bodega.ts).
   const { data, count } = await conTimeout(
-    supabase.from('profiles').select('id, avatar_url, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor').range(0, 19),
+    supabase.from('profiles').select('id, avatar_url, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor').eq('supplier_status', 'aprobado').range(0, 19),
     { data: null, count: null, error: null } as any,
   );
 
