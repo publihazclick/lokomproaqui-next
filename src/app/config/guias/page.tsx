@@ -116,14 +116,20 @@ export default function GuiasPage() {
               return (
                 <div key={g.id} className="rounded-2xl border p-3.5" style={{ borderColor: '#e5e7eb' }}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="m-0 truncate text-sm font-bold text-gray-900">{g.destinatario || 'Sin destinatario'}</p>
-                      <p className="m-0 mt-0.5 text-xs text-gray-500">{g.ciudad} · {fechaMedium(g.fecha)}</p>
-                      {g.numeroGuia && (
-                        <p className="m-0 mt-1 text-xs text-gray-600">
-                          Guía <strong>{g.numeroGuia}</strong> · {g.transportadora}
-                        </p>
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      {g.transportadoraLogo && (
+                        // eslint-disable-next-line @next/next/no-img-element -- logo de transportadora
+                        <img src={g.transportadoraLogo} alt="" className="mt-0.5 h-9 w-9 shrink-0 rounded-lg bg-white object-contain" style={{ border: '1px solid #f1f3f5' }} />
                       )}
+                      <div className="min-w-0">
+                        <p className="m-0 truncate text-sm font-bold text-gray-900">{g.destinatario || 'Sin destinatario'}</p>
+                        <p className="m-0 mt-0.5 text-xs text-gray-500">{g.ciudad} · {fechaMedium(g.fecha)}</p>
+                        {g.numeroGuia && (
+                          <p className="m-0 mt-1 text-xs text-gray-600">
+                            Guía <strong>{g.numeroGuia}</strong> · {g.transportadora}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: estilo.bg, color: estilo.color }}>
                       {estadoGuiaLabel(g.estado)}

@@ -164,10 +164,10 @@ export async function cotizarGuia(
   };
 }
 
-export async function actualizarTransportadoraGuia(shipmentId: number, deliveryCompanyId: string, deliveryCompanyName: string, freightCost: number): Promise<boolean> {
+export async function actualizarTransportadoraGuia(shipmentId: number, deliveryCompanyId: string, deliveryCompanyName: string, freightCost: number, logoUrl: string | null): Promise<boolean> {
   const { error } = await supabase
     .from('standalone_shipments')
-    .update({ delivery_company_id: deliveryCompanyId, delivery_company_name: deliveryCompanyName, freight_cost: freightCost, status: 'quoted' })
+    .update({ delivery_company_id: deliveryCompanyId, delivery_company_name: deliveryCompanyName, delivery_company_logo_url: logoUrl, freight_cost: freightCost, status: 'quoted' })
     .eq('id', shipmentId);
   return !error;
 }
@@ -191,6 +191,7 @@ export interface GuiaRow {
   estado: string;
   numeroGuia: string | null;
   transportadora: string | null;
+  transportadoraLogo: string | null;
   destinatario: string | null;
   telefonoDestinatario: string | null;
   ciudad: string | null;
@@ -228,6 +229,7 @@ export async function fetchMisGuias(profileId: string): Promise<GuiaRow[]> {
     estado: g.status,
     numeroGuia: g.tracking_number,
     transportadora: g.delivery_company_name,
+    transportadoraLogo: g.delivery_company_logo_url,
     destinatario: g.receiver_name,
     telefonoDestinatario: g.receiver_phone,
     ciudad: g.receiver_city,

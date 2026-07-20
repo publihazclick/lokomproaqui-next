@@ -298,7 +298,7 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
 
   async function elegirTransportadora(c: CotizacionGuia) {
     setTransportadora(c);
-    if (shipmentId) await actualizarTransportadoraGuia(shipmentId, c.slug, c.nombre, c.fleteTotal);
+    if (shipmentId) await actualizarTransportadoraGuia(shipmentId, c.slug, c.nombre, c.fleteTotal, c.imgTrasp);
   }
 
   function continuarTransportadora() {

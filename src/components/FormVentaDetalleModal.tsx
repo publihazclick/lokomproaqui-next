@@ -502,11 +502,15 @@ export function FormVentaDetalleModal({ orderId, esAdmin, onClose, onCambio }: F
                             <div
                               key={`${c.slug}-${i}`}
                               onClick={() => setFleteSeleccionado(c)}
-                              className="flex cursor-pointer items-center justify-between rounded border px-3 py-2 text-sm"
+                              className="flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-sm"
                               style={activa ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.06)' } : { borderColor: '#e5e7eb' }}
                             >
-                              <span>{c.nombre}</span>
-                              <span className="font-medium">$ {c.fleteTotal.toLocaleString('es-CO')}</span>
+                              {c.imgTrasp && (
+                                // eslint-disable-next-line @next/next/no-img-element -- logo de transportadora
+                                <img src={c.imgTrasp} alt="" className="h-6 w-6 shrink-0 rounded bg-white object-contain" />
+                              )}
+                              <span className="min-w-0 flex-1 truncate">{c.nombre}</span>
+                              <span className="shrink-0 font-medium">$ {c.fleteTotal.toLocaleString('es-CO')}</span>
                             </div>
                           );
                         })}
