@@ -112,6 +112,26 @@
   right: -4px;
 }
 
+/* Barrita de scroll real, siempre visible mientras haya overflow (no solo en los bordes como el
+   degradado) -- thumb con ancho/posicion en vivo segun scrollLeft real, ver TutorialesClient.tsx. */
+.tutCatBarraTrack {
+  position: relative;
+  height: 5px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.tutCatBarraThumb {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0177a8, #02a0e3);
+  transition: left 0.1s linear;
+}
+
 .tutCategoriaPill {
   flex-shrink: 0;
   white-space: nowrap;

@@ -28,12 +28,29 @@ function CategoriasSlider({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [puedeIzq, setPuedeIzq] = useState(false);
   const [puedeDer, setPuedeDer] = useState(false);
+  // Pedido explicito del usuario 2026-07-20 (segunda vuelta): la flecha+degradado no se notaba
+  // suficiente -- pidio algo mas parecido a una barrita de scroll de verdad, visible todo el
+  // tiempo que haya overflow (no solo en los bordes), con su "thumb" moviendose en vivo segun la
+  // posicion real del scroll -- igual que el indicador nativo de iOS/Android, pero siempre visible
+  // en vez de aparecer solo mientras se toca.
+  const [barraVisible, setBarraVisible] = useState(false);
+  const [thumbAncho, setThumbAncho] = useState(100);
+  const [thumbIzq, setThumbIzq] = useState(0);
 
   const actualizarFlechas = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     setPuedeIzq(el.scrollLeft > 4);
     setPuedeDer(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+
+    const overflow = el.scrollWidth - el.clientWidth;
+    setBarraVisible(overflow > 4);
+    if (overflow > 4) {
+      const anchoPct = Math.max((el.clientWidth / el.scrollWidth) * 100, 12);
+      const progreso = el.scrollLeft / overflow;
+      setThumbAncho(anchoPct);
+      setThumbIzq(progreso * (100 - anchoPct));
+    }
   }, []);
 
   useEffect(() => {
@@ -79,6 +96,12 @@ function CategoriasSlider({
         <button type="button" className={`${styles.tutCatFlecha} ${styles.tutCatFlechaDer}`} onClick={() => desplazar(1)} aria-label="Ver más categorías">
           <ChevronRight size={16} strokeWidth={3} />
         </button>
+      )}
+
+      {barraVisible && (
+        <div className={styles.tutCatBarraTrack}>
+          <div className={styles.tutCatBarraThumb} style={{ width: `${thumbAncho}%`, left: `${thumbIzq}%` }} />
+        </div>
       )}
     </div>
   );
