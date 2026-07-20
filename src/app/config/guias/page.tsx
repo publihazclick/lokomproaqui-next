@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Truck, RefreshCw, PackageX, PackageCheck } from 'lucide-react';
+import { Plus, Truck, RefreshCw, PackageX, PackageCheck, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchMisGuias, estadoGuiaLabel, marcarGuiaDevuelta, marcarGuiaEntregada, type GuiaRow } from '@/lib/guias';
 import { fechaMedium } from '@/lib/format';
 import { useToast, Toast } from '@/components/Toast';
 import { GuiaWizard } from '@/components/GuiaWizard';
+import { CotizarEnvioModal } from '@/components/CotizarEnvioModal';
 
 // Modulo "Generacion de Guias" (pedido explicito del usuario 2026-07-20): listado de guias sueltas
 // generadas por el vendedor (standalone_shipments) + boton para abrir el wizard. Estilo "unicornio"
@@ -31,6 +32,7 @@ export default function GuiasPage() {
   const [guias, setGuias] = useState<GuiaRow[]>([]);
   const [cargando, setCargando] = useState(false);
   const [mostrarWizard, setMostrarWizard] = useState(false);
+  const [mostrarCotizador, setMostrarCotizador] = useState(false);
   const [procesando, setProcesando] = useState<Record<number, boolean>>({});
 
   async function cargar(userId: string) {
@@ -78,14 +80,24 @@ export default function GuiasPage() {
           </h4>
           <p className="mt-0.5 text-xs text-gray-500">Cotiza y genera guías de envío para tus propios paquetes, sin necesidad de un pedido.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setMostrarWizard(true)}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white"
-          style={{ background: '#02a0e3', boxShadow: '0 4px 10px rgba(2,160,227,0.3)' }}
-        >
-          <Plus className="h-4 w-4" /> Nueva Guía
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMostrarCotizador(true)}
+            className="flex items-center gap-1.5 rounded-full border-[1.5px] px-4 py-2.5 text-sm font-bold"
+            style={{ borderColor: '#02a0e3', color: '#0288c2' }}
+          >
+            <Search className="h-4 w-4" /> Cotizar Envío
+          </button>
+          <button
+            type="button"
+            onClick={() => setMostrarWizard(true)}
+            className="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white"
+            style={{ background: '#02a0e3', boxShadow: '0 4px 10px rgba(2,160,227,0.3)' }}
+          >
+            <Plus className="h-4 w-4" /> Nueva Guía
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -170,6 +182,10 @@ export default function GuiasPage() {
           onClose={() => setMostrarWizard(false)}
           onGenerada={() => cargar(dataUser.id)}
         />
+      )}
+
+      {mostrarCotizador && dataUser && (
+        <CotizarEnvioModal dataUser={dataUser} onClose={() => setMostrarCotizador(false)} />
       )}
     </div>
   );
