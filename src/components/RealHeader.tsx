@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
   Wallet, Users, UserPlus, Package, Truck, Warehouse, Landmark, RefreshCw, Settings,
-  GraduationCap, LogOut, Trash2,
+  GraduationCap, LogOut, Trash2, BookOpen, Video,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
@@ -61,6 +61,8 @@ const MENUS: MenuItem[] = [
   { Icon: User, nombre: 'Mi Cuenta', href: '/config/perfil', mostrar: (r) => r !== 'visitante' },
   { Icon: Settings, nombre: 'Configuración', href: '/config/configuracion', mostrar: (r) => r === 'administrador' },
   { Icon: GraduationCap, nombre: 'Cursos / Ayuda', href: '/acelerador', mostrar: (r) => r !== 'visitante' },
+  { Icon: BookOpen, nombre: 'Academia Gratis', href: '/tutoriales', mostrar: (r) => r !== 'visitante' },
+  { Icon: Video, nombre: 'Gestionar Academia', href: '/config/cursos', mostrar: (r) => r === 'administrador' },
 ];
 
 const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar' | 'compartir'; mostrar: (r: Rol) => boolean }[] = [

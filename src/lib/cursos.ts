@@ -29,6 +29,7 @@ export interface CursoAdminRow {
   orden: number;
   padre: number | null;
   url: string | null;
+  descripcion: string | null;
 }
 
 export interface CategoriaCursos extends CursoAdminRow {
@@ -36,7 +37,7 @@ export interface CategoriaCursos extends CursoAdminRow {
 }
 
 function mapCursoAdmin(c: any): CursoAdminRow {
-  return { id: c.id, titulo: c.title, orden: c.sort_order, padre: c.parent_id, url: c.video_url };
+  return { id: c.id, titulo: c.title, orden: c.sort_order, padre: c.parent_id, url: c.video_url, descripcion: c.description };
 }
 
 export async function fetchCategoriasCursos(): Promise<CategoriaCursos[]> {
@@ -58,11 +59,16 @@ export async function crearCategoriaCurso(titulo: string, orden: number): Promis
   return !error;
 }
 
-export async function actualizarCurso(id: number, patch: { titulo?: string; orden?: number; url?: string }): Promise<boolean> {
+export async function actualizarCurso(id: number, patch: { titulo?: string; orden?: number; url?: string; descripcion?: string }): Promise<boolean> {
   const data: any = {};
   if (patch.titulo !== undefined) data.title = patch.titulo;
   if (patch.orden !== undefined) data.sort_order = patch.orden;
-  if (patch.url !== undefined) data.video_url = patch.url;
+  // BUG REAL CORREGIDO 2026-07-20: crearVideoCurso ya normalizaba el link pegado (cualquier
+  // formato de URL de YouTube) a solo el ID via extraerIdYoutube -- actualizarCurso no lo hacia,
+  // asi que EDITAR el link de un video ya creado guardaba la URL completa tal cual, rompiendo la
+  // miniatura y el embed en /tutoriales (ambos arman la URL asumiendo que video_url es solo el ID).
+  if (patch.url !== undefined) data.video_url = extraerIdYoutube(patch.url);
+  if (patch.descripcion !== undefined) data.description = patch.descripcion;
   const { error } = await supabase.from('courses').update(data).eq('id', id);
   return !error;
 }
@@ -72,7 +78,9 @@ export async function eliminarCurso(id: number): Promise<boolean> {
   return !error;
 }
 
-export async function crearVideoCurso(padre: number, orden: number, titulo: string, url: string): Promise<boolean> {
-  const { error } = await supabase.from('courses').insert({ title: titulo, video_url: extraerIdYoutube(url), sort_order: orden, parent_id: padre });
+export async function crearVideoCurso(padre: number, orden: number, titulo: string, url: string, descripcion: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('courses')
+    .insert({ title: titulo, video_url: extraerIdYoutube(url), sort_order: orden, parent_id: padre, description: descripcion || null });
   return !error;
 }

@@ -24,6 +24,7 @@ export function FormTutorialModal({
   const { mensaje, mostrar } = useToast();
   const [titulo, setTitulo] = useState(video?.titulo || '');
   const [url, setUrl] = useState(video?.url || '');
+  const [descripcion, setDescripcion] = useState(video?.descripcion || '');
   const [guardando, setGuardando] = useState(false);
 
   async function guardar() {
@@ -32,7 +33,9 @@ export function FormTutorialModal({
       return;
     }
     setGuardando(true);
-    const ok = video ? await actualizarCurso(video.id, { titulo: titulo.trim(), url: url.trim() }) : await crearVideoCurso(categoriaId, orden, titulo.trim(), url.trim());
+    const ok = video
+      ? await actualizarCurso(video.id, { titulo: titulo.trim(), url: url.trim(), descripcion: descripcion.trim() })
+      : await crearVideoCurso(categoriaId, orden, titulo.trim(), url.trim(), descripcion.trim());
     setGuardando(false);
     if (!ok) {
       mostrar('Error de servidor');
@@ -60,6 +63,16 @@ export function FormTutorialModal({
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">Link de YouTube</label>
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtu.be/…" className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">Descripción (opcional, se ve debajo del título en Academia Gratis)</label>
+            <textarea
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              rows={3}
+              placeholder="Ej: Aprende a activar tu tienda y publicar tu primer producto en 5 minutos."
+              className="w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
         </div>
 
