@@ -48,6 +48,7 @@ export function CotizarEnvioModal({ dataUser, onClose }: CotizarEnvioModalProps)
   const [cotizando, setCotizando] = useState(false);
   const [cotizado, setCotizado] = useState(false);
   const [cotizaciones, setCotizaciones] = useState<CotizacionGuia[]>([]);
+  const [origenCityName, setOrigenCityName] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const peso = tamanoId === 'personalizar' ? pesoManual : tamano.weight || 1;
@@ -97,6 +98,7 @@ export function CotizarEnvioModal({ dataUser, onClose }: CotizarEnvioModalProps)
     setCotizando(false);
     setCotizado(true);
     setCotizaciones(res.cotizaciones);
+    setOrigenCityName(res.origenCityName);
     if (!res.cotizaciones.length) setError('No hay transportadoras disponibles para esa ciudad');
   }
 
@@ -214,8 +216,13 @@ export function CotizarEnvioModal({ dataUser, onClose }: CotizarEnvioModalProps)
             {cotizado && cotizaciones.length > 0 && (
               <div className="mt-1 flex flex-col gap-2">
                 <p className="m-0 text-xs font-bold uppercase tracking-wide" style={{ color: '#6b7280' }}>
-                  Transportadoras disponibles
+                  Transportadoras disponibles {origenCityName ? `· desde ${origenCityName}` : ''}
                 </p>
+                {!origenCityName && (
+                  <p className="m-0 -mt-1 text-[11px]" style={{ color: '#b45309' }}>
+                    ⚠️ Aún no guardaste tu ciudad de recogida, así que este precio es desde una ciudad por defecto. Usa &quot;Nueva Guía&quot; una vez para guardarla y cotizar desde tu ciudad real.
+                  </p>
+                )}
                 {cotizaciones.map((c, i) => (
                   <div
                     key={`${c.slug}-${i}`}

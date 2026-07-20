@@ -64,6 +64,11 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
 
   // Paso 1: remitente (solo si el vendedor no tiene datos guardados aun)
   const [remitente, setRemitente] = useState({ firstName: '', lastName: '', idDocument: '', whatsapp: dataUser.telefono || '', address: dataUser.direccion || '', email: dataUser.email || '' });
+  const [ciudadOrigenQuery, setCiudadOrigenQuery] = useState('');
+  const [sugerenciasOrigen, setSugerenciasOrigen] = useState<CiudadMipaquete[]>([]);
+  const [ciudadOrigenFocus, setCiudadOrigenFocus] = useState(false);
+  const [ciudadOrigenSeleccionada, setCiudadOrigenSeleccionada] = useState<CiudadMipaquete | null>(null);
+  const ciudadOrigenDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Paso 2: destinatario
   const [destinatario, setDestinatario] = useState({ nombre: '', telefono: '', direccion: '', barrio: '', referencia: '' });
@@ -128,6 +133,7 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
     })();
     return () => {
       if (ciudadDebounce.current) clearTimeout(ciudadDebounce.current);
+      if (ciudadOrigenDebounce.current) clearTimeout(ciudadOrigenDebounce.current);
       if (pollingRecarga.current) clearInterval(pollingRecarga.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,8 +173,31 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
     setCiudadFocus(false);
   }
 
+  function onCiudadOrigenInput(valor: string) {
+    const sanitized = soloLetras(valor);
+    setCiudadOrigenQuery(sanitized);
+    setCiudadOrigenSeleccionada(null);
+    if (ciudadOrigenDebounce.current) clearTimeout(ciudadOrigenDebounce.current);
+    ciudadOrigenDebounce.current = setTimeout(() => buscarCiudadesOrigenLocal(sanitized), 250);
+  }
+
+  async function buscarCiudadesOrigenLocal(q: string) {
+    if (q.trim().length < 2) {
+      setSugerenciasOrigen([]);
+      return;
+    }
+    setSugerenciasOrigen(await buscarCiudadesMipaquete(q));
+  }
+
+  function seleccionarCiudadOrigen(c: CiudadMipaquete) {
+    setCiudadOrigenSeleccionada(c);
+    setCiudadOrigenQuery(c.name);
+    setSugerenciasOrigen([]);
+    setCiudadOrigenFocus(false);
+  }
+
   function formValidoRemitente(): boolean {
-    return !!remitente.firstName.trim() && !!remitente.lastName.trim() && !!remitente.idDocument.trim() && !!remitente.whatsapp.trim() && !!remitente.address.trim();
+    return !!remitente.firstName.trim() && !!remitente.lastName.trim() && !!remitente.idDocument.trim() && !!remitente.whatsapp.trim() && !!remitente.address.trim() && !!ciudadOrigenSeleccionada;
   }
 
   function formValidoDestinatario(): boolean {
@@ -185,12 +214,12 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
 
   async function confirmarRemitente() {
     if (!formValidoRemitente()) {
-      setError('Completa tus datos de remitente para continuar');
+      setError(!ciudadOrigenSeleccionada ? 'Elige tu ciudad de recogida para continuar' : 'Completa tus datos de remitente para continuar');
       return;
     }
     setLoader(true);
     setError('');
-    const ok = await guardarPickupAddress(dataUser.id, remitente);
+    const ok = await guardarPickupAddress(dataUser.id, { ...remitente, cityName: ciudadOrigenSeleccionada!.name, cityDaneCode: ciudadOrigenSeleccionada!.code });
     setLoader(false);
     if (!ok) {
       setError('No pudimos guardar tus datos, intenta de nuevo');
@@ -499,6 +528,29 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
                   <Campo label="Dirección de recogida">
                     <input className={inputCls} value={remitente.address} onChange={(e) => setRemitente((r) => ({ ...r, address: letrasYNumeros(e.target.value) }))} placeholder="Calle, número, detalles" />
                   </Campo>
+                  <div className="relative">
+                    <Campo label="Ciudad de recogida">
+                      <input
+                        className={inputCls}
+                        autoComplete="off"
+                        value={ciudadOrigenQuery}
+                        onChange={(e) => onCiudadOrigenInput(e.target.value)}
+                        onFocus={() => setCiudadOrigenFocus(true)}
+                        onBlur={() => setTimeout(() => setCiudadOrigenFocus(false), 180)}
+                        placeholder="Ej: Medellín, Bogotá, Cali..."
+                      />
+                    </Campo>
+                    {ciudadOrigenSeleccionada && <p className="mt-1.5 text-xs" style={{ color: '#16a34a' }}>✓ {ciudadOrigenSeleccionada.name}</p>}
+                    {ciudadOrigenFocus && sugerenciasOrigen.length > 0 && !ciudadOrigenSeleccionada && (
+                      <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[200px] overflow-y-auto rounded-[10px] border bg-white shadow-lg" style={{ borderColor: '#e5e7eb' }}>
+                        {sugerenciasOrigen.map((c, i) => (
+                          <div key={`${c.code}-${i}`} className="cursor-pointer border-b px-3.5 py-2.5 text-sm last:border-b-0 hover:bg-gray-50" style={{ borderColor: '#f1f3f5' }} onMouseDown={() => seleccionarCiudadOrigen(c)}>
+                            {c.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <Campo label="Email (opcional)">
                     <input className={inputCls} type="email" value={remitente.email} onChange={(e) => setRemitente((r) => ({ ...r, email: e.target.value }))} />
                   </Campo>

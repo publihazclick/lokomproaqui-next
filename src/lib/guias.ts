@@ -37,12 +37,14 @@ export interface PickupAddress {
   whatsapp: string;
   address: string;
   email: string;
+  cityName: string;
+  cityDaneCode: string;
 }
 
 export async function fetchPickupAddress(profileId: string): Promise<PickupAddress | null> {
   const { data, error } = await supabase
     .from('pickup_addresses')
-    .select('id, first_name, last_name, id_document, whatsapp, address, email')
+    .select('id, first_name, last_name, id_document, whatsapp, address, email, city_name, city_dane_code')
     .eq('profile_id', profileId)
     .order('id', { ascending: false })
     .limit(1)
@@ -56,6 +58,8 @@ export async function fetchPickupAddress(profileId: string): Promise<PickupAddre
     whatsapp: data.whatsapp || '',
     address: data.address || '',
     email: data.email || '',
+    cityName: data.city_name || '',
+    cityDaneCode: data.city_dane_code || '',
   };
 }
 
@@ -68,6 +72,8 @@ export async function guardarPickupAddress(profileId: string, datos: Omit<Pickup
     whatsapp: datos.whatsapp,
     address: datos.address,
     email: datos.email,
+    city_name: datos.cityName,
+    city_dane_code: datos.cityDaneCode,
   });
   return !error;
 }
@@ -132,7 +138,7 @@ export async function cotizarGuia(
   profileId: string,
   destinoDaneCode: string,
   paquete: { weight: number; width: number; height: number; length: number; declaredValue: number },
-): Promise<{ cotizaciones: CotizacionGuia[]; seguroObligatorio: boolean }> {
+): Promise<{ cotizaciones: CotizacionGuia[]; seguroObligatorio: boolean; origenCityName: string | null }> {
   const { data: resp, error } = await supabase.functions.invoke('guide-quote', {
     body: {
       profile_id: profileId,
@@ -144,8 +150,9 @@ export async function cotizarGuia(
       declared_value: paquete.declaredValue,
     },
   });
-  if (error || !resp || resp.error) return { cotizaciones: [], seguroObligatorio: false };
+  if (error || !resp || resp.error) return { cotizaciones: [], seguroObligatorio: false, origenCityName: null };
   return {
+    origenCityName: resp.origen_city_name ?? null,
     cotizaciones: (resp.cotizaciones || []).map((c: any) => ({
       slug: c.delivery_company_id,
       nombre: c.delivery_company_name || c.delivery_company_id,
