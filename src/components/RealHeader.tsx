@@ -159,6 +159,16 @@ export function RealHeader() {
     return base;
   }, [rol, esLiderGeneral]);
   const menusPieVisibles = useMemo(() => MENUS_PIE.filter((m) => m.mostrar(rol)), [rol]);
+  // BUG REAL CORREGIDO 2026-07-20: varios items del menu apuntan al MISMO href (ej. "Productos" y
+  // "Hacer Compra" -> /pedidos), asi que comparar pathname===href por item independiente marcaba
+  // 2+ items a la vez en esas rutas. Se resuelve el UNICO item activo por indice (el primero que
+  // matchea, en el orden de MENUS) y se resalta solo ese.
+  const activeMenuIndex = useMemo(() => {
+    return menusVisibles.findIndex((item) => {
+      const href = item.href === '/config/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
+      return pathname === href;
+    });
+  }, [menusVisibles, pathname, userId]);
 
   async function salir() {
     await supabase.auth.signOut();
@@ -291,14 +301,14 @@ export function RealHeader() {
 
           <div className="flex-1 overflow-y-auto px-2 py-3">
             <ul className="flex flex-col gap-0.5">
-              {menusVisibles.map((item) => {
+              {menusVisibles.map((item, index) => {
                 const href = item.href === '/config/storeProductActivated/' ? `${item.href}${userId ?? ''}` : item.href;
                 return (
                   <li key={item.nombre}>
                     <Link
                       href={href}
                       onClick={() => setMenuAbierto(false)}
-                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${pathname === href ? 'bg-white/15' : ''}`}
+                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10 ${index === activeMenuIndex ? 'bg-white/15' : ''}`}
                     >
                       <item.Icon className="h-[18px] w-[18px] shrink-0" />
                       {item.nombre}
