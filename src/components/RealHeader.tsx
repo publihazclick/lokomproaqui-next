@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Menu, X, ShoppingCart, User, Home, LayoutGrid, Tag, Store, ClipboardCheck, History,
+  Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
   Wallet, Users, UserPlus, Package, Truck, Warehouse, Landmark, RefreshCw, Settings,
   GraduationCap, LogOut, Trash2,
 } from 'lucide-react';
@@ -45,7 +45,6 @@ const MENUS: MenuItem[] = [
   { Icon: Home, nombre: 'Inicio', href: '/articulo', mostrar: (r) => r !== 'visitante' },
   { Icon: LayoutGrid, nombre: 'Productos', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: ShoppingCart, nombre: 'Hacer Compra', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
-  { Icon: Tag, nombre: 'Realizar Venta', href: '/realizarventa', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
