@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { crearVideoCurso, actualizarCurso, type CursoAdminRow } from '@/lib/cursos';
+import { conTimeout } from '@/lib/supabase';
 import { useToast, Toast } from './Toast';
 
 // Port de FormTutorialComponent (Angular) -- crear/editar un video tutorial dentro de una
@@ -33,12 +34,14 @@ export function FormTutorialModal({
       return;
     }
     setGuardando(true);
+    // BUG REAL CORREGIDO 2026-07-20: sin timeout, si la llamada a Supabase se colgaba (ver
+    // supabase.ts) el boton quedaba en "Guardando..." para siempre sin ningun aviso.
     const ok = video
-      ? await actualizarCurso(video.id, { titulo: titulo.trim(), url: url.trim(), descripcion: descripcion.trim() })
-      : await crearVideoCurso(categoriaId, orden, titulo.trim(), url.trim(), descripcion.trim());
+      ? await conTimeout(actualizarCurso(video.id, { titulo: titulo.trim(), url: url.trim(), descripcion: descripcion.trim() }), false, 8000)
+      : await conTimeout(crearVideoCurso(categoriaId, orden, titulo.trim(), url.trim(), descripcion.trim()), false, 8000);
     setGuardando(false);
     if (!ok) {
-      mostrar('Error de servidor');
+      mostrar('No se pudo guardar (revisa tu conexión e intenta de nuevo)');
       return;
     }
     mostrar(video ? 'Actualizado' : 'Creado');

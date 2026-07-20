@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, conTimeout } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchCategoriasCursos, crearCategoriaCurso, actualizarCurso, eliminarCurso, type CategoriaCursos, type CursoAdminRow } from '@/lib/cursos';
 import { FormTutorialModal } from '@/components/FormTutorialModal';
@@ -23,8 +23,13 @@ export default function CursosPage() {
   const [modalVideo, setModalVideo] = useState<{ video: CursoAdminRow | null; categoriaId: number; orden: number } | null>(null);
   const [creandoCategoria, setCreandoCategoria] = useState(false);
 
+  // BUG REAL CORREGIDO 2026-07-20: ninguna escritura/lectura de esta pagina tenia limite de tiempo
+  // -- si la llamada a Supabase se colgaba (ya documentado en supabase.ts: consultas que a veces
+  // tardan 15-20s+), el boton quedaba deshabilitado para siempre SIN mostrar ningun toast de error
+  // ni de exito, pareciendo que "no se crea" cuando en realidad nunca llego respuesta. Se envuelve
+  // cada llamada con el mismo conTimeout ya usado en las paginas publicas.
   async function cargar() {
-    setCategorias(await fetchCategoriasCursos());
+    setCategorias(await conTimeout(fetchCategoriasCursos(), [] as CategoriaCursos[], 8000));
   }
 
   useEffect(() => {
@@ -46,10 +51,10 @@ export default function CursosPage() {
   async function crearCategoria() {
     if (!nuevaCategoriaTitulo.trim()) return;
     setCreandoCategoria(true);
-    const ok = await crearCategoriaCurso(nuevaCategoriaTitulo.trim(), categorias.length);
+    const ok = await conTimeout(crearCategoriaCurso(nuevaCategoriaTitulo.trim(), categorias.length), false, 8000);
     setCreandoCategoria(false);
     if (!ok) {
-      mostrar('Error de servidor');
+      mostrar('No se pudo crear (revisa tu conexión e intenta de nuevo)');
       return;
     }
     setNuevaCategoriaTitulo('');
@@ -58,14 +63,14 @@ export default function CursosPage() {
   }
 
   async function guardarTituloCategoria(cat: CategoriaCursos) {
-    const ok = await actualizarCurso(cat.id, { titulo: cat.titulo });
-    mostrar(ok ? 'Actualizado' : 'Error de servidor');
+    const ok = await conTimeout(actualizarCurso(cat.id, { titulo: cat.titulo }), false, 8000);
+    mostrar(ok ? 'Actualizado' : 'No se pudo guardar (revisa tu conexión e intenta de nuevo)');
   }
 
   async function eliminarCategoria(cat: CategoriaCursos) {
     if (!window.confirm(`¿Eliminar la categoria "${cat.titulo}"? Esto tambien borra sus ${cat.videos.length} videos, sin poder deshacerlo.`)) return;
-    for (const video of cat.videos) await eliminarCurso(video.id);
-    await eliminarCurso(cat.id);
+    for (const video of cat.videos) await conTimeout(eliminarCurso(video.id), false, 8000);
+    await conTimeout(eliminarCurso(cat.id), false, 8000);
     mostrar('Eliminado');
     cargar();
   }
@@ -75,8 +80,8 @@ export default function CursosPage() {
     if (vecino < 0 || vecino >= categorias.length) return;
     const actual = categorias[index];
     const otro = categorias[vecino];
-    await actualizarCurso(actual.id, { orden: otro.orden });
-    await actualizarCurso(otro.id, { orden: actual.orden });
+    await conTimeout(actualizarCurso(actual.id, { orden: otro.orden }), false, 8000);
+    await conTimeout(actualizarCurso(otro.id, { orden: actual.orden }), false, 8000);
     cargar();
   }
 
@@ -85,14 +90,14 @@ export default function CursosPage() {
     if (vecino < 0 || vecino >= cat.videos.length) return;
     const actual = cat.videos[index];
     const otro = cat.videos[vecino];
-    await actualizarCurso(actual.id, { orden: otro.orden });
-    await actualizarCurso(otro.id, { orden: actual.orden });
+    await conTimeout(actualizarCurso(actual.id, { orden: otro.orden }), false, 8000);
+    await conTimeout(actualizarCurso(otro.id, { orden: actual.orden }), false, 8000);
     cargar();
   }
 
   async function eliminarVideo(video: CursoAdminRow) {
     if (!window.confirm(`¿Eliminar el video "${video.titulo}"?`)) return;
-    await eliminarCurso(video.id);
+    await conTimeout(eliminarCurso(video.id), false, 8000);
     mostrar('Eliminado');
     cargar();
   }
