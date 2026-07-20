@@ -1,11 +1,87 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './tutoriales.module.css';
 import type { CategoriaConVideos, CursoVideo } from './types';
 
 function thumbnail(video: CursoVideo): string {
   return `https://img.youtube.com/vi/${video.video_url}/hqdefault.jpg`;
+}
+
+// Pedido explicito del usuario 2026-07-20: en celular los usuarios no notaban que la fila de
+// categorias se puede deslizar horizontal -- no hay scrollbar visible (a proposito, ver CSS) y
+// sin mas categorias que las que caben en pantalla no hay ninguna pista de que sigue habiendo mas.
+// Se agrega el mismo patron de Netflix/YouTube: flecha + degradado que solo aparecen del lado que
+// SI tiene contenido oculto (se recalculan con cada scroll/resize), y desaparecen solos al llegar
+// a cada extremo. Igual en mobile y en desktop -- en mobile es la pista visual, en desktop ademas
+// es clickeable (el trackpad/mouse wheel no siempre hace scroll horizontal de forma obvia).
+function CategoriasSlider({
+  categorias,
+  activaId,
+  onSelect,
+}: {
+  categorias: CategoriaConVideos[];
+  activaId: number | null;
+  onSelect: (id: number) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [puedeIzq, setPuedeIzq] = useState(false);
+  const [puedeDer, setPuedeDer] = useState(false);
+
+  const actualizarFlechas = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setPuedeIzq(el.scrollLeft > 4);
+    setPuedeDer(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    actualizarFlechas();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', actualizarFlechas, { passive: true });
+    window.addEventListener('resize', actualizarFlechas);
+    return () => {
+      el.removeEventListener('scroll', actualizarFlechas);
+      window.removeEventListener('resize', actualizarFlechas);
+    };
+  }, [actualizarFlechas, categorias.length]);
+
+  function desplazar(direccion: number) {
+    scrollRef.current?.scrollBy({ left: direccion * 220, behavior: 'smooth' });
+  }
+
+  return (
+    <div className={styles.tutCategoriasWrap}>
+      <div className={styles.tutCategorias} ref={scrollRef}>
+        {categorias.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            className={`${styles.tutCategoriaPill} ${cat.id === activaId ? styles.tutCategoriaPillActiva : ''}`}
+            onClick={() => onSelect(cat.id)}
+          >
+            {cat.title}
+          </button>
+        ))}
+      </div>
+
+      {puedeIzq && <div className={`${styles.tutCatFade} ${styles.tutCatFadeIzq}`} />}
+      {puedeIzq && (
+        <button type="button" className={`${styles.tutCatFlecha} ${styles.tutCatFlechaIzq}`} onClick={() => desplazar(-1)} aria-label="Ver categorías anteriores">
+          <ChevronLeft size={16} strokeWidth={3} />
+        </button>
+      )}
+
+      {puedeDer && <div className={`${styles.tutCatFade} ${styles.tutCatFadeDer}`} />}
+      {puedeDer && (
+        <button type="button" className={`${styles.tutCatFlecha} ${styles.tutCatFlechaDer}`} onClick={() => desplazar(1)} aria-label="Ver más categorías">
+          <ChevronRight size={16} strokeWidth={3} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function TutorialesClient({ categorias }: { categorias: CategoriaConVideos[] }) {
@@ -61,18 +137,7 @@ export function TutorialesClient({ categorias }: { categorias: CategoriaConVideo
       </div>
 
       <div className={styles.tutContenido}>
-        <div className={styles.tutCategorias}>
-          {categorias.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              className={`${styles.tutCategoriaPill} ${cat.id === categoriaActivaId ? styles.tutCategoriaPillActiva : ''}`}
-              onClick={() => setCategoriaActivaId(cat.id)}
-            >
-              {cat.title}
-            </button>
-          ))}
-        </div>
+        <CategoriasSlider categorias={categorias} activaId={categoriaActivaId} onSelect={setCategoriaActivaId} />
 
         {categoriaActiva && (
           <div className={styles.tutGrid}>

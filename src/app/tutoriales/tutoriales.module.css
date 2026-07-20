@@ -40,18 +40,76 @@
   padding: 28px 20px 0;
 }
 
+/* Pedido explicito del usuario 2026-07-20: fila de categorias deslizable con pista visual (flecha +
+   degradado) de que hay mas contenido a los lados -- el scrollbar sigue oculto a proposito (se ve
+   mejor), la pista real ahora es .tutCatFade/.tutCatFlecha, calculados en TutorialesClient.tsx
+   segun la posicion real del scroll. Igual en mobile y desktop. */
+.tutCategoriasWrap {
+  position: relative;
+  margin-bottom: 20px;
+}
+
 .tutCategorias {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 10px;
-  margin-bottom: 20px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 
 .tutCategorias::-webkit-scrollbar {
   display: none;
+}
+
+.tutCatFade {
+  position: absolute;
+  top: 0;
+  bottom: 10px;
+  width: 44px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tutCatFadeIzq {
+  left: 0;
+  background: linear-gradient(to right, #f7f9fb, rgba(247, 249, 251, 0));
+}
+
+.tutCatFadeDer {
+  right: 0;
+  background: linear-gradient(to left, #f7f9fb, rgba(247, 249, 251, 0));
+}
+
+.tutCatFlecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: #0177a8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.tutCatFlecha:hover {
+  transform: translateY(-50%) scale(1.08);
+}
+
+.tutCatFlechaIzq {
+  left: -4px;
+}
+
+.tutCatFlechaDer {
+  right: -4px;
 }
 
 .tutCategoriaPill {
