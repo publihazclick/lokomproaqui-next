@@ -470,7 +470,11 @@
 /* ── Franja de color solida antes del CTA final ───────────────────────────────────────────── */
 
 .colorFondo5 {
-  margin: 48px auto;
+  /* Pedido explicito del usuario 2026-07-20: quedaba mucho espacio vacio entre las 3 cajas de
+     registro y esta franja ("Registrate no Pierdas Mas Dinero") -- el margen superior baja de
+     48px a 12px (se suma a los 12px de margen inferior de la fila de cajas, ver page.tsx), el
+     inferior se deja igual para no pegar esta franja con la siguiente seccion. */
+  margin: 12px auto 48px;
   max-width: 1200px;
   color: white;
   background: linear-gradient(135deg, #0177a8, #02a0e3, #38bdf8);
