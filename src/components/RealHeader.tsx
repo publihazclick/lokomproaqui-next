@@ -196,25 +196,30 @@ export function RealHeader() {
   return (
     <>
       {/* Banner promo del Acelerador de Ventas, solo en /info -- pedido explicito del usuario:
-          va ANTES de la cabecera (no dentro), por eso vive aca y no en info/page.tsx. */}
-      {pathname === '/info' && (
-        <div className="banner-mirror relative overflow-hidden px-3 py-2.5 text-center shadow-[0_2px_16px_rgba(0,0,0,0.25)] sm:py-3">
-          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
-            <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-[#0177a8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] sm:text-base">
-              <span className="animate-pulse text-base sm:text-lg">🔥</span>
-              Acelerador de Ventas
-            </span>
-            <Link
-              href="/acelerador"
-              className="whitespace-nowrap rounded-full bg-[#0177a8] px-4 py-1.5 text-xs font-extrabold text-white shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
-            >
-              Ver ahora →
-            </Link>
+          va ANTES de la cabecera (no dentro), por eso vive aca y no en info/page.tsx. Pedido
+          explicito 2026-07-20: debe quedar fijo junto con la cabecera al hacer scroll (antes solo
+          la cabecera era sticky, el banner se iba con el scroll) -- se envuelven ambos en un mismo
+          contenedor sticky en vez de que el banner tenga su propio sticky (dos elementos con
+          sticky top-0 compitiendo por la misma posicion se superpondrian). */}
+      <div className="sticky top-0 z-50">
+        {pathname === '/info' && (
+          <div className="banner-mirror relative overflow-hidden px-3 py-2.5 text-center shadow-[0_2px_16px_rgba(0,0,0,0.25)] sm:py-3">
+            <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
+              <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-[#0177a8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] sm:text-base">
+                <span className="animate-pulse text-base sm:text-lg">🔥</span>
+                Acelerador de Ventas
+              </span>
+              <Link
+                href="/acelerador"
+                className="whitespace-nowrap rounded-full bg-[#0177a8] px-4 py-1.5 text-xs font-extrabold text-white shadow-lg transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
+              >
+                Ver ahora →
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <header className="sticky top-0 z-50 bg-[#02a0e3] shadow-md">
+        <header className="bg-[#02a0e3] shadow-md">
         <div className="mx-auto flex h-20 max-w-[1200px] items-center gap-2 px-3 sm:h-32 sm:px-4">
           <button type="button" onClick={() => setMenuAbierto(true)} className="rounded p-2 text-white hover:bg-white/10" aria-label="Abrir menú">
             <Menu className="h-6 w-6" />
@@ -276,6 +281,7 @@ export function RealHeader() {
           </div>
         </div>
       </header>
+      </div>
 
       {/* Menu lateral (hamburguesa) -- siempre montado (no `{menuAbierto && ...}`) para que el nav
           pueda animarse deslizando de izquierda a derecha al abrir (translate-x-full -> 0) en vez
