@@ -165,7 +165,14 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
               <h4 className="truncate text-center text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>
 
               {coinShop ? (
-                <p className="text-center text-sm font-bold text-gray-900">$ {formatCOP(item.pro_uni_venta || 0)}</p>
+                <>
+                  <p className="text-center text-[11px] text-gray-500">
+                    Precio a Distribuidor: <span className="font-medium text-gray-700">$ {formatCOP(item.pro_vendedor || 0)}</span>
+                  </p>
+                  <p className="text-center text-[11px] text-gray-500">
+                    Tú lo Vendes: <span className="font-medium text-gray-700">$ {formatCOP(item.pro_uni_venta || 0)}</span>
+                  </p>
+                </>
               ) : (
                 <input
                   type="number"
@@ -177,7 +184,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
 
               <button
                 onClick={() => setProductoAbierto(item)}
-                className="mt-2 w-full rounded bg-[#198754] py-1.5 text-xs font-bold text-white hover:opacity-90"
+                className={`mt-2 w-full rounded py-1.5 text-xs font-bold text-white hover:opacity-90 ${coinShop ? 'bg-[#02a0e3]' : 'bg-[#198754]'}`}
               >
                 {titleButton}
               </button>
