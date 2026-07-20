@@ -58,7 +58,7 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
   // Mismo chequeo que Angular: busca si el nombre de tienda ya esta tomado (referral_code) --
   // no bloquea nada mas del formulario, solo muestra el aviso, igual que el original.
   async function validarUsuario(valor: string) {
-    const limpio = valor.replace(/[^a-zA-Z ]/g, '').replace(/\s/g, '');
+    const limpio = valor.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s/g, '');
     setUsuUsuario(limpio);
     if (!limpio) {
       setUsuarioTomado(false);

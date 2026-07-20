@@ -67,7 +67,7 @@ export default function RegistroPage() {
   }, []);
 
   async function validarBodega(valor: string) {
-    const limpio = valor.replace(/[^a-zA-Z ]/g, '').replace(/\s/g, '');
+    const limpio = valor.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s/g, '');
     setNombreBodega(limpio);
     if (!limpio) {
       setBodegaTomada(false);
