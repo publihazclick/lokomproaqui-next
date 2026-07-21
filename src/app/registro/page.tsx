@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { departamento } from '@/lib/departamentos';
 import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
+import { Turnstile } from '@/components/Turnstile';
 
 // Port desde src/app/components/registro (Angular): registro de PROVEEDOR unicamente (ver
 // memoria lokomproaqui-nextjs-migration -- la variante "vendedor" de este formulario en
@@ -50,6 +51,7 @@ export default function RegistroPage() {
   const [clave, setClave] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const ciudadesDelDepartamento = useMemo(
     () => departamento.find((d: any) => d.departamento === departamentoSel)?.ciudades ?? [],
@@ -96,6 +98,7 @@ export default function RegistroPage() {
     if (!clave) return alertear('Falta la contraseña'), false;
     if (clave !== confirmar) return alertear('Las claves no coinciden'), false;
     if (!aceptaTerminos) return alertear('Debes aceptar los términos de privacidad'), false;
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) return alertear('Confirma que no eres un robot'), false;
     return true;
   }
 
@@ -111,6 +114,7 @@ export default function RegistroPage() {
       email: email.trim(),
       password: clave,
       options: {
+        captchaToken: captchaToken || undefined,
         data: {
           full_name: titular,
           phone: telefono,
@@ -121,6 +125,7 @@ export default function RegistroPage() {
 
     if (error) {
       setEnviando(false);
+      setCaptchaToken(null);
       let msg = 'No pudimos crear tu cuenta, intenta de nuevo';
       if (error.message.includes('already registered')) msg = 'Ya existe una cuenta con ese correo';
       else if (error.message.includes('profiles_phone_key') || error.message.includes('phone')) msg = 'Ya existe una cuenta con ese número de teléfono';
@@ -293,6 +298,10 @@ export default function RegistroPage() {
                   términos de privacidad
                 </button>
               </label>
+
+              <div className="flex justify-center">
+                <Turnstile onToken={setCaptchaToken} />
+              </div>
 
               <div className="mt-2 flex gap-2">
                 <button

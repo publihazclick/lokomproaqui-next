@@ -6,6 +6,7 @@ import { Eye, EyeOff, Lock, Mail, User, Users, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
+import { Turnstile } from '@/components/Turnstile';
 
 // Port desde src/app/layout/sign-up (Angular), ruta [[...slug]] para cubrir tanto /singUp como
 // /singUp/:type/:cel (mismo componente en Angular). Se replica el formulario COMPLETO tal cual
@@ -34,6 +35,7 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
   const [showPassword, setShowPassword] = useState(false);
   const [rol, setRol] = useState<'vendedor' | 'proveedor'>(typeRol === 'proveedor' ? 'proveedor' : 'vendedor');
   const [enviando, setEnviando] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -89,6 +91,10 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
       alert('Las claves no coinciden');
       return;
     }
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) {
+      alert('Confirma que no eres un robot');
+      return;
+    }
 
     setEnviando(true);
     const referrerId = dataCabeza && cel ? await resolverReferrerId(cel) : null;
@@ -97,6 +103,7 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
       email: email.trim(),
       password: clave,
       options: {
+        captchaToken: captchaToken || undefined,
         data: {
           full_name: nombre,
           last_name: apellido,
@@ -109,6 +116,7 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
 
     if (error) {
       setEnviando(false);
+      setCaptchaToken(null);
       let msg = 'No pudimos crear tu cuenta, intenta de nuevo';
       if (error.message.includes('already registered')) msg = 'Ya existe una cuenta con ese correo';
       else if (error.message.includes('profiles_phone_key') || error.message.includes('phone')) msg = 'Ya existe una cuenta con ese numero de telefono';
@@ -243,6 +251,10 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
                 <input type="checkbox" checked={rol === 'proveedor'} onChange={() => setRol('proveedor')} className="h-4 w-4 accent-[#02a0e3]" />
                 Proveedor
               </label>
+            </div>
+
+            <div className="flex justify-center">
+              <Turnstile onToken={setCaptchaToken} />
             </div>
 
             <button
