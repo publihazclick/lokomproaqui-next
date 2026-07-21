@@ -140,6 +140,26 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     await cargarPagina(dataUser, categoriaId, 0, true, searchInput, bodega?.id);
   }
 
+  async function handleSearchInputChange(valor: string) {
+    setSearchInput(valor);
+    // Si ya habia una busqueda activa y el campo se vacia, se quita el filtro solo (sin esperar a
+    // que se apriete "Buscar" de nuevo) -- pedido explicito del usuario 2026-07-21.
+    if (valor.trim() === '' && search !== '') {
+      setSearch('');
+      setPage(0);
+      await cargarPagina(dataUser, categoriaId, 0, true, '', bodega?.id);
+    }
+  }
+
+  async function handleBodegaInputChange(valor: string) {
+    setBodegaNumeroInput(valor);
+    if (valor.trim() === '' && bodega) {
+      await salirDeBodega();
+    } else if (valor.trim() === '') {
+      setBodegaError('');
+    }
+  }
+
   async function buscarBodega() {
     const numero = Number(bodegaNumeroInput.trim());
     if (!bodegaNumeroInput.trim() || Number.isNaN(numero)) {
@@ -186,7 +206,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
           <div className="flex gap-2">
             <input
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && buscarProductos()}
               placeholder="ID, referencia o nombre del producto"
               className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
@@ -201,7 +221,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
           <div className="flex gap-2">
             <input
               value={bodegaNumeroInput}
-              onChange={(e) => setBodegaNumeroInput(e.target.value)}
+              onChange={(e) => handleBodegaInputChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && buscarBodega()}
               placeholder="ID de la bodega"
               className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
