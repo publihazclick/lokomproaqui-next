@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { fetchReferidosNivel, fetchIdsReferidosNivel, fetchTodosLosVendedores, type ReferidoRow } from '@/lib/referidos';
+import { fetchReferidosNivel, fetchIdsReferidosNivel, fetchTodosLosVendedores, fetchComisionMesActual, type ReferidoRow } from '@/lib/referidos';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fechaMedium } from '@/lib/format';
 
@@ -26,6 +26,11 @@ const LIMIT = 20;
 // plataforma, se hayan registrado con su link o no -- distinto de las 5 pestañas normales, que solo
 // muestran la cadena de referidos real (referrer_id).
 const TAB_TODOS = 5;
+// Sistema de comisiones multinivel (pedido explicito del usuario 2026-07-21): minimo de entregas
+// mensuales que activa el pago a un upline (referral_commission_config.min_deliveries_per_month,
+// migracion 068) -- se muestra solo como texto informativo, la validacion real vive en el RPC
+// pay_referral_commissions del lado del servidor.
+const MIN_ENTREGAS_MES = 2;
 
 interface TabState {
   dataRows: ReferidoRow[];
@@ -48,6 +53,7 @@ export default function ReferidosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
+  const [comisionMes, setComisionMes] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -55,10 +61,12 @@ export default function ReferidosPage() {
         window.location.href = '/info';
         return;
       }
-      setDataUserId(sessionData.session.user.id);
-      const usuario = await fetchDataUserCompleto(sessionData.session.user.id);
+      const uid = sessionData.session.user.id;
+      setDataUserId(uid);
+      const usuario = await fetchDataUserCompleto(uid);
       setEsLiderGeneral(usuario.esLiderGeneral);
       setEstado('listo');
+      fetchComisionMesActual(uid).then(setComisionMes);
     });
   }, []);
 
@@ -154,6 +162,18 @@ export default function ReferidosPage() {
         <h4 className="text-lg font-bold text-gray-900">Referidos</h4>
       </div>
 
+      {/* Sistema de comisiones multinivel (pedido explicito del usuario 2026-07-21): comision
+          acreditada este mes por las entregas de toda tu cadena de referidos, hasta 5 niveles. */}
+      <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+        <p className="m-0 text-xs font-semibold uppercase tracking-wide text-gray-500">Comisión generada este mes</p>
+        <p className="m-0 mt-1 text-2xl font-extrabold text-gray-900">
+          {comisionMes === null ? '—' : `$ ${comisionMes.toLocaleString('es-CO')}`}
+        </p>
+        <p className="m-0 mt-1 text-xs text-gray-500">
+          Se paga por cada pedido entregado en tu cadena (hasta 5 niveles), siempre que la persona que vendió tenga mínimo {MIN_ENTREGAS_MES} entregas exitosas ese mes.
+        </p>
+      </div>
+
       <div className="mt-4 flex gap-1 overflow-x-auto border-b border-gray-200">
         {TABS.map((label, idx) => (
           <button
@@ -211,6 +231,7 @@ export default function ReferidosPage() {
                 <th className="py-2 pr-3">Nivel</th>
                 <th className="py-2 pr-3">Fecha Registro</th>
                 <th className="py-2 pr-3">Activo</th>
+                <th className="py-2 pr-3">Entregas este mes</th>
               </tr>
             </thead>
             <tbody>
@@ -223,6 +244,18 @@ export default function ReferidosPage() {
                   <td className="py-3 pr-3 align-top">{row.nivelVendedor}</td>
                   <td className="py-3 pr-3 align-top">{fechaMedium(row.fechaRegistro)}</td>
                   <td className="py-3 pr-3 align-top">Activo</td>
+                  <td className="py-3 pr-3 align-top">
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-bold"
+                      style={
+                        row.entregasMes >= MIN_ENTREGAS_MES
+                          ? { background: '#f0fdf4', color: '#16a34a' }
+                          : { background: '#fef2f2', color: '#dc2626' }
+                      }
+                    >
+                      {row.entregasMes} / {MIN_ENTREGAS_MES}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -37,6 +37,11 @@ export interface ReferidoRow {
   nivelVendedor: string | null;
   fechaRegistro: string;
   activo: boolean;
+  // Sistema de comisiones multinivel (pedido explicito del usuario 2026-07-21): entregas exitosas
+  // de ESTE perfil como vendedor en el mes calendario en curso -- es el numero que determina si
+  // su upline cobra comision por sus ventas (minimo real en referral_commission_config, mostrado
+  // aca de forma informativa/transparente).
+  entregasMes: number;
 }
 
 const SELECT = `
@@ -44,6 +49,32 @@ const SELECT = `
   referrer:referrer_id(full_name),
   seller_tiers(name)
 `;
+
+// Batched (una sola llamada RPC, no N+1) -- ver fetch_entregas_mes, migracion 071. Necesario a la
+// escala de la plataforma (10k+ vendedores), no se puede hacer una consulta por fila.
+async function fetchEntregasMesPorId(ids: string[]): Promise<Record<string, number>> {
+  if (!ids.length) return {};
+  const { data } = await supabase.rpc('fetch_entregas_mes', { p_profile_ids: ids });
+  const mapa: Record<string, number> = {};
+  for (const row of (data as any[]) || []) mapa[row.profile_id] = Number(row.entregas_mes) || 0;
+  return mapa;
+}
+
+// Comision total acreditada este mes calendario a este perfil (suma de wallet_ledger,
+// wallet_type='referral', kind del sistema de comisiones multinivel -- ver migracion 069).
+export async function fetchComisionMesActual(profileId: string): Promise<number> {
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+  const { data } = await supabase
+    .from('wallet_ledger')
+    .select('amount')
+    .eq('profile_id', profileId)
+    .eq('wallet_type', 'referral')
+    .like('kind', 'comision_nivel_%')
+    .gte('created_at', inicioMes.toISOString());
+  return (data || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+}
 
 // Ids COMPLETOS de un nivel (sin paginar) -- necesarios para encadenar al siguiente nivel. Si se
 // usaran solo las filas ya cargadas en pantalla (paginadas), un vendedor con mas de LIMIT referidos
@@ -76,6 +107,7 @@ export async function fetchReferidosNivel(
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
 
+  const entregasPorId = await fetchEntregasMesPorId(data.map((p: any) => p.id));
   const mapped: ReferidoRow[] = data.map((p: any) => ({
     id: p.id,
     nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
@@ -85,6 +117,7 @@ export async function fetchReferidosNivel(
     nivelVendedor: p.seller_tiers ? p.seller_tiers.name : null,
     fechaRegistro: p.created_at,
     activo: p.status !== 0,
+    entregasMes: entregasPorId[p.id] || 0,
   }));
 
   return { data: mapped, count: count ?? mapped.length };
@@ -119,6 +152,7 @@ export async function fetchTodosLosVendedores(
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
 
+  const entregasPorId = await fetchEntregasMesPorId(data.map((p: any) => p.id));
   const mapped: ReferidoRow[] = data.map((p: any) => ({
     id: p.id,
     nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
@@ -128,6 +162,7 @@ export async function fetchTodosLosVendedores(
     nivelVendedor: p.seller_tiers ? p.seller_tiers.name : null,
     fechaRegistro: p.created_at,
     activo: p.status !== 0,
+    entregasMes: entregasPorId[p.id] || 0,
   }));
 
   return { data: mapped, count: count ?? mapped.length };
