@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
-  Wallet, Users, UserPlus, Package, Truck, Warehouse, Landmark, RefreshCw, Settings,
+  Wallet, Users, UserPlus, Package, Truck, Landmark, RefreshCw, Settings,
   GraduationCap, LogOut, Trash2, BookOpen, Video,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -53,7 +53,6 @@ const MENUS: MenuItem[] = [
   { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
   { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
   { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
-  { Icon: Warehouse, nombre: 'Explorar Bodegas', href: '/config/store/stores', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: RefreshCw, nombre: 'Integración Shopify', href: '/config/shopify', mostrar: (r) => r === 'vendedor' },
   { Icon: RefreshCw, nombre: 'Integración WooCommerce', href: '/config/woocommerce', mostrar: (r) => r === 'vendedor' },
