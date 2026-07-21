@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { mapProductToLegacy, type ProductoLegacy } from './productos';
+import { crearPedidosAgrupadosPorProveedor } from './ordenes';
 
 // Port 1:1 de WoocommerceService (Angular) -- mismo mecanismo que Shopify (ver lib/shopify.ts),
 // ya bien implementado en Supabase, sin bugs. Unica diferencia real: `orderType` se marca
@@ -86,39 +87,42 @@ export async function resolverPedidoWoocommerce(
   }
 
   const orderItems = items.map((it) => ({
-    product_id: it.product_id,
-    product_variant_id: it.product_variant_id || null,
+    // it.product_id ya viene garantizado no-nulo aca -- el boton que dispara
+    // resolverPedidoWoocommerce esta deshabilitado hasta que todoListo() confirme que TODOS los
+    // items tienen producto elegido (ver woocommercePendientes/page.tsx).
+    productId: it.product_id as number,
+    productVariantId: it.product_variant_id || null,
     title: it.title,
-    unit_price: it.unit_price,
+    unitPrice: it.unit_price,
     quantity: it.quantity,
     size: null,
     color: null,
-    seller_cost: null,
-    total_cost: it.unit_price * it.quantity,
+    totalCost: it.unit_price * it.quantity,
   }));
 
   const orderType = pending.financial_status === 'processing' || pending.financial_status === 'completed' ? 'woocommerce' : 'contraentrega';
 
-  const { data: orderId, error } = await supabase.rpc('create_order', {
-    order_data: {
-      seller_id: profileId,
-      buyer_name: pending.buyer_name,
-      buyer_phone: pending.buyer_phone,
-      buyer_address: pending.buyer_address,
-      buyer_city: pending.buyer_city,
-      buyer_neighborhood: pending.buyer_neighborhood,
-      order_type: orderType,
-      freight_payer: 'tienda',
+  // Fase 2 del plan de aislamiento proveedor<->vendedor: si el pedido de WooCommerce trae productos
+  // de proveedores distintos, se divide en varios pedidos internos -- ver lib/ordenes.ts.
+  const res = await crearPedidosAgrupadosPorProveedor(
+    {
+      sellerId: profileId,
+      buyerName: pending.buyer_name,
+      buyerPhone: pending.buyer_phone,
+      buyerAddress: pending.buyer_address,
+      buyerCity: pending.buyer_city,
+      buyerNeighborhood: pending.buyer_neighborhood,
+      orderType,
+      freightPayer: 'tienda',
     },
-    items: orderItems,
-  });
+    orderItems,
+  );
 
-  if (error || !orderId) {
-    const msg = error && error.message && error.message.includes('stock_insuficiente') ? 'Uno de los productos ya no tiene stock disponible' : 'No se pudo crear el pedido, intenta de nuevo';
-    return { success: false, message: msg };
+  if (!res.success) return { success: false, message: res.message };
+
+  for (const orderId of res.orderIds) {
+    await supabase.from('orders').update({ woocommerce_order_id: pending.woocommerce_order_id }).eq('id', orderId);
   }
-
-  await supabase.from('orders').update({ woocommerce_order_id: pending.woocommerce_order_id }).eq('id', orderId as number);
   await supabase.from('woocommerce_pending_orders').update({ resolved: true }).eq('id', pending.id);
 
   return { success: true };

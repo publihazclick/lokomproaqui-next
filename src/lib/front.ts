@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { mapProductToLegacy, type ProductoLegacy } from './productos';
+import { crearPedidosAgrupadosPorProveedor } from './ordenes';
 
 // Port del modulo `portada` (Angular, "/front[/:cell]") -- vitrina publica SIN LOGIN de un
 // vendedor especifico (identificado por telefono, compartible por WhatsApp/link), con su propio
@@ -102,7 +103,9 @@ async function resolverVariantId(productId: number, talla: string | null, color:
 export async function crearPedidoRapido(sellerId: string, comprador: DatosComprador, item: { productId: number; nombre: string; precio: number; cantidad: number; talla: string | null; color: string | null }): Promise<{ success: boolean; message?: string; id?: number }> {
   const variantId = await resolverVariantId(item.productId, item.talla, item.color);
 
-  const { data: orderId, error } = await supabase.rpc('create_order', {
+  // create_order (migracion 065) devuelve bigint[] (agrupa por proveedor internamente) -- aca
+  // siempre hay un solo item de un solo producto, asi que siempre es un array de 1.
+  const { data: orderIds, error } = await supabase.rpc('create_order', {
     order_data: {
       seller_id: sellerId,
       buyer_name: comprador.nombre,
@@ -135,12 +138,13 @@ export async function crearPedidoRapido(sellerId: string, comprador: DatosCompra
     ],
   });
 
+  const orderId = (orderIds as number[] | null)?.[0] ?? null;
   if (error || !orderId) {
     const msg = error?.message?.includes('stock_insuficiente') ? 'Uno de los productos ya no tiene stock disponible en esa talla' : 'No pudimos procesar tu pedido, intenta de nuevo';
     return { success: false, message: msg };
   }
-  dispararConfirmacionWhatsapp(orderId as number);
-  return { success: true, id: orderId as number };
+  dispararConfirmacionWhatsapp(orderId);
+  return { success: true, id: orderId };
 }
 
 // Fase 1d del plan de reduccion de devoluciones (pedido explicito del usuario 2026-07-19): dispara
@@ -162,40 +166,39 @@ export interface ItemCarritoFront {
   color: string | null;
 }
 
-// Equivalente a VentasService.createOrder (checkout de carrito completo, multi-item).
-export async function crearPedidoCarrito(sellerId: string, comprador: DatosComprador, items: ItemCarritoFront[]): Promise<{ success: boolean; message?: string; id?: number }> {
+// Equivalente a VentasService.createOrder (checkout de carrito completo, multi-item). Fase 2 del
+// plan de aislamiento proveedor<->vendedor: si el carrito tiene productos de proveedores distintos,
+// se divide en varios pedidos (uno por proveedor) via crearPedidosAgrupadosPorProveedor, ver
+// lib/ordenes.ts -- una guia de Mipaquete solo admite un remitente.
+export async function crearPedidoCarrito(sellerId: string, comprador: DatosComprador, items: ItemCarritoFront[]): Promise<{ success: boolean; message?: string; orderIds: number[]; dividido: boolean }> {
   const orderItems = items.map((it) => ({
-    product_id: it.productId,
-    product_variant_id: null,
+    productId: it.productId,
+    productVariantId: null,
     title: it.nombre,
-    unit_price: it.precio,
+    unitPrice: it.precio,
     quantity: it.cantidad,
     size: it.talla,
     color: it.color,
-    seller_cost: null,
-    total_cost: it.precio * it.cantidad,
+    totalCost: it.precio * it.cantidad,
   }));
 
-  const { data: orderId, error } = await supabase.rpc('create_order', {
-    order_data: {
-      seller_id: sellerId,
-      buyer_name: comprador.nombre,
-      buyer_phone: comprador.telefono,
-      buyer_address: comprador.direccion,
-      buyer_city: comprador.ciudad,
-      buyer_neighborhood: comprador.barrio,
-      order_type: 'contraentrega',
-      freight_payer: 'cliente',
+  const res = await crearPedidosAgrupadosPorProveedor(
+    {
+      sellerId,
+      buyerName: comprador.nombre,
+      buyerPhone: comprador.telefono,
+      buyerAddress: comprador.direccion,
+      buyerCity: comprador.ciudad,
+      buyerNeighborhood: comprador.barrio,
+      orderType: 'contraentrega',
+      freightPayer: 'cliente',
     },
-    items: orderItems,
-  });
+    orderItems,
+  );
 
-  if (error || !orderId) {
-    const msg = error?.message?.includes('stock_insuficiente') ? 'Uno de los productos ya no tiene stock disponible' : 'No pudimos procesar tu pedido, intenta de nuevo';
-    return { success: false, message: msg };
-  }
-  dispararConfirmacionWhatsapp(orderId as number);
-  return { success: true, id: orderId as number };
+  if (!res.success) return res;
+  for (const id of res.orderIds) dispararConfirmacionWhatsapp(id);
+  return res;
 }
 
 // ── Carrito local (localStorage, esta vitrina no requiere sesion) ──────────────────────────────

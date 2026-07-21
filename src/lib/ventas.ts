@@ -73,7 +73,9 @@ export async function crearPedidoDropshipping(data: DatosPedidoDropshipping): Pr
     total_cost: data.ven_total,
   }];
 
-  const { data: orderId, error } = await supabase.rpc('create_order', {
+  // create_order (migracion 065) devuelve bigint[] (agrupa por proveedor internamente) -- aca
+  // siempre hay un solo item de un solo producto, asi que siempre es un array de 1.
+  const { data: orderIds, error } = await supabase.rpc('create_order', {
     order_data: {
       seller_id: data.usu_clave_int || null,
       buyer_name: data.ven_nombre_cliente,
@@ -87,6 +89,7 @@ export async function crearPedidoDropshipping(data: DatosPedidoDropshipping): Pr
     items,
   });
 
+  const orderId = (orderIds as number[] | null)?.[0] ?? null;
   if (error || !orderId) return { success: false, id: null };
 
   const patch: Record<string, unknown> = {};

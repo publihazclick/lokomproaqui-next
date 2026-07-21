@@ -80,7 +80,11 @@ export default function FrontChecktPage() {
       mostrar(res.message || 'No pudimos procesar tu pedido');
       return;
     }
-    mostrar('Exitoso! Tu pedido esta en proceso. Un asesor se pondra en contacto contigo.');
+    mostrar(
+      res.dividido
+        ? `Exitoso! Tu pedido se dividió en ${res.orderIds.length} envíos porque incluye productos de proveedores distintos. Un asesor se pondrá en contacto contigo.`
+        : 'Exitoso! Tu pedido esta en proceso. Un asesor se pondra en contacto contigo.',
+    );
     vaciarCarritoFront();
     setVista('completado');
   }
