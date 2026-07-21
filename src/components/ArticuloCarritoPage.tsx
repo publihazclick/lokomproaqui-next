@@ -180,30 +180,36 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <div className="flex min-w-0 flex-1 gap-2">
-          <input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscarProductos()}
-            placeholder="Buscar por ID, referencia o nombre"
-            className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={buscarProductos} className="shrink-0 rounded bg-[#02a0e3] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
-            Buscar
-          </button>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-xs font-semibold text-gray-500">Buscar Productos</p>
+          <div className="flex gap-2">
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && buscarProductos()}
+              placeholder="ID, referencia o nombre del producto"
+              className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button onClick={buscarProductos} className="shrink-0 rounded bg-[#02a0e3] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
+              Buscar
+            </button>
+          </div>
         </div>
-        <div className="flex min-w-0 flex-1 gap-2">
-          <input
-            value={bodegaNumeroInput}
-            onChange={(e) => setBodegaNumeroInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscarBodega()}
-            placeholder="Buscar bodega por ID"
-            className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button onClick={buscarBodega} className="shrink-0 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
-            Ver bodega
-          </button>
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-xs font-semibold text-gray-500">Buscar Bodega</p>
+          <div className="flex gap-2">
+            <input
+              value={bodegaNumeroInput}
+              onChange={(e) => setBodegaNumeroInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && buscarBodega()}
+              placeholder="ID de la bodega"
+              className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button onClick={buscarBodega} className="shrink-0 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
+              Ver bodega
+            </button>
+          </div>
         </div>
       </div>
 
