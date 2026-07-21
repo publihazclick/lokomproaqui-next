@@ -198,7 +198,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
             value={bodegaNumeroInput}
             onChange={(e) => setBodegaNumeroInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && buscarBodega()}
-            placeholder="Buscar bodega por número (ej: 12)"
+            placeholder="Buscar bodega por ID"
             className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
           />
           <button onClick={buscarBodega} className="shrink-0 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
