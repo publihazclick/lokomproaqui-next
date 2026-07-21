@@ -80,7 +80,13 @@ export default function MisDespachoPage() {
       </div>
 
       {ventaAbierta != null && (
-        <FormVentaDetalleModal orderId={ventaAbierta} esAdmin={dataUser.rolname === 'administrador'} onClose={() => setVentaAbierta(null)} onCambio={() => {}} />
+        <FormVentaDetalleModal
+          orderId={ventaAbierta}
+          esAdmin={dataUser.rolname === 'administrador'}
+          esProveedor={dataUser.rolname === 'proveedor'}
+          onClose={() => setVentaAbierta(null)}
+          onCambio={() => {}}
+        />
       )}
     </div>
   );

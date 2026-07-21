@@ -8,6 +8,7 @@ import { TableProductosPanel } from '@/components/TableProductosPanel';
 import { FormProductoModal } from '@/components/FormProductoModal';
 import type { ModoListaProductos } from '@/lib/productosAdmin';
 import { fetchEstadoProveedor, enviarProveedorARevision, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor } from '@/lib/proveedorEstado';
+import { PickupAddressCard } from '@/components/PickupAddressCard';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port de ProductosComponent (Angular, panel admin "Productos", la pieza mas grande de Fase 5).
@@ -70,6 +71,8 @@ export default function ProductosPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-6">
+      {esProveedor && <PickupAddressCard profileId={dataUser.id} />}
+
       {esProveedor && estadoProveedor && (
         <div
           className="mb-3 rounded-2xl border p-4"

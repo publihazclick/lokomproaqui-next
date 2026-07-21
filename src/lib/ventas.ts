@@ -153,11 +153,14 @@ export async function reembolsarWalletPedidoSiCobrado(orderId: number): Promise<
   return !error;
 }
 
-// Condiciones de entrega (pedido explicito del usuario 2026-07-19): el vendedor las define al
-// autorizar el despacho, antes de generar la guia real -- mipaquete-create-shipment las lee de la
-// base de datos para saber cuanto debe recaudar el mensajero (ver nota ampliada en ese archivo).
+// Condiciones de entrega (pedido explicito del usuario 2026-07-19, ajustado en la Fase 3 del plan
+// de aislamiento proveedor<->vendedor 2026-07-20): el VENDEDOR las define y confirma -- es quien
+// sabe si el cliente ya pago, el proveedor no tiene forma de saberlo. delivery_conditions_confirmed
+// es el punto de corte que habilita al proveedor a ver el pedido en su panel y generar la guia (ver
+// FormVentaDetalleModal) -- antes esto y "generar guia" eran el mismo click del vendedor, ahora son
+// dos pasos de dos personas distintas.
 export async function actualizarCondicionesEntrega(orderId: number, clientePago: boolean, envioIncluido: boolean, seguroActivo?: boolean): Promise<boolean> {
-  const patch: Record<string, boolean> = { customer_prepaid_product: clientePago, shipping_included: envioIncluido };
+  const patch: Record<string, boolean> = { customer_prepaid_product: clientePago, shipping_included: envioIncluido, delivery_conditions_confirmed: true };
   // seguroActivo solo se toca para 'contraentrega' (ver FormVentaDetalleModal) -- dropshipping/
   // muestra ya definieron esto en su propio checkout, no hay que pisarlo aca.
   if (seguroActivo !== undefined) patch.insurance_active = seguroActivo;
@@ -269,6 +272,14 @@ export async function cambiarEstadoVenta(orderId: number, estadoLegacy: number):
   if (estadoLegacy === 1) return aprobarPedido(orderId);
   if (estadoLegacy === 2) return cancelarPedido(orderId);
   const { error } = await supabase.from('orders').update({ status: LEGACY_TO_STATUS[estadoLegacy] || 'pending' }).eq('id', orderId);
+  return !error;
+}
+
+// Fase 3 del plan de aislamiento proveedor<->vendedor: el vendedor confirma la ciudad destino SIN
+// cotizar (cotizar ahora es trabajo del proveedor, que recien puede hacerlo una vez el vendedor
+// confirma las condiciones de entrega) -- guarda destino_dane_code directo, sin llamar a Mipaquete.
+export async function actualizarDestinoPedido(orderId: number, destinoDaneCode: string): Promise<boolean> {
+  const { error } = await supabase.from('orders').update({ destino_dane_code: destinoDaneCode }).eq('id', orderId);
   return !error;
 }
 
@@ -582,6 +593,12 @@ export interface VentaDetalle {
   // definir al autorizar el despacho de una venta normal, ver actualizarCondicionesEntrega.
   clientePago: boolean;
   envioIncluido: boolean;
+  // Fase 3 del plan de aislamiento proveedor<->vendedor: true cuando el VENDEDOR ya confirmo las
+  // condiciones de entrega -- recien ahi el proveedor puede ver el pedido en /config/misDespacho y
+  // generar la guia real.
+  deliveryConditionsConfirmed: boolean;
+  supplierId: string | null;
+  destinoDaneCode: string | null;
   // Fase 1d del plan de reduccion de devoluciones: null = todavia no se le pidio confirmacion al
   // comprador (dropshipping/muestra, o contraentrega mientras las credenciales de Meta no existan
   // -- ver whatsapp-send-confirmation) -- en ese caso NO bloquea nada. 'pending'/'invalid_number' SI
@@ -621,6 +638,9 @@ export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle |
     vendedorCiudad: order.profiles ? order.profiles.city : null,
     clientePago: !!order.customer_prepaid_product,
     envioIncluido: order.shipping_included !== false,
+    deliveryConditionsConfirmed: !!order.delivery_conditions_confirmed,
+    supplierId: order.supplier_id,
+    destinoDaneCode: order.destino_dane_code,
     confirmationStatus: order.confirmation_status,
     deliveryRescheduleRequested: !!order.delivery_reschedule_requested,
     items: (items || []).map((i: any) => ({
