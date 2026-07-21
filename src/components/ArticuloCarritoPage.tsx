@@ -165,15 +165,14 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
               <h4 className="truncate text-center text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>
 
               {coinShop ? (
-                <p className="flex items-center justify-center gap-1 whitespace-nowrap text-center text-[10px] text-gray-500">
-                  <span>
-                    Dist: <span className="font-semibold text-gray-700">$ {formatCOP(item.pro_vendedor || 0)}</span>
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span>
-                    Vendes: <span className="font-semibold text-gray-700">$ {formatCOP(item.pro_uni_venta || 0)}</span>
-                  </span>
-                </p>
+                <div className="text-center text-[10px] text-gray-500">
+                  <p>
+                    Precio a Distribuidor: <span className="font-bold text-gray-700">$ {formatCOP(item.pro_vendedor || 0)}</span>
+                  </p>
+                  <p>
+                    Tu lo vendes: <span className="font-bold text-gray-700">$ {formatCOP(item.pro_uni_venta || 0)}</span>
+                  </p>
+                </div>
               ) : (
                 <input
                   type="number"
