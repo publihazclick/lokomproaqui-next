@@ -43,7 +43,7 @@ interface MenuItem {
 // por error de lectura, esta version quedo verificada linea por linea contra el original.
 const MENUS: MenuItem[] = [
   { Icon: Home, nombre: 'Inicio', href: '/articulo', mostrar: (r) => r !== 'visitante' },
-  { Icon: LayoutGrid, nombre: 'Productos', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
+  { Icon: LayoutGrid, nombre: 'Productos/Bodegas', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: ShoppingCart, nombre: 'Hacer Compra', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },

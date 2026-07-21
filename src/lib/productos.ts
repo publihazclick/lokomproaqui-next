@@ -133,7 +133,11 @@ export async function fetchProductos(opts: {
   let q = supabase.from('products').select(PRODUCT_SELECT, { count: 'exact' }).eq('active', true).order('position', { ascending: true });
   if (opts.categoriaId) q = q.eq('category_id', opts.categoriaId);
   if (opts.ownerProfileId) q = q.eq('owner_profile_id', opts.ownerProfileId);
-  if (opts.search && opts.search.trim()) q = q.or(`name.ilike.%${opts.search.trim()}%,code.ilike.%${opts.search.trim()}%`);
+  if (opts.search && opts.search.trim()) {
+    const s = opts.search.trim();
+    const idNumerico = /^\d+$/.test(s) ? Number(s) : null;
+    q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%${idNumerico !== null ? `,id.eq.${idNumerico}` : ''}`);
+  }
   q = q.range(page * limit, page * limit + limit - 1);
 
   const { data, error, count } = await q;

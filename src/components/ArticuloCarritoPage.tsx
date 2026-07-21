@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchProductos, guardarPriceOverride, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
+import { fetchTiendaProveedorPorNumero, type TiendaProveedor } from '@/lib/bodega';
 import { formatCOP, useCart } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
 
@@ -53,6 +54,12 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
   const [cargandoMas, setCargandoMas] = useState(false);
   const [productoAbierto, setProductoAbierto] = useState<ProductoLegacy | null>(null);
 
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [bodegaNumeroInput, setBodegaNumeroInput] = useState('');
+  const [bodega, setBodega] = useState<TiendaProveedor | null>(null);
+  const [bodegaError, setBodegaError] = useState('');
+
   const limit = 54;
 
   // Purga el carrito de items del OTRO modo (coinShop no coincide) -- idempotente, seguro de
@@ -65,16 +72,26 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, coinShop]);
 
-  const cargarPagina = useCallback(async (usuario: DataUserCompleto | null, categoria: string | undefined, pageToLoad: number, reemplazar: boolean) => {
-    const res = await fetchProductos({ categoriaId: categoria, userId: usuario?.id, page: pageToLoad, limit });
-    setCount(res.count);
-    setListProductos((prev) => {
-      const base = reemplazar ? [] : prev;
-      const existentes = new Set(base.map((p) => p.id));
-      return [...base, ...res.data.filter((p) => !existentes.has(p.id))];
-    });
-    setNotEmptyPost(res.data.length > 0);
-  }, []);
+  const cargarPagina = useCallback(
+    async (
+      usuario: DataUserCompleto | null,
+      categoria: string | undefined,
+      pageToLoad: number,
+      reemplazar: boolean,
+      searchTerm: string,
+      ownerProfileId?: string,
+    ) => {
+      const res = await fetchProductos({ categoriaId: categoria, ownerProfileId, userId: usuario?.id, search: searchTerm, page: pageToLoad, limit });
+      setCount(res.count);
+      setListProductos((prev) => {
+        const base = reemplazar ? [] : prev;
+        const existentes = new Set(base.map((p) => p.id));
+        return [...base, ...res.data.filter((p) => !existentes.has(p.id))];
+      });
+      setNotEmptyPost(res.data.length > 0);
+    },
+    [],
+  );
 
   useEffect(() => {
     let activo = true;
@@ -94,7 +111,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
       setCategorias(cats);
 
       setPage(0);
-      await cargarPagina(usuario, categoriaId, 0, true);
+      await cargarPagina(usuario, categoriaId, 0, true, search, bodega?.id);
       if (!activo) return;
       setEstado('listo');
     });
@@ -109,12 +126,43 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     setCargandoMas(true);
     const next = page + 1;
     setPage(next);
-    await cargarPagina(dataUser, categoriaId, next, false);
+    await cargarPagina(dataUser, categoriaId, next, false, search, bodega?.id);
     setCargandoMas(false);
   }
 
   function handleCategoriaClick(catId: number) {
     router.push(catId ? `/${modo}/${catId}` : `/${modo}`);
+  }
+
+  async function buscarProductos() {
+    setPage(0);
+    setSearch(searchInput);
+    await cargarPagina(dataUser, categoriaId, 0, true, searchInput, bodega?.id);
+  }
+
+  async function buscarBodega() {
+    const numero = Number(bodegaNumeroInput.trim());
+    if (!bodegaNumeroInput.trim() || Number.isNaN(numero)) {
+      setBodegaError('Ingresa un número de bodega válido');
+      return;
+    }
+    const encontrada = await fetchTiendaProveedorPorNumero(numero);
+    if (!encontrada) {
+      setBodegaError('No se encontró ninguna bodega con ese número');
+      return;
+    }
+    setBodegaError('');
+    setBodega(encontrada);
+    setPage(0);
+    await cargarPagina(dataUser, categoriaId, 0, true, search, encontrada.id);
+  }
+
+  async function salirDeBodega() {
+    setBodega(null);
+    setBodegaNumeroInput('');
+    setBodegaError('');
+    setPage(0);
+    await cargarPagina(dataUser, categoriaId, 0, true, search, undefined);
   }
 
   async function guardarPrecioEditado(item: ProductoLegacy, valor: number) {
@@ -132,6 +180,49 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <div className="flex min-w-0 flex-1 gap-2">
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && buscarProductos()}
+            placeholder="Buscar por ID, referencia o nombre"
+            className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+          <button onClick={buscarProductos} className="shrink-0 rounded bg-[#02a0e3] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
+            Buscar
+          </button>
+        </div>
+        <div className="flex min-w-0 flex-1 gap-2">
+          <input
+            value={bodegaNumeroInput}
+            onChange={(e) => setBodegaNumeroInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && buscarBodega()}
+            placeholder="Buscar bodega por número (ej: 12)"
+            className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+          <button onClick={buscarBodega} className="shrink-0 rounded bg-[#198754] px-3 py-2 text-sm font-medium text-white hover:opacity-90">
+            Ver bodega
+          </button>
+        </div>
+      </div>
+
+      {bodegaError && <p className="mb-3 text-sm text-red-600">{bodegaError}</p>}
+
+      {bodega && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-green-100 bg-green-50 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
+          <img src={bodega.foto || '/assets/imagenes/todos.png'} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-gray-800">{bodega.nombre}</p>
+            <p className="truncate text-xs text-gray-500">{bodega.ciudad}</p>
+          </div>
+          <button onClick={salirDeBodega} className="shrink-0 rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">
+            Salir de bodega
+          </button>
+        </div>
+      )}
+
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => handleCategoriaClick(0)}

@@ -44,6 +44,21 @@ export async function fetchTiendasProveedor(search: string, page: number, limit:
   };
 }
 
+// Busqueda directa por proveedor_numero (el "id de bodega" publico, ej. "Bodega #12") -- mismo
+// criterio de anonimato de fetchTiendasProveedor arriba: nunca se expone telefono/nombre real/uuid
+// en la busqueda, solo el numero que ya es publico en toda la UI ("Bodega #N").
+export async function fetchTiendaProveedorPorNumero(numero: number): Promise<TiendaProveedor | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, city, avatar_url, proveedor_numero, roles!inner(name)')
+    .eq('roles.name', 'proveedor')
+    .eq('supplier_status', 'aprobado')
+    .eq('proveedor_numero', numero)
+    .maybeSingle();
+  if (error || !data) return null;
+  return { id: data.id, nombre: `Bodega #${data.proveedor_numero}`, ciudad: data.city, foto: data.avatar_url };
+}
+
 export interface MiProductoTienda {
   priceOverrideId: number;
   precio: number;
