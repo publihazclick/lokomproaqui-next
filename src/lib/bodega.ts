@@ -1,16 +1,15 @@
 import { supabase } from './supabase';
 import { mapProductToLegacy, type ProductoLegacy } from './productos';
 
-// Port de StoreComponent + MyProductsComponent (Angular, modulo lazy "bodega" -> "/config/store/*").
-// UsuariosService.getStore() y ProductoService.getPriceArticle/updatePriceArticle ya estaban bien
-// implementados en Supabase, sin bugs reales -- se portan 1:1.
+// Port de MyProductsComponent (Angular, modulo lazy "bodega" -> "/config/store/myproducts").
+// ProductoService.getPriceArticle/updatePriceArticle ya estaban bien implementados en Supabase,
+// sin bugs reales -- se portan 1:1.
 //
-// Alcance recortado: `/config/store/product[/:idStore]` (ProductsComponent) es un wrapper vacio
-// que solo embebe `<app-list-article-store>` -- EL MISMO componente ya portado en Fase 3 como
-// `/listproduct[/:idStore]`. No se duplica esa pantalla bajo una URL distinta. `/config/store/index`
-// (IndexComponent) es una version mas chica del ya portado `/config/verCatalagoProveedor`
-// (mismas 2 secciones: bodegas destacadas + productos certificados) -- se redirige ahi en vez de
-// reconstruir un duplicado casi identico.
+// 2026-07-21: se borraron `/config/store/stores`, `/config/store/index` y `/config/verCatalagoProveedor`
+// (directorios/vitrinas de bodegas navegables) a pedido explicito del usuario -- la unica forma de
+// llegar a una bodega en todo el sitio es buscandola por su numero publico desde Productos/Bodegas
+// (`/pedidos`, ver fetchTiendaProveedorPorNumero abajo). No reintroducir un listado/directorio de
+// bodegas sin confirmar primero, va contra ese criterio.
 
 export interface TiendaProveedor {
   id: string;
