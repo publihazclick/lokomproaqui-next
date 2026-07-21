@@ -19,34 +19,12 @@ export interface TiendaProveedor {
   foto: string | null;
 }
 
-// Anonimato proveedor<->vendedor (pedido explicito del usuario 2026-07-20): si el vendedor puede
-// identificar y contactar al proveedor, terminan negociando por fuera de la plataforma. Antes esta
-// funcion devolvia telefono/nombre real/referral_code, y ademas se podia BUSCAR por telefono --
-// se quita todo eso y se muestra proveedor_numero (columna ya existente, migracion 037, pensada
-// para "identificar proveedores sin exponer el uuid interno" -- se extiende la misma idea a no
-// exponer tampoco el nombre real). La busqueda ahora solo filtra por ciudad (dato no identificable
-// por si solo) -- ya no por nombre/telefono/tienda.
-export async function fetchTiendasProveedor(search: string, page: number, limit: number): Promise<{ data: TiendaProveedor[]; count: number }> {
-  let q = supabase
-    .from('profiles')
-    .select('id, city, avatar_url, proveedor_numero, roles!inner(name)', { count: 'exact' })
-    .eq('roles.name', 'proveedor')
-    .eq('supplier_status', 'aprobado');
-  if (search.trim()) {
-    q = q.ilike('city', `%${search.trim()}%`);
-  }
-  q = q.order('proveedor_numero').range(page * limit, page * limit + limit - 1);
-  const { data, error, count } = await q;
-  if (error || !data) return { data: [], count: 0 };
-  return {
-    data: data.map((p: any) => ({ id: p.id, nombre: `Bodega #${p.proveedor_numero}`, ciudad: p.city, foto: p.avatar_url })),
-    count: count ?? data.length,
-  };
-}
-
-// Busqueda directa por proveedor_numero (el "id de bodega" publico, ej. "Bodega #12") -- mismo
-// criterio de anonimato de fetchTiendasProveedor arriba: nunca se expone telefono/nombre real/uuid
-// en la busqueda, solo el numero que ya es publico en toda la UI ("Bodega #N").
+// Busqueda directa por proveedor_numero (el "id de bodega" publico, ej. "Bodega #12"), UNICA forma
+// de llegar a una bodega en todo el sitio (pedido explicito del usuario 2026-07-21 -- se borro el
+// directorio "Explorar Bodegas" que permitia listar/buscar por ciudad). Mismo criterio de anonimato
+// proveedor<->vendedor ya establecido antes (si el vendedor identifica y contacta al proveedor,
+// terminan negociando por fuera de la plataforma): nunca se expone telefono/nombre real/uuid, solo
+// el numero que ya es publico en toda la UI ("Bodega #N").
 export async function fetchTiendaProveedorPorNumero(numero: number): Promise<TiendaProveedor | null> {
   const { data, error } = await supabase
     .from('profiles')
