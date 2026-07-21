@@ -611,11 +611,19 @@ export interface VentaDetalle {
   items: VentaItem[];
 }
 
-export async function fetchVentaDetalle(orderId: number): Promise<VentaDetalle | null> {
-  const [{ data: order, error }, { data: items }] = await Promise.all([
-    supabase.from('orders').select('*, profiles!orders_seller_id_fkey(full_name, phone, city)').eq('id', orderId).maybeSingle(),
+// Fase 4 del plan de aislamiento proveedor<->vendedor (pedido explicito del usuario 2026-07-20):
+// ocultar el bloque "Informacion del Vendedor" en la UI (FormVentaDetalleModal) no alcanza -- la
+// respuesta de red de este fetch igual traia nombre/telefono/ciudad del vendedor aunque no se
+// renderizaran, visible con las herramientas de desarrollador del navegador. incluirVendedor=false
+// (usado cuando quien pregunta es el proveedor) saca el join por completo, esos datos nunca salen
+// del servidor.
+export async function fetchVentaDetalle(orderId: number, incluirVendedor: boolean = true): Promise<VentaDetalle | null> {
+  const selectOrders = incluirVendedor ? '*, profiles!orders_seller_id_fkey(full_name, phone, city)' : '*';
+  const [{ data: orderRaw, error }, { data: items }] = await Promise.all([
+    supabase.from('orders').select(selectOrders).eq('id', orderId).maybeSingle(),
     supabase.from('order_items').select('*').eq('order_id', orderId),
   ]);
+  const order = orderRaw as any;
   if (error || !order) return null;
 
   return {

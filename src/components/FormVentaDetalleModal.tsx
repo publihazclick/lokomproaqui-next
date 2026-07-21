@@ -120,7 +120,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchVentaDetalle(orderId).then(async (res) => {
+    fetchVentaDetalle(orderId, !viewerEsProveedor).then(async (res) => {
       setVenta(res);
       setCargando(false);
       if (!res) return;
