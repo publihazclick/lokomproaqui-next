@@ -17,6 +17,7 @@ import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { Indicativo } from '@/lib/indicativo';
 import { DANEGROUP } from '@/lib/dane-cities';
 import { useToast, Toast } from '@/components/Toast';
+import { EquipoVendedoresInfoModal } from '@/components/EquipoVendedoresInfoModal';
 
 // Port 1:1 desde src/app/dashboard-config/components/perfil (Angular, PerfilComponent) -- "Mi
 // Cuenta", pantalla usada por todos los roles logueados. Primera pieza de Fase 5 (panel admin).
@@ -81,6 +82,7 @@ export default function PerfilPage() {
   const [cambiandoClave, setCambiandoClave] = useState(false);
   const [claveNueva, setClaveNueva] = useState('');
   const [verClave, setVerClave] = useState(false);
+  const [mostrarInfoEquipo, setMostrarInfoEquipo] = useState(false);
 
   const ciudadesOrdenadas = useMemo(() => [...DANEGROUP].sort((a: any, b: any) => (a.city || '').localeCompare(b.city || '')), []);
 
@@ -250,10 +252,25 @@ export default function PerfilPage() {
           <button onClick={() => copiar(urlTienda, urlTienda)} className="rounded-full bg-[#0d6efd] px-4 py-2 text-xs font-bold text-white hover:opacity-90">
             TRAER CLIENTES A MI TIENDA
           </button>
-          <button onClick={() => copiar(urlRegistro, urlRegistro)} className="rounded-full bg-[#198754] px-4 py-2 text-xs font-bold text-white hover:opacity-90">
+          <button onClick={() => setMostrarInfoEquipo(true)} className="rounded-full bg-[#198754] px-4 py-2 text-xs font-bold text-white hover:opacity-90">
             Link para crear mi equipo de vendedores
           </button>
         </div>
+
+        {/* Pedido explicito del usuario 2026-07-21 ("curarme en salud"): el link ya no se copia
+            directo al hacer click -- primero se explica, en lenguaje simple, exactamente como
+            funcionan las comisiones de equipo (montos por nivel, requisito de actividad, ventana
+            de 90 dias, alcance solo marketplace). El copiado real ocurre desde el boton del modal. */}
+        {mostrarInfoEquipo && (
+          <EquipoVendedoresInfoModal
+            urlRegistro={urlRegistro}
+            onClose={() => setMostrarInfoEquipo(false)}
+            onCopiar={() => {
+              copiar(urlRegistro, urlRegistro);
+              setMostrarInfoEquipo(false);
+            }}
+          />
+        )}
 
         <div className="mt-5 flex justify-center">
           <div className="w-full max-w-sm rounded-xl border border-gray-200 p-4 text-center">
