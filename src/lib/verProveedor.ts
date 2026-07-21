@@ -11,15 +11,15 @@ import { fetchProductos, type ProductoLegacy } from './productos';
 
 export interface PerfilProveedor {
   id: string;
-  nombre: string | null;
+  nombre: string; // "Bodega #N" (proveedor_numero) -- nunca referral_code/nombre real, ver bodega.ts.
   foto: string | null;
   ciudad: string | null;
 }
 
 export async function fetchPerfilProveedor(id: string): Promise<PerfilProveedor | null> {
-  const { data, error } = await supabase.from('profiles').select('id, referral_code, avatar_url, city').eq('id', id).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('id, avatar_url, city, proveedor_numero').eq('id', id).maybeSingle();
   if (error || !data) return null;
-  return { id: data.id, nombre: data.referral_code, foto: data.avatar_url, ciudad: data.city };
+  return { id: data.id, nombre: `Bodega #${data.proveedor_numero}`, foto: data.avatar_url, ciudad: data.city };
 }
 
 export async function fetchCatalogoProveedor(proveedorId: string, search: string, page: number, limit: number): Promise<{ data: ProductoLegacy[]; count: number }> {
@@ -33,9 +33,9 @@ export async function fetchCatalogoProveedor(proveedorId: string, search: string
 // era especifico de VerProveedorComponent, este componente no lo tiene.
 
 export async function fetchPerfilProveedorPorReferralCode(referralCode: string): Promise<PerfilProveedor | null> {
-  const { data, error } = await supabase.from('profiles').select('id, referral_code, avatar_url, city').eq('referral_code', referralCode).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('id, avatar_url, city, proveedor_numero').eq('referral_code', referralCode).maybeSingle();
   if (error || !data) return null;
-  return { id: data.id, nombre: data.referral_code, foto: data.avatar_url, ciudad: data.city };
+  return { id: data.id, nombre: `Bodega #${data.proveedor_numero}`, foto: data.avatar_url, ciudad: data.city };
 }
 
 // Equivalente a ProductoService.createPriceArticleFull: agrega TODOS los productos activos de esta

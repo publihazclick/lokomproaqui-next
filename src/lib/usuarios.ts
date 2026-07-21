@@ -56,6 +56,11 @@ export interface PerfilTienda {
   usu_telefono: string | null;
   usu_ciudad: string | null;
   usu_imagen: string | null;
+  // Anonimato proveedor<->vendedor (pedido explicito del usuario 2026-07-20): esta "vitrina" la
+  // comparten la tienda publica de un VENDEDOR (donde SI debe verse su contacto real -- quiere que
+  // sus clientes lo encuentren) y la de un PROVEEDOR (donde NO debe). El componente decide que
+  // mostrar segun este campo.
+  esProveedor: boolean;
 }
 
 // Equivalente a UsuariosService.getOn({ where: {} }): directorio simple de usuarios, usado por el
@@ -73,15 +78,21 @@ export async function fetchVendedores(): Promise<VendedorBasico[]> {
 }
 
 export async function fetchPerfilPorReferralCode(referralCode: string): Promise<PerfilTienda | null> {
-  const { data, error } = await supabase.from('profiles').select('id, referral_code, phone, city, avatar_url').eq('referral_code', referralCode).maybeSingle();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, referral_code, phone, city, avatar_url, proveedor_numero, roles(name)')
+    .eq('referral_code', referralCode)
+    .maybeSingle();
   if (error || !data) return null;
+  const esProveedor = (data.roles as unknown as { name: string } | null)?.name === 'proveedor';
   return {
     id: data.id,
-    usu_usuario: data.referral_code,
+    usu_usuario: esProveedor ? `Bodega #${data.proveedor_numero}` : data.referral_code,
     usu_email: null,
-    usu_telefono: data.phone,
+    usu_telefono: esProveedor ? null : data.phone,
     usu_ciudad: data.city,
     usu_imagen: data.avatar_url,
+    esProveedor,
   };
 }
 

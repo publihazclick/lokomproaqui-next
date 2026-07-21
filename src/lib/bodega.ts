@@ -14,27 +14,32 @@ import { mapProductToLegacy, type ProductoLegacy } from './productos';
 
 export interface TiendaProveedor {
   id: string;
-  nombre: string | null;
-  telefono: string | null;
+  nombre: string; // "Bodega #N" (proveedor_numero) -- NUNCA el nombre real, ver nota abajo.
   ciudad: string | null;
   foto: string | null;
-  referralCode: string | null;
 }
 
+// Anonimato proveedor<->vendedor (pedido explicito del usuario 2026-07-20): si el vendedor puede
+// identificar y contactar al proveedor, terminan negociando por fuera de la plataforma. Antes esta
+// funcion devolvia telefono/nombre real/referral_code, y ademas se podia BUSCAR por telefono --
+// se quita todo eso y se muestra proveedor_numero (columna ya existente, migracion 037, pensada
+// para "identificar proveedores sin exponer el uuid interno" -- se extiende la misma idea a no
+// exponer tampoco el nombre real). La busqueda ahora solo filtra por ciudad (dato no identificable
+// por si solo) -- ya no por nombre/telefono/tienda.
 export async function fetchTiendasProveedor(search: string, page: number, limit: number): Promise<{ data: TiendaProveedor[]; count: number }> {
-  // Aprobacion de proveedores (migracion 063, pedido explicito del usuario 2026-07-20): solo
-  // aparecen bodegas con supplier_status='aprobado' -- antes cualquier proveedor recien registrado
-  // (sin ningun producto siquiera) ya aparecia aca de inmediato.
-  let q = supabase.from('profiles').select('*, roles!inner(name)', { count: 'exact' }).eq('roles.name', 'proveedor').eq('supplier_status', 'aprobado');
+  let q = supabase
+    .from('profiles')
+    .select('id, city, avatar_url, proveedor_numero, roles!inner(name)', { count: 'exact' })
+    .eq('roles.name', 'proveedor')
+    .eq('supplier_status', 'aprobado');
   if (search.trim()) {
-    const term = search.trim();
-    q = q.or(`full_name.ilike.%${term}%,phone.ilike.%${term}%,city.ilike.%${term}%,referral_code.ilike.%${term}%`);
+    q = q.ilike('city', `%${search.trim()}%`);
   }
-  q = q.range(page * limit, page * limit + limit - 1);
+  q = q.order('proveedor_numero').range(page * limit, page * limit + limit - 1);
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
   return {
-    data: data.map((p: any) => ({ id: p.id, nombre: p.full_name, telefono: p.phone, ciudad: p.city, foto: p.avatar_url, referralCode: p.referral_code })),
+    data: data.map((p: any) => ({ id: p.id, nombre: `Bodega #${p.proveedor_numero}`, ciudad: p.city, foto: p.avatar_url })),
     count: count ?? data.length,
   };
 }

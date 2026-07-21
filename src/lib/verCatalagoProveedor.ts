@@ -31,6 +31,9 @@ export interface ProveedorDestacado {
 }
 
 export async function fetchProveedoresDestacados(): Promise<ProveedorDestacado[]> {
-  const { data } = await supabase.from('profiles').select('id, avatar_url, roles!inner(name)').eq('roles.name', 'proveedor').limit(4);
+  // Mismo filtro de aprobacion que fetchTiendasProveedor (lib/bodega.ts, migracion 063) -- se habia
+  // quedado sin el al construir esa migracion, un proveedor recien registrado sin revisar podia
+  // aparecer destacado aca.
+  const { data } = await supabase.from('profiles').select('id, avatar_url, roles!inner(name)').eq('roles.name', 'proveedor').eq('supplier_status', 'aprobado').limit(4);
   return (data || []).map((p) => ({ id: p.id, foto: p.avatar_url }));
 }

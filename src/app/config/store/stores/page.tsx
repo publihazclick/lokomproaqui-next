@@ -75,7 +75,7 @@ export default function StoresPage() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && buscar()}
-            placeholder="Buscar por nombre, telefono, ciudad…"
+            placeholder="Buscar por ciudad…"
             className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
           />
           <button onClick={buscar} className="rounded bg-[#0d6efd] px-3 py-2 text-sm text-white">
@@ -90,7 +90,7 @@ export default function StoresPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
                 <img src={t.foto || '/assets/imagenes/todos.png'} alt="" className="mx-auto h-24 w-24 rounded-full object-cover" />
                 <h6 className="mt-2 truncate text-sm font-semibold text-gray-800">{t.nombre}</h6>
-                <p className="text-xs text-gray-500">{t.telefono}</p>
+                <p className="text-xs text-gray-500">{t.ciudad}</p>
               </Link>
               <button
                 onClick={() => agregarTodos(t)}
