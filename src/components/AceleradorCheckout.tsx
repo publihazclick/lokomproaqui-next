@@ -61,26 +61,32 @@ export function AceleradorCheckout({
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abrioInicialRef = useRef(false);
 
+  // Consulta la sesion REAL en el momento en que se llama (nunca un valor cacheado de antes) --
+  // devuelve el usuario logueado con su perfil, o null si de verdad no hay sesion en ESTE instante.
+  // Se usa tanto al montar (para pintar sesionResuelta/dataUser en pantalla) como, mas importante,
+  // dentro de onClickPrincipal en el momento exacto del click (ver comentario ahi abajo).
+  async function resolverDataUserEnVivo(): Promise<DataUserPago | null> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) return null;
+    const userId = sessionData.session.user.id;
+    const [{ data: profile }, { data: userAuth }] = await Promise.all([
+      supabase.from('profiles').select('full_name, last_name, phone, document_id, city').eq('id', userId).maybeSingle(),
+      supabase.auth.getUser(),
+    ]);
+    return {
+      id: userId,
+      nombre: profile?.full_name || '',
+      apellido: profile?.last_name || '',
+      email: userAuth?.user?.email || '',
+      telefono: profile?.phone || '',
+      documento: profile?.document_id || '',
+      ciudad: profile?.city || '',
+    };
+  }
+
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: sessionData }) => {
-      if (!sessionData.session) {
-        setSesionResuelta(true);
-        return;
-      }
-      const userId = sessionData.session.user.id;
-      const [{ data: profile }, { data: userAuth }] = await Promise.all([
-        supabase.from('profiles').select('full_name, last_name, phone, document_id, city').eq('id', userId).maybeSingle(),
-        supabase.auth.getUser(),
-      ]);
-      setDataUser({
-        id: userId,
-        nombre: profile?.full_name || '',
-        apellido: profile?.last_name || '',
-        email: userAuth?.user?.email || '',
-        telefono: profile?.phone || '',
-        documento: profile?.document_id || '',
-        ciudad: profile?.city || '',
-      });
+    resolverDataUserEnVivo().then((usuario) => {
+      setDataUser(usuario);
       setSesionResuelta(true);
     });
     return () => {
@@ -114,9 +120,23 @@ export function AceleradorCheckout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abrirTrigger]);
 
-  function onClickPrincipal() {
-    if (dataUser) suscribirme(dataUser);
-    else setMostrarFormAnon(true);
+  // Punto critico (pedido explicito del usuario 2026-07-22, "no puede haber margen de error"): NO
+  // decide segun el `dataUser` que ya este en el estado -- ese valor se llena de forma asincrona al
+  // montar la pagina, y si el usuario hace click ANTES de que esa consulta inicial termine (ej.
+  // pestaña nueva recien abierta desde el banner de /articulo, click rapido en una miniatura),
+  // `dataUser` todavia esta en null aunque el usuario SI tenga sesion real -- eso mandaba al
+  // formulario de "completa tus datos" a un usuario logueado, pareciendo que lo habiamos
+  // deslogueado. Se vuelve a consultar la sesion en vivo en el instante exacto del click, sin
+  // ninguna ventana de tiempo donde se pueda confundir "todavia no se sabe" con "no hay sesion".
+  async function onClickPrincipal() {
+    if (procesandoPago) return;
+    const usuario = dataUser || (await resolverDataUserEnVivo());
+    if (usuario) {
+      if (!dataUser) setDataUser(usuario);
+      suscribirme(usuario);
+    } else {
+      setMostrarFormAnon(true);
+    }
   }
 
   function soloLetras(valor: string): string {
