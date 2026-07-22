@@ -1,12 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
-import { fetchModulosConLecciones, type Leccion } from '@/lib/acelerador';
 import { fetchBannersActivos, type BannerImagen } from '@/lib/adminConfig';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
@@ -33,50 +31,16 @@ interface DataUserBasico {
   telefono?: string | null;
 }
 
-// Pedido explicito del usuario 2026-07-19: reemplaza los 3 banners promocionales fijos (imagenes
-// estaticas en /assets/imagenes) por las miniaturas REALES de las lecciones del Acelerador,
-// pasando una por una -- cada slide lleva directo a esa leccion (/acelerador/leccion/[id]).
-// aspect-video (16:9) en vez de un alto fijo en pixeles: la proporcion se mantiene igual en celular
-// y en computador, el ancho disponible es lo unico que cambia -- eso es lo que resuelve "que se vea
-// bien" en los dos sin necesitar breakpoints distintos. object-contain + fondo negro (mismo criterio
-// ya usado en /acelerador para estas mismas miniaturas) evita recortar mal una miniatura que no
-// venga exactamente en 16:9.
-function CursosCarousel({ lecciones }: { lecciones: Leccion[] }) {
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (lecciones.length < 2) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % lecciones.length), 7000);
-    return () => clearInterval(t);
-  }, [lecciones.length]);
-
-  if (lecciones.length === 0) return null;
-  const actual = lecciones[idx % lecciones.length];
-
-  return (
-    // Alto fijo por breakpoint (no aspect-video a lo ancho completo del contenedor) -- pedido
-    // explicito del usuario 2026-07-19: se veia muy grande tanto en celular como en computador.
-    // object-contain se encarga de que la miniatura completa se siga viendo sin recortarse, solo
-    // mas chica.
-    <Link href={`/acelerador/leccion/${actual.id}`} className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded bg-black sm:h-48">
-      {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de Supabase Storage, tamaño variable */}
-      <img src={actual.thumbnailUrl || ''} alt={actual.titulo} className="h-full w-full object-contain" />
-      {lecciones.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-          {lecciones.map((l, i) => (
-            <span key={l.id} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
-          ))}
-        </div>
-      )}
-    </Link>
-  );
-}
-
 // Banners de imagen reales del admin (pedido explicito del usuario 2026-07-22, ver
 // adminConfig.ts/site_banners) -- lo primero que ve el usuario logueado, arriba de todo en
-// /articulo. Mismo patron de carrusel que CursosCarousel (auto-rotacion + puntos), pero cada slide
-// es una imagen subida por el admin con medidas propias (sin recorte -- object-cover solo si el
-// admin la subio con otra proporcion, no se fuerza aspect ratio). Click opcional: si el banner
-// tiene link_url, navega ahi (externo o interno); si no, es puramente decorativo.
+// /articulo. Auto-rotacion + puntos si hay mas de uno, cada slide es una imagen subida por el
+// admin con medidas propias (sin recorte -- object-cover solo si el admin la subio con otra
+// proporcion, no se fuerza aspect ratio). Click opcional: si el banner tiene link_url, navega ahi
+// (externo o interno); si no, es puramente decorativo.
+//
+// El carrusel viejo de miniaturas del curso Acelerador (CursosCarousel) que iba justo debajo de
+// este se elimino a pedido explicito del usuario 2026-07-22 -- ya no debe volver a agregarse aca
+// sin que el usuario lo pida de nuevo.
 function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
@@ -151,7 +115,6 @@ export default function ArticuloPage() {
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
   const [banners, setBanners] = useState<BannerImagen[]>([]);
-  const [leccionesCarousel, setLeccionesCarousel] = useState<Leccion[]>([]);
   const [listProductos, setListProductos] = useState<ProductoLegacy[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -183,17 +146,9 @@ export default function ArticuloPage() {
       setDataUser(usuario);
       setEstado('cargando');
 
-      const [cats, modulos, listaBanners] = await Promise.all([fetchCategoriasConSub(), fetchModulosConLecciones(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
+      const [cats, listaBanners] = await Promise.all([fetchCategoriasConSub(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
       setCategorias(cats);
       setBanners(listaBanners);
-      // Pedido explicito del usuario 2026-07-19: solo lecciones con miniatura real (thumbnailUrl) --
-      // limite de 10 para que los puntos del carrusel no se vean amontonados con muchas lecciones.
-      setLeccionesCarousel(
-        modulos
-          .flatMap((m) => m.lecciones)
-          .filter((l) => !!l.thumbnailUrl)
-          .slice(0, 10),
-      );
       setEstado('listo');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,10 +175,6 @@ export default function ArticuloPage() {
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
       <PromoBannerCarousel banners={banners} />
-
-      <div className="mt-4">
-        <CursosCarousel lecciones={leccionesCarousel} />
-      </div>
 
       <div className="mt-4">
         <CategoriaStrip categorias={categorias} />
