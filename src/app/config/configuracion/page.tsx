@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
 import {
@@ -36,6 +36,7 @@ export default function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragIdx = useRef<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -68,19 +69,28 @@ export default function ConfiguracionPage() {
     if (ok) setData(await fetchSiteConfig());
   }
 
+  // Pedido explicito del usuario 2026-07-22: subir varias imagenes de una sola vez (antes solo
+  // dejaba elegir un archivo). Se suben una por una (no en paralelo, para no saturar Storage con
+  // muchas subidas simultaneas si el admin elige 10+ fotos) y cada una se agrega al final del orden
+  // actual.
   async function subirBanner(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
     setSubiendo(true);
-    const url = await subirImagenBanner(file);
-    if (url) {
-      await crearBannerImagen(url, banners.length);
-      setBanners(await fetchBannersAdmin());
-      mostrar('Banner agregado');
-    } else {
-      mostrar('Error al subir la imagen');
+    let siguienteOrden = banners.length;
+    let fallidos = 0;
+    for (const file of files) {
+      const url = await subirImagenBanner(file);
+      if (url) {
+        await crearBannerImagen(url, siguienteOrden);
+        siguienteOrden++;
+      } else {
+        fallidos++;
+      }
     }
+    setBanners(await fetchBannersAdmin());
+    mostrar(fallidos ? `${files.length - fallidos} banner(s) agregados, ${fallidos} fallaron` : 'Banner(s) agregados');
     setSubiendo(false);
   }
 
@@ -98,16 +108,33 @@ export default function ConfiguracionPage() {
     if (ok) setBanners((prev) => prev.map((b) => (b.id === banner.id ? { ...b, active: !b.active } : b)));
   }
 
-  async function mover(idx: number, direccion: -1 | 1) {
-    const otro = idx + direccion;
-    if (otro < 0 || otro >= banners.length) return;
-    const a = banners[idx];
-    const b = banners[otro];
-    await Promise.all([
-      actualizarBannerImagen(a.id, { sortOrder: b.sortOrder }),
-      actualizarBannerImagen(b.id, { sortOrder: a.sortOrder }),
-    ]);
-    setBanners(await fetchBannersAdmin());
+  // Reordenar arrastrando (pedido explicito del usuario 2026-07-22, reemplaza las flechas
+  // subir/bajar). Drag and drop nativo del navegador, sin libreria nueva -- la lista es corta
+  // (banners promocionales, no cientos de filas). Al soltar, se recalcula el sort_order de TODOS
+  // los banners segun la posicion nueva (mas simple y robusto que tratar de mover solo 2) y se
+  // persiste cada fila que cambio.
+  function onDragStart(idx: number) {
+    dragIdx.current = idx;
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+  }
+
+  async function onDrop(idx: number) {
+    const origen = dragIdx.current;
+    dragIdx.current = null;
+    if (origen === null || origen === idx) return;
+
+    const reordenados = [...banners];
+    const [movido] = reordenados.splice(origen, 1);
+    reordenados.splice(idx, 0, movido);
+
+    setBanners(reordenados);
+    await Promise.all(
+      reordenados.map((b, i) => (b.sortOrder !== i ? actualizarBannerImagen(b.id, { sortOrder: i }) : Promise.resolve(true))),
+    );
+    setBanners(reordenados.map((b, i) => ({ ...b, sortOrder: i })));
   }
 
   async function eliminar(id: number) {
@@ -194,7 +221,7 @@ export default function ConfiguracionPage() {
       <div className="flex items-center justify-between">
         <h4 className="font-semibold text-gray-800">Banners de imagen (arriba de Productos/Bodegas)</h4>
         <div>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={subirBanner} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={subirBanner} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={subiendo}
@@ -204,11 +231,21 @@ export default function ConfiguracionPage() {
           </button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-gray-400">Sube la imagen con las medidas que ya tengas listas. El orden de abajo hacia arriba/abajo define el orden del carrusel.</p>
+      <p className="mt-1 text-xs text-gray-400">Podés elegir varias imágenes de una vez. Arrastrá desde el ícono de la izquierda para reordenar.</p>
 
       <div className="mt-4 space-y-3">
         {banners.map((banner, idx) => (
-          <div key={banner.id} className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 shadow-sm sm:flex-row sm:items-center">
+          <div
+            key={banner.id}
+            draggable
+            onDragStart={() => onDragStart(idx)}
+            onDragOver={onDragOver}
+            onDrop={() => onDrop(idx)}
+            className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 shadow-sm sm:flex-row sm:items-center"
+          >
+            <div className="flex shrink-0 cursor-move items-center text-gray-400 sm:self-stretch">
+              <GripVertical className="h-5 w-5" />
+            </div>
             {/* eslint-disable-next-line @next/next/no-img-element -- Storage, tamaño variable */}
             <img src={banner.imageUrl} alt="" className="h-20 w-36 shrink-0 rounded object-cover" />
             <div className="flex-1">
@@ -223,12 +260,6 @@ export default function ConfiguracionPage() {
             <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => toggleActivo(banner)} className={`rounded-full px-2 py-1 text-xs font-semibold ${banner.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {banner.active ? 'Activo' : 'Inactivo'}
-              </button>
-              <button onClick={() => mover(idx, -1)} disabled={idx === 0} className="rounded bg-gray-100 p-1.5 text-gray-600 disabled:opacity-30">
-                <ArrowUp className="h-4 w-4" />
-              </button>
-              <button onClick={() => mover(idx, 1)} disabled={idx === banners.length - 1} className="rounded bg-gray-100 p-1.5 text-gray-600 disabled:opacity-30">
-                <ArrowDown className="h-4 w-4" />
               </button>
               <button onClick={() => eliminar(banner.id)} className="rounded bg-red-100 p-1.5 text-red-600">
                 <Trash2 className="h-4 w-4" />
