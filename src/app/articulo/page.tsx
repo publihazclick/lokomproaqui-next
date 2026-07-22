@@ -69,7 +69,7 @@ function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
         // por el admin POR banner (ver /config/configuracion), para que quede visible sobre
         // cualquier imagen -- sin esto no era obvio que el banner completo ya era clickeable.
         <span
-          className={`${clasesPosicionBoton(actual.buttonPosition)} pointer-events-none rounded-full px-4 py-2 text-sm font-bold text-white shadow-lg`}
+          className={`${clasesPosicionBoton(actual.buttonPosition)} pointer-events-none rounded-full px-4 py-2 text-sm font-bold text-white shadow-lg sm:px-6 sm:py-3 sm:text-base`}
           style={{ backgroundColor: actual.buttonColor }}
         >
           Ver ahora
