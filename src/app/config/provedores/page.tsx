@@ -142,7 +142,7 @@ export default function ProvedoresPage() {
           {cargando ? (
             <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
           ) : (
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
                   <th className="py-2 pr-3">Acciones</th>
@@ -151,6 +151,7 @@ export default function ProvedoresPage() {
                   <th className="py-2 pr-3">Fecha Registro</th>
                   <th className="py-2 pr-3">Activo</th>
                   <th className="py-2 pr-3">Productos</th>
+                  <th className="py-2 pr-3">Documentos</th>
                   <th className="py-2 pr-3">Aprobación</th>
                 </tr>
               </thead>
@@ -179,6 +180,13 @@ export default function ProvedoresPage() {
                       <span className={(u.productCount ?? 0) < MINIMO_PRODUCTOS_PROVEEDOR ? 'font-semibold text-red-600' : 'text-gray-700'}>
                         {u.productCount ?? 0} / {MINIMO_PRODUCTOS_PROVEEDOR}
                       </span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <div className="flex gap-1">
+                        <DocumentoLink label="RUT" url={u.pdfRutUrl} />
+                        <DocumentoLink label="CC" url={u.pdfCedulaUrl} />
+                        <DocumentoLink label="CyC" url={u.pdfCamaraComercioUrl} />
+                      </div>
                     </td>
                     <td className="py-2 pr-3">
                       {u.supplierStatus && (
@@ -234,5 +242,30 @@ export default function ProvedoresPage() {
         />
       )}
     </div>
+  );
+}
+
+// Documentos de aprobacion (RUT/Cedula/Camara de Comercio, subidos por el proveedor en
+// /config/perfil -- supplier_doc_*_url) recien se muestran aca por primera vez: antes el admin
+// aprobaba/rechazaba sin poder verlos. Sin url = badge gris "Falta", con url = link real (abre en
+// pestaña nueva) al PDF/imagen en el bucket publico 'lokomproaqui-media'.
+function DocumentoLink({ label, url }: { label: string; url: string | null }) {
+  if (!url) {
+    return (
+      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400" title={`${label}: no subido`}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 hover:bg-green-200"
+      title={`Ver ${label}`}
+    >
+      {label}
+    </a>
   );
 }

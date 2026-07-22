@@ -54,11 +54,19 @@ export interface UsuarioAdminRow {
   supplierStatus: SupplierStatus | null;
   supplierRejectionReason: string | null;
   productCount: number | null;
+  // Documentos subidos en /config/perfil (supplier_doc_*_url, existen desde 002_auth_profiles.sql
+  // pero nunca se mostraban en ningun lado del panel de aprobacion -- el admin aprobaba sin poder
+  // verlos). Tambien solo poblados cuando soloRol === 'proveedor'.
+  pdfRutUrl: string | null;
+  pdfCedulaUrl: string | null;
+  pdfCamaraComercioUrl: string | null;
 }
 
 export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: string; page: number; limit: number }): Promise<{ data: UsuarioAdminRow[]; count: number }> {
   const esProveedores = opts.soloRol === 'proveedor';
-  const columnas = 'id, full_name, last_name, phone, city, status, created_at, roles(name)' + (esProveedores ? ', supplier_status, supplier_rejection_reason' : '');
+  const columnas =
+    'id, full_name, last_name, phone, city, status, created_at, roles(name)' +
+    (esProveedores ? ', supplier_status, supplier_rejection_reason, supplier_doc_rut_url, supplier_doc_cc_url, supplier_doc_comercio_url' : '');
   let q = opts.soloRol
     ? supabase.from('profiles').select(columnas, { count: 'exact' }).eq('roles.name', opts.soloRol)
     : supabase.from('profiles').select(columnas, { count: 'exact' });
@@ -96,6 +104,9 @@ export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: stri
       supplierStatus: esProveedores ? (p.supplier_status ?? null) : null,
       supplierRejectionReason: esProveedores ? (p.supplier_rejection_reason ?? null) : null,
       productCount: esProveedores ? (conteos[p.id] || 0) : null,
+      pdfRutUrl: esProveedores ? (p.supplier_doc_rut_url ?? null) : null,
+      pdfCedulaUrl: esProveedores ? (p.supplier_doc_cc_url ?? null) : null,
+      pdfCamaraComercioUrl: esProveedores ? (p.supplier_doc_comercio_url ?? null) : null,
     })),
     count: count ?? data.length,
   };
