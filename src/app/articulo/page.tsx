@@ -7,6 +7,7 @@ import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchModulosConLecciones, type Leccion } from '@/lib/acelerador';
+import { fetchBannersActivos, type BannerImagen } from '@/lib/adminConfig';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
 
@@ -70,6 +71,48 @@ function CursosCarousel({ lecciones }: { lecciones: Leccion[] }) {
   );
 }
 
+// Banners de imagen reales del admin (pedido explicito del usuario 2026-07-22, ver
+// adminConfig.ts/site_banners) -- lo primero que ve el usuario logueado, arriba de todo en
+// /articulo. Mismo patron de carrusel que CursosCarousel (auto-rotacion + puntos), pero cada slide
+// es una imagen subida por el admin con medidas propias (sin recorte -- object-cover solo si el
+// admin la subio con otra proporcion, no se fuerza aspect ratio). Click opcional: si el banner
+// tiene link_url, navega ahi (externo o interno); si no, es puramente decorativo.
+function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (banners.length < 2) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % banners.length), 5000);
+    return () => clearInterval(t);
+  }, [banners.length]);
+
+  if (banners.length === 0) return null;
+  const actual = banners[idx % banners.length];
+
+  const contenido = (
+    // eslint-disable-next-line @next/next/no-img-element -- Storage, medidas propias del admin
+    <img src={actual.imageUrl} alt="" className="w-full rounded-lg object-cover" />
+  );
+
+  return (
+    <div className="relative">
+      {actual.linkUrl ? (
+        <a href={actual.linkUrl} target={actual.linkUrl.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
+          {contenido}
+        </a>
+      ) : (
+        contenido
+      )}
+      {banners.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+          {banners.map((b, i) => (
+            <span key={b.id} className={`h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/50'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoriaStrip({ categorias }: { categorias: CategoriaConSub[] }) {
   return (
     <div className="flex gap-4 overflow-x-auto px-1 py-2">
@@ -107,6 +150,7 @@ export default function ArticuloPage() {
   const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
+  const [banners, setBanners] = useState<BannerImagen[]>([]);
   const [leccionesCarousel, setLeccionesCarousel] = useState<Leccion[]>([]);
   const [listProductos, setListProductos] = useState<ProductoLegacy[]>([]);
   const [count, setCount] = useState(0);
@@ -139,8 +183,9 @@ export default function ArticuloPage() {
       setDataUser(usuario);
       setEstado('cargando');
 
-      const [cats, modulos] = await Promise.all([fetchCategoriasConSub(), fetchModulosConLecciones(), cargarPagina(usuario, 0)]);
+      const [cats, modulos, listaBanners] = await Promise.all([fetchCategoriasConSub(), fetchModulosConLecciones(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
       setCategorias(cats);
+      setBanners(listaBanners);
       // Pedido explicito del usuario 2026-07-19: solo lecciones con miniatura real (thumbnailUrl) --
       // limite de 10 para que los puntos del carrusel no se vean amontonados con muchas lecciones.
       setLeccionesCarousel(
@@ -174,7 +219,11 @@ export default function ArticuloPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
-      <CursosCarousel lecciones={leccionesCarousel} />
+      <PromoBannerCarousel banners={banners} />
+
+      <div className="mt-4">
+        <CursosCarousel lecciones={leccionesCarousel} />
+      </div>
 
       <div className="mt-4">
         <CategoriaStrip categorias={categorias} />

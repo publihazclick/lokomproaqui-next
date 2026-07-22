@@ -107,30 +107,61 @@ export async function subirVideoIntro(file: File): Promise<string | null> {
   return data.publicUrl;
 }
 
-export interface BannerRow {
+// Banners de IMAGEN mostrados arriba de /articulo (pedido explicito del usuario 2026-07-22,
+// migracion 074) -- reemplaza el sistema viejo de banners de solo texto (notifications type=3),
+// que ademas nunca llego a mostrarse a ningun usuario real (se porto el CRUD de admin en la
+// migracion a Next.js pero nunca se construyo el lado publico). Tabla dedicada `site_banners`, sin
+// relacion con `notifications` (esa tabla queda intacta, sin tocar, por si algo mas la usa).
+export interface BannerImagen {
   id: number;
-  titulo: string | null;
-  descripcion: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+  sortOrder: number;
+  active: boolean;
 }
 
-export async function fetchBanners(): Promise<BannerRow[]> {
-  const { data, error } = await supabase.from('notifications').select('*').eq('type', 3).order('created_at', { ascending: false }).limit(50);
+function mapBanner(b: any): BannerImagen {
+  return { id: b.id, imageUrl: b.image_url, linkUrl: b.link_url, sortOrder: b.sort_order, active: b.active };
+}
+
+export async function fetchBannersAdmin(): Promise<BannerImagen[]> {
+  const { data, error } = await supabase.from('site_banners').select('*').order('sort_order', { ascending: true });
   if (error || !data) return [];
-  return data.map((n: any) => ({ id: n.id, titulo: n.title, descripcion: n.description }));
+  return data.map(mapBanner);
 }
 
-export async function crearBanner(titulo: string, descripcion: string): Promise<number | null> {
-  const { data, error } = await supabase.from('notifications').insert({ title: titulo, description: descripcion, type: 3, is_admin: true }).select('id').single();
+// Consumido por /articulo (usuario final): solo banners activos, en orden.
+export async function fetchBannersActivos(): Promise<BannerImagen[]> {
+  const { data, error } = await supabase.from('site_banners').select('*').eq('active', true).order('sort_order', { ascending: true });
+  if (error || !data) return [];
+  return data.map(mapBanner);
+}
+
+export async function subirImagenBanner(file: File): Promise<string | null> {
+  const ext = (file.name || 'jpg').split('.').pop();
+  const path = `uploads/banner-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from('lokomproaqui-media').upload(path, file, { upsert: true });
+  if (error) return null;
+  const { data } = supabase.storage.from('lokomproaqui-media').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function crearBannerImagen(imageUrl: string, sortOrder: number): Promise<number | null> {
+  const { data, error } = await supabase.from('site_banners').insert({ image_url: imageUrl, sort_order: sortOrder }).select('id').single();
   if (error || !data) return null;
   return data.id;
 }
 
-export async function actualizarBanner(id: number, titulo: string, descripcion: string): Promise<boolean> {
-  const { error } = await supabase.from('notifications').update({ title: titulo, description: descripcion }).eq('id', id);
+export async function actualizarBannerImagen(id: number, patch: { linkUrl?: string; sortOrder?: number; active?: boolean }): Promise<boolean> {
+  const dbPatch: Record<string, unknown> = {};
+  if (patch.linkUrl !== undefined) dbPatch.link_url = patch.linkUrl || null;
+  if (patch.sortOrder !== undefined) dbPatch.sort_order = patch.sortOrder;
+  if (patch.active !== undefined) dbPatch.active = patch.active;
+  const { error } = await supabase.from('site_banners').update(dbPatch).eq('id', id);
   return !error;
 }
 
-export async function eliminarBanner(id: number): Promise<boolean> {
-  const { error } = await supabase.from('notifications').delete().eq('id', id);
+export async function eliminarBannerImagen(id: number): Promise<boolean> {
+  const { error } = await supabase.from('site_banners').delete().eq('id', id);
   return !error;
 }
