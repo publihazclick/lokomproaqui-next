@@ -3,10 +3,11 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { PlayCircle, Award } from 'lucide-react';
+import { PlayCircle, Award, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchModulosConLecciones, tieneAccesoAcelerador, formatDuracion, type ModuloConLecciones } from '@/lib/acelerador';
+import { abrirWhatsappMentoria } from '@/lib/adminConfig';
 import { AceleradorCheckout } from '@/components/AceleradorCheckout';
 
 // Port de AceleradorComponent (Angular, "/acelerador") -- vitrina de venta del curso (sin
@@ -101,6 +102,19 @@ function AceleradorPageInterna() {
                 abrirTrigger={abrirPagoTrigger}
                 onActivada={onSuscripcionActivada}
               />
+            </div>
+
+            {/* Boton de WhatsApp (pedido explicito del usuario 2026-07-22): numero y mensaje
+                editables desde /config/configuracion (abrirWhatsappMentoria en adminConfig.ts) --
+                para quien ya esta pagando y quiere avisarle directo al mentor. */}
+            <div className="mt-3">
+              <button
+                onClick={() => abrirWhatsappMentoria()}
+                className="inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Avisar por WhatsApp
+              </button>
             </div>
           </div>
 

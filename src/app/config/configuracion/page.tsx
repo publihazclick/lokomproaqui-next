@@ -205,6 +205,26 @@ export default function ConfiguracionPage() {
           />
         </div>
         <div>
+          {/* Pedido explicito del usuario 2026-07-22: boton de WhatsApp visible en /acelerador
+              (junto al precio) -- numero y mensaje editables aca cuando el admin quiera cambiarlos. */}
+          <label className="mb-1 block text-xs font-medium text-gray-700">Número de WhatsApp del botón en Acelerador de Ventas</label>
+          <input
+            value={data.whatsappMentoriaNumero}
+            onChange={(e) => setCampo('whatsappMentoriaNumero', e.target.value)}
+            placeholder="Ej: 3001234567 (sin indicativo 57)"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-gray-700">Mensaje que se manda por WhatsApp (el link de la página se agrega solo al final)</label>
+          <textarea
+            value={data.whatsappMentoriaMensaje}
+            onChange={(e) => setCampo('whatsappMentoriaMensaje', e.target.value)}
+            rows={3}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-gray-700">Video gancho 1 (link de YouTube, no listado)</label>
           <input
             value={data.aceleradorVideoGancho1}

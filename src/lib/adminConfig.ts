@@ -40,7 +40,14 @@ export interface SiteConfigForm {
   urlSegundo: string;
   tituloTercero: string;
   urlTercero: string;
+  // Pedido explicito del usuario 2026-07-22: boton de WhatsApp en /acelerador -- numero y mensaje
+  // editables desde el admin cada vez que quiera cambiarlos (ver botonWhatsappMentoria() abajo).
+  whatsappMentoriaNumero: string;
+  whatsappMentoriaMensaje: string;
 }
+
+const WHATSAPP_MENTORIA_NUMERO_DEFAULT = '3202241463';
+const WHATSAPP_MENTORIA_MENSAJE_DEFAULT = 'Hola Harley, estoy interesad@ en tomar la mentoría con ustedes, ya estoy generando el pago en la plataforma.';
 
 export async function fetchSiteConfig(): Promise<SiteConfigForm> {
   const { data } = await supabase.from('site_config').select('*').limit(1).single();
@@ -58,7 +65,22 @@ export async function fetchSiteConfig(): Promise<SiteConfigForm> {
     urlSegundo: info.urlSegundo || '',
     tituloTercero: info.tituloTercero || '',
     urlTercero: info.urlTercero || '',
+    whatsappMentoriaNumero: info.whatsappMentoriaNumero || WHATSAPP_MENTORIA_NUMERO_DEFAULT,
+    whatsappMentoriaMensaje: info.whatsappMentoriaMensaje || WHATSAPP_MENTORIA_MENSAJE_DEFAULT,
   };
+}
+
+// Pedido explicito del usuario 2026-07-22: boton de WhatsApp visible en /acelerador -- arma el link
+// wa.me con el numero y el mensaje configurados en /config/configuracion (con default de fabrica si
+// el admin todavia no los toco), agregando siempre el link de esta misma pagina al final del
+// mensaje para que quien reciba el WhatsApp sepa desde donde escribio el interesado.
+export async function abrirWhatsappMentoria(): Promise<void> {
+  const config = await fetchSiteConfig();
+  const numero = (config.whatsappMentoriaNumero || WHATSAPP_MENTORIA_NUMERO_DEFAULT).replace(/\D/g, '');
+  if (!numero) return;
+  const mensaje = `${config.whatsappMentoriaMensaje || WHATSAPP_MENTORIA_MENSAJE_DEFAULT}\n\nhttps://lokomproaqui.com/acelerador`;
+  const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
 }
 
 // Pedido explicito del usuario 2026-07-19: apenas alguien se registra, se le abre WhatsApp (pestaña
