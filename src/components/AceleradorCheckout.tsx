@@ -54,6 +54,11 @@ export function AceleradorCheckout({
   const [dataUser, setDataUser] = useState<DataUserPago | null>(null);
   const [sesionResuelta, setSesionResuelta] = useState(false);
   const [mostrarFormAnon, setMostrarFormAnon] = useState(false);
+  // Pedido explicito del usuario 2026-07-22: un usuario logueado (sin sesion tambien, tras llenar
+  // el formulario anonimo mas abajo) ya llega directo a abrir el cobro real de ePayco con un solo
+  // click en cualquier miniatura de leccion -- se agrega este paso explicito para que nadie dispare
+  // un intento de cobro sin confirmar antes que quiere suscribirse.
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [procesandoCuenta, setProcesandoCuenta] = useState(false);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [pagoFueAnonimo, setPagoFueAnonimo] = useState(false);
@@ -133,10 +138,16 @@ export function AceleradorCheckout({
     const usuario = dataUser || (await resolverDataUserEnVivo());
     if (usuario) {
       if (!dataUser) setDataUser(usuario);
-      suscribirme(usuario);
+      setMostrarConfirmacion(true);
     } else {
       setMostrarFormAnon(true);
     }
+  }
+
+  function confirmarSuscripcion() {
+    if (!dataUser) return;
+    setMostrarConfirmacion(false);
+    suscribirme(dataUser);
   }
 
   function soloLetras(valor: string): string {
@@ -288,7 +299,29 @@ export function AceleradorCheckout({
           primer click, en cualquiera de esos puntos, se sintiera lento/colgado esperando a que
           window.ePayco existiera. */}
       <Script src="https://checkout.epayco.co/checkout.js" strategy="afterInteractive" />
-      {!mostrarFormAnon ? (
+      {mostrarConfirmacion ? (
+        <div className="mx-auto max-w-md rounded-2xl border border-[#02a0e3]/20 bg-white p-5 text-center shadow-md">
+          <p className="font-semibold text-gray-800">
+            Este contenido es parte del curso <span className="text-[#0177a8]">Acelerador de Ventas</span>
+          </p>
+          <p className="mt-1 text-sm text-gray-500">Suscripción mensual de ${PRECIO_USD} USD para ver todas las clases.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <button
+              onClick={() => setMostrarConfirmacion(false)}
+              className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmarSuscripcion}
+              disabled={procesandoPago}
+              className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {procesandoPago ? 'Procesando...' : `Sí, suscribirme por $${PRECIO_USD} USD/mes`}
+            </button>
+          </div>
+        </div>
+      ) : !mostrarFormAnon ? (
         <button onClick={onClickPrincipal} disabled={procesandoPago} className={`${buttonClass} disabled:opacity-60`}>
           {procesandoPago ? 'Procesando...' : buttonLabel}
         </button>
