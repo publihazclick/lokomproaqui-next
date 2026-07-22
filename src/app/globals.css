@@ -88,3 +88,24 @@ body {
     background-position: 100% 50%;
   }
 }
+
+/* Boton "Ver ahora" superpuesto en los banners de imagen (/articulo, pedido explicito 2026-07-22):
+   pulso de brillo con el color propio de cada banner (via la variable --boton-glow, calculada en
+   JS desde el color elegido en el admin) para que se note que hay que hacer click sin resultar
+   agresivo. No se reusa .shine-sweep de arriba porque ese fija position:relative -- entraria en
+   conflicto con el position:absolute que ya necesita este boton para ubicarse sobre la imagen. */
+@keyframes boton-pulso-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--boton-glow, rgba(13, 110, 253, 0.55));
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 12px transparent;
+    transform: scale(1.05);
+  }
+}
+
+.boton-pulso {
+  animation: boton-pulso-glow 2s ease-in-out infinite;
+}

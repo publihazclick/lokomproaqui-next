@@ -31,6 +31,18 @@ interface DataUserBasico {
   telefono?: string | null;
 }
 
+// Convierte el color hex elegido en el admin a rgba con transparencia, para el anillo de brillo
+// pulsante del boton "Ver ahora" (--boton-glow en globals.css, animacion .boton-pulso).
+function hexToRgba(hex: string, alpha: number): string {
+  const limpio = hex.replace('#', '');
+  const completo = limpio.length === 3 ? limpio.split('').map((c) => c + c).join('') : limpio;
+  const bigint = parseInt(completo, 16) || 0;
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Banners de imagen reales del admin (pedido explicito del usuario 2026-07-22, ver
 // adminConfig.ts/site_banners) -- lo primero que ve el usuario logueado, arriba de todo en
 // /articulo. Auto-rotacion + puntos si hay mas de uno, cada slide es una imagen subida por el
@@ -69,8 +81,8 @@ function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
         // por el admin POR banner (ver /config/configuracion), para que quede visible sobre
         // cualquier imagen -- sin esto no era obvio que el banner completo ya era clickeable.
         <span
-          className={`${clasesPosicionBoton(actual.buttonPosition)} pointer-events-none rounded-full px-4 py-2 text-sm font-bold text-white shadow-lg sm:px-6 sm:py-3 sm:text-base`}
-          style={{ backgroundColor: actual.buttonColor }}
+          className={`${clasesPosicionBoton(actual.buttonPosition)} boton-pulso pointer-events-none rounded-full px-4 py-2 text-sm font-bold text-white shadow-lg sm:px-6 sm:py-3 sm:text-base`}
+          style={{ backgroundColor: actual.buttonColor, ['--boton-glow' as string]: hexToRgba(actual.buttonColor, 0.6) }}
         >
           Ver ahora
         </span>
