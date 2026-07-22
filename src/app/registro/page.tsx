@@ -15,10 +15,12 @@ import { Turnstile } from '@/components/Turnstile';
 // /singUp, ya migrado). Es el flujo real detras de "Registrarme como Proveedor" en
 // /infoSupplier (ya migrada, linkea aca via <a href="/registro">).
 //
-// Campos que en Angular se piden pero nunca se mandan al backend real (tipo de proveedor,
-// tiempo de experiencia, plataformas de dropshipping, ciudad, direccion): se mantienen en el
-// formulario tal cual pidio el usuario para /singUp (mismo precedente, ver memoria) -- solo
-// full_name/phone/role_name llegan de verdad a supabase.auth.signUp.
+// TODOS los campos del formulario se guardan de verdad (pedido explicito del usuario 2026-07-21,
+// migracion 072): nombre de bodega -> referral_code (si esta disponible; si no, se cae al
+// generador aleatorio de siempre), indicativo -> phone_country_code, tipo/experiencia -> mismos
+// valores enum que ya usa /config/perfil (fabricante/importador, 0_6_meses/6_meses_1_anio/
+// mas_1_anio) para que quede consistente si el proveedor edita despues, vinculado/plataformas ->
+// columnas nuevas, departamento/ciudad/direccion -> department/city/address.
 //
 // Bug real NO replicado (no afecta nada, el campo ni se manda): en Angular el <option> de
 // ciudad usaba [value]="item.phone_code" -- una propiedad que las ciudades no tienen (copiado
@@ -36,8 +38,8 @@ export default function RegistroPage() {
   const [titular, setTitular] = useState('');
   const [indicativo, setIndicativo] = useState('57');
   const [telefono, setTelefono] = useState('');
-  const [tipoProveedor, setTipoProveedor] = useState('1');
-  const [tiempoExperiencia, setTiempoExperiencia] = useState('0');
+  const [tipoProveedor, setTipoProveedor] = useState('fabricante');
+  const [tiempoExperiencia, setTiempoExperiencia] = useState('0_6_meses');
   const [vinculado, setVinculado] = useState<'si' | 'no'>('no');
   const [plataformas, setPlataformas] = useState('');
 
@@ -118,7 +120,16 @@ export default function RegistroPage() {
         data: {
           full_name: titular,
           phone: telefono,
+          phone_country_code: indicativo,
           role_name: 'proveedor',
+          desired_referral_code: nombreBodega || undefined,
+          supplier_type: tipoProveedor,
+          supplier_experience: tiempoExperiencia,
+          supplier_linked_platform: vinculado === 'si',
+          supplier_platforms: vinculado === 'si' ? plataformas : null,
+          department: departamentoSel,
+          city: ciudad,
+          address: direccion,
         },
       },
     });
@@ -191,8 +202,8 @@ export default function RegistroPage() {
                 value={tipoProveedor}
                 onChange={setTipoProveedor}
                 options={[
-                  { value: '1', label: 'Fabricante' },
-                  { value: '2', label: 'Importador' },
+                  { value: 'fabricante', label: 'Fabricante' },
+                  { value: 'importador', label: 'Importador' },
                 ]}
               />
 
@@ -201,9 +212,9 @@ export default function RegistroPage() {
                 value={tiempoExperiencia}
                 onChange={setTiempoExperiencia}
                 options={[
-                  { value: '0', label: '0 a 6 meses' },
-                  { value: '1', label: '6 meses a 1 año' },
-                  { value: '2', label: 'Más de un año' },
+                  { value: '0_6_meses', label: '0 a 6 meses' },
+                  { value: '6_meses_1_anio', label: '6 meses a 1 año' },
+                  { value: 'mas_1_anio', label: 'Más de un año' },
                 ]}
               />
 
