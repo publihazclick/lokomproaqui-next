@@ -12,6 +12,8 @@ import {
   crearBannerImagen,
   actualizarBannerImagen,
   eliminarBannerImagen,
+  clasesPosicionBoton,
+  POSICIONES_BOTON,
   type SiteConfigForm,
   type BannerImagen,
 } from '@/lib/adminConfig';
@@ -101,6 +103,19 @@ export default function ConfiguracionPage() {
   async function guardarLink(banner: BannerImagen) {
     const ok = await actualizarBannerImagen(banner.id, { linkUrl: banner.linkUrl || undefined });
     mostrar(ok ? 'Link guardado' : 'Error de servidor');
+  }
+
+  // Boton "Ver ahora" superpuesto (pedido explicito del usuario 2026-07-22): color y posicion se
+  // guardan al toque (no hace falta un boton "Guardar" aparte, ya se ve reflejado en la vista
+  // previa de al lado en tiempo real).
+  async function guardarColor(banner: BannerImagen, color: string) {
+    actualizarLocal(banners.indexOf(banner), { buttonColor: color });
+    await actualizarBannerImagen(banner.id, { buttonColor: color });
+  }
+
+  async function guardarPosicion(banner: BannerImagen, pos: BannerImagen['buttonPosition']) {
+    actualizarLocal(banners.indexOf(banner), { buttonPosition: pos });
+    await actualizarBannerImagen(banner.id, { buttonPosition: pos });
   }
 
   async function toggleActivo(banner: BannerImagen) {
@@ -241,14 +256,28 @@ export default function ConfiguracionPage() {
             onDragStart={() => onDragStart(idx)}
             onDragOver={onDragOver}
             onDrop={() => onDrop(idx)}
-            className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 shadow-sm sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-lg border border-gray-100 p-3 shadow-sm sm:flex-row"
           >
             <div className="flex shrink-0 cursor-move items-center text-gray-400 sm:self-stretch">
               <GripVertical className="h-5 w-5" />
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element -- Storage, tamaño variable */}
-            <img src={banner.imageUrl} alt="" className="h-20 w-36 shrink-0 rounded object-cover" />
-            <div className="flex-1">
+
+            {/* Vista previa en vivo: mismo componente de posicionamiento (clasesPosicionBoton) que
+                usa /articulo, para que el admin vea exactamente como va a quedar antes de guardar. */}
+            <div className="relative h-24 w-44 shrink-0 overflow-hidden rounded">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Storage, tamaño variable */}
+              <img src={banner.imageUrl} alt="" className="h-full w-full object-cover" />
+              {banner.linkUrl && (
+                <span
+                  className={`${clasesPosicionBoton(banner.buttonPosition)} rounded-full px-2.5 py-1 text-[11px] font-bold text-white shadow`}
+                  style={{ backgroundColor: banner.buttonColor }}
+                >
+                  Ver ahora
+                </span>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-2">
               <input
                 value={banner.linkUrl || ''}
                 onChange={(e) => actualizarLocal(idx, { linkUrl: e.target.value })}
@@ -256,7 +285,30 @@ export default function ConfiguracionPage() {
                 placeholder="Link al hacer click (opcional, ej: https://wa.me/57... o /listproduct/categoria/1)"
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                  Color del botón
+                  <input
+                    type="color"
+                    value={banner.buttonColor}
+                    onChange={(e) => guardarColor(banner, e.target.value)}
+                    className="h-7 w-9 cursor-pointer rounded border border-gray-300"
+                  />
+                </label>
+                <select
+                  value={banner.buttonPosition}
+                  onChange={(e) => guardarPosicion(banner, e.target.value as BannerImagen['buttonPosition'])}
+                  className="rounded border border-gray-300 px-2 py-1.5 text-xs"
+                >
+                  {POSICIONES_BOTON.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+
             <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => toggleActivo(banner)} className={`rounded-full px-2 py-1 text-xs font-semibold ${banner.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {banner.active ? 'Activo' : 'Inactivo'}

@@ -112,16 +112,61 @@ export async function subirVideoIntro(file: File): Promise<string | null> {
 // que ademas nunca llego a mostrarse a ningun usuario real (se porto el CRUD de admin en la
 // migracion a Next.js pero nunca se construyo el lado publico). Tabla dedicada `site_banners`, sin
 // relacion con `notifications` (esa tabla queda intacta, sin tocar, por si algo mas la usa).
+// Posiciones disponibles para el boton "Ver ahora" superpuesto (migracion 075, pedido explicito
+// del usuario 2026-07-22: color y posicion se eligen POR banner, cada imagen tiene su propia
+// composicion y el admin es quien ve cual queda mejor en cada una).
+export type BannerButtonPosition = 'bottom-right' | 'bottom-left' | 'bottom-center' | 'top-right' | 'top-left' | 'center';
+
 export interface BannerImagen {
   id: number;
   imageUrl: string;
   linkUrl: string | null;
   sortOrder: number;
   active: boolean;
+  buttonColor: string;
+  buttonPosition: BannerButtonPosition;
+}
+
+// Clases de posicionamiento absoluto para el boton "Ver ahora", compartidas entre la vista previa
+// del admin (/config/configuracion) y el carrusel real (/articulo) -- una sola fuente de verdad
+// para que la vista previa nunca quede desalineada con lo que ve el usuario final.
+export const POSICIONES_BOTON: { value: BannerButtonPosition; label: string }[] = [
+  { value: 'bottom-right', label: 'Abajo a la derecha' },
+  { value: 'bottom-left', label: 'Abajo a la izquierda' },
+  { value: 'bottom-center', label: 'Abajo al centro' },
+  { value: 'top-right', label: 'Arriba a la derecha' },
+  { value: 'top-left', label: 'Arriba a la izquierda' },
+  { value: 'center', label: 'Centrado' },
+];
+
+export function clasesPosicionBoton(pos: BannerButtonPosition): string {
+  switch (pos) {
+    case 'bottom-left':
+      return 'absolute bottom-3 left-3';
+    case 'bottom-center':
+      return 'absolute bottom-3 left-1/2 -translate-x-1/2';
+    case 'top-right':
+      return 'absolute top-3 right-3';
+    case 'top-left':
+      return 'absolute top-3 left-3';
+    case 'center':
+      return 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+    case 'bottom-right':
+    default:
+      return 'absolute bottom-3 right-3';
+  }
 }
 
 function mapBanner(b: any): BannerImagen {
-  return { id: b.id, imageUrl: b.image_url, linkUrl: b.link_url, sortOrder: b.sort_order, active: b.active };
+  return {
+    id: b.id,
+    imageUrl: b.image_url,
+    linkUrl: b.link_url,
+    sortOrder: b.sort_order,
+    active: b.active,
+    buttonColor: b.button_color || '#0d6efd',
+    buttonPosition: (b.button_position || 'bottom-right') as BannerButtonPosition,
+  };
 }
 
 export async function fetchBannersAdmin(): Promise<BannerImagen[]> {
@@ -152,11 +197,16 @@ export async function crearBannerImagen(imageUrl: string, sortOrder: number): Pr
   return data.id;
 }
 
-export async function actualizarBannerImagen(id: number, patch: { linkUrl?: string; sortOrder?: number; active?: boolean }): Promise<boolean> {
+export async function actualizarBannerImagen(
+  id: number,
+  patch: { linkUrl?: string; sortOrder?: number; active?: boolean; buttonColor?: string; buttonPosition?: BannerButtonPosition },
+): Promise<boolean> {
   const dbPatch: Record<string, unknown> = {};
   if (patch.linkUrl !== undefined) dbPatch.link_url = patch.linkUrl || null;
   if (patch.sortOrder !== undefined) dbPatch.sort_order = patch.sortOrder;
   if (patch.active !== undefined) dbPatch.active = patch.active;
+  if (patch.buttonColor !== undefined) dbPatch.button_color = patch.buttonColor;
+  if (patch.buttonPosition !== undefined) dbPatch.button_position = patch.buttonPosition;
   const { error } = await supabase.from('site_banners').update(dbPatch).eq('id', id);
   return !error;
 }

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
-import { fetchBannersActivos, type BannerImagen } from '@/lib/adminConfig';
+import { fetchBannersActivos, clasesPosicionBoton, type BannerImagen } from '@/lib/adminConfig';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
 
@@ -52,19 +52,28 @@ function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
   if (banners.length === 0) return null;
   const actual = banners[idx % banners.length];
 
-  const contenido = (
-    // eslint-disable-next-line @next/next/no-img-element -- Storage, medidas propias del admin
-    <img src={actual.imageUrl} alt="" className="w-full rounded-lg object-cover" />
-  );
+  // eslint-disable-next-line @next/next/no-img-element -- Storage, medidas propias del admin
+  const imagen = <img src={actual.imageUrl} alt="" className="w-full rounded-lg object-cover" />;
 
   return (
     <div className="relative">
       {actual.linkUrl ? (
         <a href={actual.linkUrl} target={actual.linkUrl.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
-          {contenido}
+          {imagen}
         </a>
       ) : (
-        contenido
+        imagen
+      )}
+      {actual.linkUrl && (
+        // Boton "Ver ahora" (pedido explicito del usuario 2026-07-22): color/posicion configurados
+        // por el admin POR banner (ver /config/configuracion), para que quede visible sobre
+        // cualquier imagen -- sin esto no era obvio que el banner completo ya era clickeable.
+        <span
+          className={`${clasesPosicionBoton(actual.buttonPosition)} pointer-events-none rounded-full px-4 py-2 text-sm font-bold text-white shadow-lg`}
+          style={{ backgroundColor: actual.buttonColor }}
+        >
+          Ver ahora
+        </span>
       )}
       {banners.length > 1 && (
         <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
