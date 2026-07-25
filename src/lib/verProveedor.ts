@@ -22,6 +22,14 @@ export async function fetchPerfilProveedorPorReferralCode(referralCode: string):
 // Equivalente a ProductoService.createPriceArticleFull: agrega TODOS los productos activos de esta
 // tienda al catalogo propio del usuario (price_overrides), sin duplicar los que ya tenia.
 export async function agregarTodosLosProductos(userId: string, storeOwnerId: string): Promise<{ success: boolean; message: string }> {
+  // Pedido explicito del usuario 2026-07-25 ("solo los productos de proveedor aprobado se van a
+  // mostrar en productos a la vista de los vendedores"): esta tienda normalmente ya se encontro via
+  // una busqueda que exige supplier_status='aprobado' (ver bodega.ts), pero se revalida aca por si
+  // el estado cambio despues de esa busqueda (o llega un storeOwnerId de otra via).
+  const { data: dueño } = await supabase.from('profiles').select('supplier_status, roles!inner(name)').eq('id', storeOwnerId).maybeSingle();
+  const esProveedorNoAprobado = (dueño as any)?.roles?.name === 'proveedor' && dueño?.supplier_status !== 'aprobado';
+  if (esProveedorNoAprobado) return { success: false, message: 'Esta bodega todavía no está aprobada' };
+
   const { data: products } = await supabase.from('products').select('id, client_sale_price').eq('owner_profile_id', storeOwnerId).eq('active', true);
   if (!products || !products.length) return { success: true, message: 'Creado exitoso' };
 

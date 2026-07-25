@@ -7,6 +7,40 @@ import { supabase } from './supabase';
 
 const PRODUCT_SELECT = '*, categories:categories!products_category_id_fkey(id, name), product_variants(*, sizes(name))';
 
+// Pedido explicito del usuario 2026-07-25 ("solo los productos de proveedor aprobado se van a
+// mostrar en productos a la vista de los vendedores"): antes, `products.active=true` (que un
+// proveedor pone el mismo con "Activar Producto") era la UNICA condicion para aparecer en el
+// catalogo -- la cuenta del proveedor podia seguir sin aprobar (supplier_status 'incompleto'/
+// 'en_revision'/'rechazado') y sus productos ya se veian igual. Ahora se excluyen los productos
+// de cualquier profile con rol proveedor cuya cuenta no este 'aprobado' (NULL incluido, un
+// proveedor recien registrado). Cache corto (30s) porque son pocas filas (rol proveedor) y esta
+// consulta corre en cada busqueda/pagina del catalogo -- no vale la pena pedirla de nuevo en cada
+// tecla, pero tampoco se quiere un cache largo que tarde en reflejar una aprobacion reciente.
+let cacheProveedoresNoAprobados: { ids: string[]; ts: number } | null = null;
+
+async function idsProveedoresNoAprobados(): Promise<string[]> {
+  const ahora = Date.now();
+  if (cacheProveedoresNoAprobados && ahora - cacheProveedoresNoAprobados.ts < 30_000) {
+    return cacheProveedoresNoAprobados.ids;
+  }
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, roles!inner(name)')
+    .eq('roles.name', 'proveedor')
+    .or('supplier_status.is.null,supplier_status.neq.aprobado');
+  const ids = (data || []).map((p: any) => p.id as string);
+  cacheProveedoresNoAprobados = { ids, ts: ahora };
+  return ids;
+}
+
+// `.not(col, 'in', '(a,b,c)')` es la sintaxis real de PostgREST/supabase-js para NOT IN -- devuelve
+// el texto listo para pasarle a `.not('owner_profile_id', 'in', ...)`, o null si no hay nada que
+// excluir (para no aplicar un `.not` innecesario).
+async function filtroNotInProveedoresNoAprobados(): Promise<string | null> {
+  const excluidos = await idsProveedoresNoAprobados();
+  return excluidos.length ? `(${excluidos.join(',')})` : null;
+}
+
 // Sentinela interno para agrupar la unica variante de un producto sin primer eje (ver
 // esVariante en ProductoColor) -- exportado para que las pantallas que arman un label combinado
 // de "talla - color" (ej woocommercePendientes/shopifyPendientes) lo filtren igual que el viejo
@@ -117,7 +151,10 @@ function formatFechaDDMMYYYY(iso: string): string {
 // Equivalente a ProductoService.get({ where: { id } }) para la pagina de detalle: un producto activo
 // + sus comentarios publicos aprobados (status 0), mismo orden mas reciente primero.
 export async function fetchProductoById(id: string | number): Promise<ProductoLegacy | null> {
-  const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('id', id).eq('active', true).maybeSingle();
+  let q = supabase.from('products').select(PRODUCT_SELECT).eq('id', id).eq('active', true);
+  const excluidos = await filtroNotInProveedoresNoAprobados();
+  if (excluidos) q = q.not('owner_profile_id', 'in', excluidos);
+  const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
 
   const mapped = mapProductToLegacy(data);
@@ -161,6 +198,8 @@ export async function fetchProductos(opts: {
     const idNumerico = /^\d+$/.test(s) ? Number(s) : null;
     q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%${idNumerico !== null ? `,id.eq.${idNumerico}` : ''}`);
   }
+  const excluidos = await filtroNotInProveedoresNoAprobados();
+  if (excluidos) q = q.not('owner_profile_id', 'in', excluidos);
   q = q.range(page * limit, page * limit + limit - 1);
 
   const { data, error, count } = await q;
