@@ -61,6 +61,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // ProductoService nunca lo guarda (ver comentario de alcance recortado arriba), asi que no forma
   // parte de ProductoForm ni se manda al guardar, solo se muestra para fidelidad visual.
   const [urlMediosDrive, setUrlMediosDrive] = useState('');
+  // Pedido explicito del usuario 2026-07-25: un campo simple de texto para escribir el color o los
+  // colores del producto (separados por coma) -- no la gestion completa de variantes/tallas/stock
+  // que se quito antes. Al guardar se convierte a la estructura que syncVariants espera.
+  const [colorTexto, setColorTexto] = useState('');
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -86,6 +90,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       setForm(p);
       setTieneSubcategoria(!!p.subcategoriaId);
       setTieneTalla(!!p.tipoTallaId);
+      setColorTexto(p.colores.map((c) => c.nombre).join(', '));
       if (p.categoriaId) setSubcategorias(await fetchSubcategorias(p.categoriaId));
       setCargando(false);
     });
@@ -105,7 +110,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     if (!form.categoriaId) return mostrar('Falta la categoría del producto');
     if (!esCreacion && !form.nombre.trim()) return mostrar('Falta el nombre del producto');
     const eraCreacion = esCreacion;
-    const formAGuardar = form.nombre.trim() ? form : { ...form, nombre: `Producto ${form.codigo}` };
+    const colores = colorTexto
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .map((nombre) => ({ key: nombre, nombre, foto: form.foto, tallas: [{ tallaId: 0, nombre: '', check: true, cantidad: 0 }] }));
+    const formAGuardar = { ...form, nombre: form.nombre.trim() || `Producto ${form.codigo}`, colores };
     setGuardando(true);
     const id = await guardarProducto(formAGuardar, ownerProfileId, esAdmin);
     setGuardando(false);
@@ -299,6 +309,16 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Color o colores</label>
+                <input
+                  value={colorTexto}
+                  onChange={(e) => setColorTexto(e.target.value)}
+                  placeholder="Ej: Rojo, Azul, Verde"
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
               </div>
             </div>
 
