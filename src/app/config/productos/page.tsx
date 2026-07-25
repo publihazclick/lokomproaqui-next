@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Layers } from 'lucide-react';
 
 // Pedido explicito del usuario 2026-07-25: cambios reales desplegados no se veian en produccion --
 // el shell HTML de esta pagina (contenido 100% client-side, autenticado) quedaba cacheado en el
@@ -28,8 +28,14 @@ export default function ProductosPage() {
   const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [tab, setTab] = useState<ModoListaProductos>('mios');
-  const [modalId, setModalId] = useState<number | null | 'crear'>(null);
+  const [modalId, setModalId] = useState<number | null | 'crear' | 'masiva'>(null);
   const [refrescarKey, setRefrescarKey] = useState(0);
+  // Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda subir productos de
+  // manera masiva"): cada vez que se termina un producto en carga masiva, se bumpea esta key para
+  // remontar FormProductoModal desde cero (formulario vacio para el siguiente), y se suma 1 al
+  // contador que ve el proveedor arriba del formulario.
+  const [masivaKey, setMasivaKey] = useState(0);
+  const [masivaContador, setMasivaContador] = useState(0);
 
   const esAdmin = dataUser?.rolname === 'administrador';
 
@@ -50,9 +56,23 @@ export default function ProductosPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-6">
-      <div className="flex items-center gap-2 px-1 py-2">
-        <ClipboardList className="h-5 w-5 text-gray-700" />
-        <h4 className="text-lg font-bold text-gray-900">Productos</h4>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-2">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5 text-gray-700" />
+          <h4 className="text-lg font-bold text-gray-900">Productos</h4>
+        </div>
+        {!esAdmin && (
+          <button
+            onClick={() => {
+              setMasivaContador(0);
+              setMasivaKey((k) => k + 1);
+              setModalId('masiva');
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-[#0d6efd] px-4 py-2 text-sm font-bold text-white hover:opacity-90"
+          >
+            <Layers className="h-4 w-4" /> Carga Masiva de Productos
+          </button>
+        )}
       </div>
       <div className="rounded-xl border border-gray-100 p-4 shadow-sm">
         <div className="flex flex-wrap gap-2 border-b border-gray-200">
@@ -72,7 +92,7 @@ export default function ProductosPage() {
         <TableProductosPanel key={`${tab}-${refrescarKey}`} modo={tab} userId={dataUser.id} esAdmin={esAdmin} onEditar={(id) => setModalId(id)} onCrear={() => setModalId('crear')} />
       </div>
 
-      {modalId !== null && (
+      {modalId !== null && modalId !== 'masiva' && (
         <FormProductoModal
           productoId={modalId === 'crear' ? null : modalId}
           ownerProfileId={dataUser.id}
@@ -81,6 +101,28 @@ export default function ProductosPage() {
           onGuardado={() => {
             setModalId(null);
             setRefrescarKey((k) => k + 1);
+          }}
+        />
+      )}
+
+      {modalId === 'masiva' && (
+        <FormProductoModal
+          key={masivaKey}
+          productoId={null}
+          modoMasivo
+          contadorMasivo={masivaContador}
+          ownerProfileId={dataUser.id}
+          esAdmin={esAdmin}
+          // "Terminar carga masiva": cierra la sesion y refresca la tabla para ver todo lo subido.
+          onClose={() => {
+            setModalId(null);
+            setRefrescarKey((k) => k + 1);
+          }}
+          // "Guardar y Agregar Otro Producto": NO cierra la sesion -- bumpea la key para remontar
+          // un formulario vacio (siguiente producto) y suma 1 al contador.
+          onGuardado={() => {
+            setMasivaContador((n) => n + 1);
+            setMasivaKey((k) => k + 1);
           }}
         />
       )}

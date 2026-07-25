@@ -45,9 +45,17 @@ interface FormProductoModalProps {
   // Pedido explicito del usuario 2026-07-24: en el paso 2 del registro de proveedor, el formulario
   // debe verse directo en la pagina (sin fondo oscuro ni que parezca una ventana emergente aparte).
   inline?: boolean;
+  // Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda subir productos de
+  // manera masiva"): modo "carga masiva" -- el formulario COMPLETO (foto, nombre, medidas,
+  // variantes, descripcion) para un producto, con un solo boton grande "Guardar y Agregar Otro
+  // Producto" al final en vez de Actualizar Cambios/Activar Producto -- activar cada uno queda
+  // para despues, desde "Mis Productos", asi no se interrumpe el ritmo de carga. `contadorMasivo`
+  // es solo para mostrar "Producto N de esta sesion" arriba, lo maneja el padre.
+  modoMasivo?: boolean;
+  contadorMasivo?: number;
 }
 
-export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose, onGuardado, inline = false }: FormProductoModalProps) {
+export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose, onGuardado, inline = false, modoMasivo = false, contadorMasivo }: FormProductoModalProps) {
   const { mensaje, mostrar } = useToast();
   const [cargando, setCargando] = useState(!!productoId);
   const [form, setForm] = useState<ProductoForm>(productoFormVacio);
@@ -481,6 +489,40 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     onGuardado();
   }
 
+  // Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda subir productos de
+  // manera masiva"): un solo boton para todo el modo carga masiva. Primer click (esCreacion, solo
+  // foto+precios+categoria) guarda el producto y expande el mismo formulario a la vista completa
+  // (nombre, medidas, variantes, descripcion), igual que el flujo normal. Segundo click (ya con
+  // todos los datos) guarda de verdad y pasa al SIGUIENTE producto en blanco (onGuardado hace que
+  // el padre reemplace este modal por uno nuevo, vacio). Activar cada producto se deja para
+  // despues, desde "Mis Productos" -- no se interrumpe el ritmo de carga con esa decision.
+  async function guardarYAgregarOtro() {
+    const erroresActuales = validar();
+    if (Object.keys(erroresActuales).length > 0) {
+      setErrores(erroresActuales);
+      setIntentoGuardar(true);
+      mostrar('Faltan campos obligatorios, revisa lo marcado en rojo');
+      return;
+    }
+    const eraCreacion = esCreacion;
+    const formAGuardar = form.nombre.trim() ? form : { ...form, nombre: `Producto ${form.codigo}` };
+    setGuardando(true);
+    const id = await guardarProducto(formAGuardar, ownerProfileId, esAdmin);
+    setGuardando(false);
+    if (!id) return mostrar('Error de servidor');
+    setErrores({});
+    setIntentoGuardar(false);
+    if (eraCreacion) {
+      mostrar('Muy bien, ahora completa el nombre, las medidas y la descripción de este producto.');
+      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: esAdmin ? 0 : 3 }));
+      return;
+    }
+    mostrar('¡Producto guardado! Pasando al siguiente producto…');
+    // Se le da un respiro al mensaje antes de reemplazar este formulario por uno vacio (mismo
+    // motivo que el de "Activar Producto": onGuardado() desmonta este componente de una).
+    setTimeout(onGuardado, 1800);
+  }
+
   // Pedido explicito del usuario 2026-07-25 ("asegurate que todos los botones tienen funcion"):
   // esta validacion separada quedo desactualizada tras quitar las medidas (alto/ancho/largo/peso)
   // y la subcategoria obligatoria del formulario -- exigia campos que ya no existen en ninguna
@@ -521,7 +563,16 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       >
         {!inline && (
           <div className="px-4 py-3">
-            <h4 className="text-base font-bold text-gray-900">{form.id ? 'Actualizar' : 'Crear'} Productos</h4>
+            {modoMasivo ? (
+              <>
+                <h4 className="text-base font-bold text-gray-900">Carga Masiva de Productos</h4>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Producto {(contadorMasivo ?? 0) + 1} de esta sesión — completa este y sigue con el siguiente, tan rápido como puedas.
+                </p>
+              </>
+            ) : (
+              <h4 className="text-base font-bold text-gray-900">{form.id ? 'Actualizar' : 'Crear'} Productos</h4>
+            )}
           </div>
         )}
 
@@ -578,11 +629,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
             {esCreacion && (
               <div className="flex justify-center">
                 <button
-                  onClick={guardar}
+                  onClick={modoMasivo ? guardarYAgregarOtro : guardar}
                   disabled={cargando || guardando}
                   className="rounded-full bg-[#198754] px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60"
                 >
-                  {guardando ? 'Subiendo…' : 'Subir imagen'}
+                  {guardando ? 'Subiendo…' : modoMasivo ? 'Guardar y Continuar' : 'Subir imagen'}
                 </button>
               </div>
             )}
@@ -961,37 +1012,61 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         )}
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 px-4 py-3">
-          {!inline && (
-            <button
-              onClick={
-                // Si se creo un producto nuevo durante esta sesion del modal (productoId era null
-                // pero form.id ya tiene valor), Cerrar debe refrescar la tabla de fondo -- no solo
-                // cerrar sin mas, o el producto recien creado no aparece hasta recargar la pagina.
-                !productoId && form.id ? onGuardado : onClose
-              }
-              className="rounded px-3 py-1.5 text-sm text-gray-600"
-            >
-              Cerrar
-            </button>
-          )}
-          {!esCreacion && (
-            <button onClick={guardar} disabled={cargando || guardando} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
-              {guardando ? 'Guardando…' : 'Actualizar Cambios'}
-            </button>
-          )}
-          {form.estado === 3 && (
-            <button
-              onClick={activar}
-              disabled={activando || !cambiosGuardados}
-              title={!cambiosGuardados ? 'Primero da click en "Actualizar Cambios"' : undefined}
-              className={`rounded border px-3 py-1.5 text-sm font-medium ${
-                cambiosGuardados
-                  ? 'border-[#198754] bg-[#198754] text-white disabled:opacity-60'
-                  : 'cursor-not-allowed border-gray-300 bg-transparent text-gray-400'
-              }`}
-            >
-              {activando ? 'Activando…' : 'Activar Producto / Mostrar a la Comunidad'}
-            </button>
+          {modoMasivo ? (
+            <>
+              {/* Pedido explicito del usuario 2026-07-25: en carga masiva no se activa cada
+                  producto ahi mismo (interrumpiria el ritmo) -- solo Terminar (cierra la sesion,
+                  los productos ya subidos quedan pendientes en "Mis Productos" para activarlos,
+                  disponible en cualquier momento) y Guardar y Agregar Otro Producto (unico boton
+                  de accion del paso 2, el paso 1 ya tiene su propio boton grande mas arriba). */}
+              <button onClick={onClose} className="rounded px-3 py-1.5 text-sm text-gray-600">
+                Terminar carga masiva
+              </button>
+              {!esCreacion && (
+                <button
+                  onClick={guardarYAgregarOtro}
+                  disabled={cargando || guardando}
+                  className="rounded bg-[#198754] px-3 py-1.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {guardando ? 'Guardando…' : 'Guardar y Agregar Otro Producto'}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {!inline && (
+                <button
+                  onClick={
+                    // Si se creo un producto nuevo durante esta sesion del modal (productoId era null
+                    // pero form.id ya tiene valor), Cerrar debe refrescar la tabla de fondo -- no solo
+                    // cerrar sin mas, o el producto recien creado no aparece hasta recargar la pagina.
+                    !productoId && form.id ? onGuardado : onClose
+                  }
+                  className="rounded px-3 py-1.5 text-sm text-gray-600"
+                >
+                  Cerrar
+                </button>
+              )}
+              {!esCreacion && (
+                <button onClick={guardar} disabled={cargando || guardando} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
+                  {guardando ? 'Guardando…' : 'Actualizar Cambios'}
+                </button>
+              )}
+              {form.estado === 3 && (
+                <button
+                  onClick={activar}
+                  disabled={activando || !cambiosGuardados}
+                  title={!cambiosGuardados ? 'Primero da click en "Actualizar Cambios"' : undefined}
+                  className={`rounded border px-3 py-1.5 text-sm font-medium ${
+                    cambiosGuardados
+                      ? 'border-[#198754] bg-[#198754] text-white disabled:opacity-60'
+                      : 'cursor-not-allowed border-gray-300 bg-transparent text-gray-400'
+                  }`}
+                >
+                  {activando ? 'Activando…' : 'Activar Producto / Mostrar a la Comunidad'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
