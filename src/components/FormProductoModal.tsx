@@ -99,6 +99,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     if (!form.precioVenta) errs.precioVenta = 'Falta el precio sugerido de venta';
     if (!form.categoriaId) errs.categoriaId = 'Falta la categoría';
     if (!esCreacion) {
+      if (!(form.colores[0]?.nombre || '').trim()) errs.colorPrincipal = 'Falta el color de la foto principal';
       if (!form.nombre.trim()) errs.nombre = 'Falta el nombre del producto';
       if (!form.alto) errs.alto = 'Falta el alto empacado';
       if (!form.ancho) errs.ancho = 'Falta el ancho empacado';
@@ -211,6 +212,27 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
   function generarCodigoColor(): string {
     return (Date.now().toString(20).substring(2, 5) + Math.random().toString(20).substring(2, 5)).toUpperCase();
+  }
+
+  // Pedido explicito del usuario 2026-07-25: antes de Nombre se pide el color de la foto principal
+  // ya subida -- en vez de ser un campo aparte que se pierde, se convierte en el primer color de
+  // "Lista Colores" (con esa misma foto ya puesta), asi el proveedor no tiene que volver a subirla.
+  function onColorPrincipalChange(nombre: string) {
+    if (form.colores.length === 0) {
+      const nuevo: ColorForm = {
+        key: `${Date.now()}-${Math.random()}`,
+        nombre,
+        foto: form.foto,
+        galeria: [],
+        tallas: modoTalla === 'real'
+          ? tallasDisponibles.map((t) => ({ tallaId: t.id, nombre: t.nombre, check: false, cantidad: 0 }))
+          : [{ tallaId: 0, nombre: '', check: true, cantidad: 0 }],
+      };
+      setCodigosColor((prev) => ({ ...prev, [nuevo.key]: generarCodigoColor() }));
+      setForm((prev) => ({ ...prev, colores: [nuevo] }));
+    } else {
+      setForm((prev) => ({ ...prev, colores: prev.colores.map((c, i) => (i === 0 ? { ...c, nombre } : c)) }));
+    }
   }
 
   // Pedido explicito del usuario 2026-07-25: escribir un color y darle Enter o coma lo agrega como
@@ -439,6 +461,14 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 <input value={form.codigo} disabled className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm" />
               </div>
               <div className="sm:col-span-2">
+                {/* Pedido explicito del usuario 2026-07-25: antes de Nombre, el color de la foto
+                    principal ya subida -- se convierte en el primer color de "Lista Colores" (con
+                    esa misma foto), para no tener que subirla de nuevo mas abajo. */}
+                <label className="mb-1 block text-xs font-medium text-gray-700">Color de la foto principal</label>
+                <input value={form.colores[0]?.nombre ?? ''} onChange={(e) => onColorPrincipalChange(e.target.value)} className={claseInput('colorPrincipal')} />
+                <MensajeError campo="colorPrincipal" />
+              </div>
+              <div className="sm:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
                 <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={claseInput('nombre')} />
                 <MensajeError campo="nombre" />
