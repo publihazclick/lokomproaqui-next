@@ -69,6 +69,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
+  const esCreacion = !form.id;
+
   useEffect(() => {
     fetchCategoriasPrincipales().then(setCategorias);
     fetchTiposTalla().then(setTiposTalla);
@@ -168,11 +170,16 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     actualizarColor(colorKey, { foto: url });
   }
 
+  // Pedido explicito del usuario 2026-07-25: al crear (form.id todavia null) solo se piden foto +
+  // precio a distribuidor + precio de venta + categoria, igual a la captura de referencia -- el
+  // nombre real se completa despues, al editar. Mientras tanto se autogenera un nombre placeholder
+  // (mismo comportamiento del original: "productos borrador con nombre/codigo aleatorios").
   async function guardar() {
-    if (!form.nombre.trim()) return mostrar('Falta el nombre del producto');
     if (!form.categoriaId) return mostrar('Falta la categoría del producto');
+    if (!esCreacion && !form.nombre.trim()) return mostrar('Falta el nombre del producto');
+    const formAGuardar = form.nombre.trim() ? form : { ...form, nombre: `Producto ${form.codigo}` };
     setGuardando(true);
-    const id = await guardarProducto(form, ownerProfileId, esAdmin);
+    const id = await guardarProducto(formAGuardar, ownerProfileId, esAdmin);
     setGuardando(false);
     if (!id) return mostrar('Error de servidor');
     mostrar(form.id ? 'Actualizado' : 'Exitoso');
@@ -266,6 +273,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
             </div>
 
+            {/* Pedido explicito del usuario 2026-07-25: al crear, solo se ven foto + precio a
+                distribuidor + precio de venta + categoria (arriba) -- todo lo de aca abajo
+                (nombre, codigo, subcategoria, medidas, colores, descripcion, estado) queda oculto
+                hasta que el producto ya existe y se abre para editar, igual que el flujo original. */}
+            {!esCreacion && (
+            <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Código</label>
@@ -452,6 +465,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                   <option value="1">Eliminado</option>
                 </select>
               </div>
+            )}
+            </>
             )}
           </div>
         )}
