@@ -256,14 +256,23 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     actualizarColor(colorKey, { foto: url });
   }
 
-  async function subirFotoGaleria(colorKey: string, file: File) {
+  // Pedido explicito del usuario 2026-07-25: "Subir imagen Galeria" permite elegir varias fotos de
+  // una vez (input multiple), no una por una.
+  async function subirFotoGaleria(colorKey: string, files: FileList) {
     setSubiendoFoto(`${colorKey}-galeria`);
-    const url = await subirArchivoPublico(file);
+    const urls = (await Promise.all(Array.from(files).map((f) => subirArchivoPublico(f)))).filter(Boolean) as string[];
     setSubiendoFoto(null);
-    if (!url) return mostrar('Error de servidor');
+    if (!urls.length) return mostrar('Error de servidor');
     setForm((prev) => ({
       ...prev,
-      colores: prev.colores.map((c) => (c.key === colorKey ? { ...c, galeria: [...c.galeria, url] } : c)),
+      colores: prev.colores.map((c) => (c.key === colorKey ? { ...c, galeria: [...c.galeria, ...urls] } : c)),
+    }));
+  }
+
+  function quitarFotoGaleria(colorKey: string, indice: number) {
+    setForm((prev) => ({
+      ...prev,
+      colores: prev.colores.map((c) => (c.key === colorKey ? { ...c, galeria: c.galeria.filter((_, i) => i !== indice) } : c)),
     }));
   }
 
@@ -528,6 +537,13 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                   {form.colores.map((color) => {
                     return (
                       <div key={color.key} className="w-full max-w-sm rounded-lg border border-gray-200 p-4 sm:w-[380px]">
+                        {/* Pedido explicito del usuario 2026-07-25: la foto principal ya subida se
+                            ve arriba de la tarjeta, para saber que es lo que se esta montando. */}
+                        {color.foto && (
+                          // eslint-disable-next-line @next/next/no-img-element -- foto de color (Supabase Storage)
+                          <img src={color.foto} alt="" className="mb-3 aspect-square w-full rounded-md border border-gray-200 object-cover" />
+                        )}
+
                         <label className="mb-1 block text-xs font-medium text-gray-700">Color</label>
                         <input
                           value={color.nombre}
@@ -544,7 +560,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                             className="inline-flex cursor-pointer items-center rounded px-4 py-2 text-sm font-semibold text-white"
                             style={{ background: errores[`colorFoto:${color.key}`] ? '#dc3545' : '#198754' }}
                           >
-                            {subiendoFoto === color.key ? 'Subiendo…' : 'Agregar una foto'}
+                            {subiendoFoto === color.key ? 'Subiendo…' : color.foto ? 'Cambiar foto' : 'Agregar una foto'}
                             <input
                               type="file"
                               accept="image/*"
@@ -567,7 +583,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                                   </label>
                                   <input
                                     type="number"
-                                    value={t.cantidad}
+                                    value={t.cantidad || ''}
                                     onChange={(e) => actualizarTalla(color.key, t.tallaId, { cantidad: Number(e.target.value) })}
                                     placeholder="Cantidad disponible"
                                     className={`w-full rounded border px-2 py-1.5 text-xs ${errores[`colorCantidad:${color.key}`] ? 'border-red-500' : 'border-gray-300'}`}
@@ -582,7 +598,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                             <label className="mb-1 block text-xs font-medium text-gray-700">{modoTalla === 'unica' ? 'Talla única' : 'Cantidad disponible'}</label>
                             <input
                               type="number"
-                              value={color.tallas[0]?.cantidad ?? 0}
+                              value={color.tallas[0]?.cantidad || ''}
                               onChange={(e) => actualizarCantidadSinTalla(color.key, Number(e.target.value))}
                               placeholder="Cantidad disponible"
                               className={claseInput(`colorCantidad:${color.key}`)}
@@ -591,18 +607,40 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           </div>
                         )}
 
-                        <div className="mt-3 flex justify-center">
+                        <div className="mt-3 flex flex-col items-center">
                           <label className="inline-flex cursor-pointer items-center rounded px-4 py-2 text-sm font-semibold text-gray-900" style={{ background: '#ffc107' }}>
                             {subiendoFoto === `${color.key}-galeria` ? 'Subiendo…' : 'Subir imagen Galeria'}
                             <input
                               type="file"
                               accept="image/*"
+                              multiple
                               hidden
                               disabled={!!subiendoFoto}
-                              onChange={(e) => e.target.files?.[0] && subirFotoGaleria(color.key, e.target.files[0])}
+                              onChange={(e) => e.target.files?.length && subirFotoGaleria(color.key, e.target.files)}
                             />
                           </label>
                         </div>
+
+                        {/* Pedido explicito del usuario 2026-07-25: las fotos de galeria se ven
+                            abajo, para saber que es lo que se esta montando. */}
+                        {color.galeria.length > 0 && (
+                          <div className="mt-2 grid grid-cols-4 gap-1.5">
+                            {color.galeria.map((url, i) => (
+                              <div key={`${url}-${i}`} className="group relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element -- foto de galeria (Supabase Storage) */}
+                                <img src={url} alt="" className="aspect-square w-full rounded object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => quitarFotoGaleria(color.key, i)}
+                                  aria-label="Quitar foto de galeria"
+                                  className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#dc3545] text-white opacity-0 group-hover:opacity-100"
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="mt-3">
                           <button onClick={() => quitarColor(color.key)} className="rounded bg-[#dc3545] px-4 py-1.5 text-sm font-semibold text-white">
