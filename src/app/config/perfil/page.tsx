@@ -9,11 +9,8 @@ import {
   actualizarPerfil,
   cambiarPassword,
   subirArchivoPublico,
-  fetchCategoriasSeleccionadas,
-  guardarCategoriasSeleccionadas,
   type PerfilCompleto,
 } from '@/lib/perfil';
-import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
 import { Indicativo } from '@/lib/indicativo';
 import { DANEGROUP } from '@/lib/dane-cities';
 import { useToast, Toast } from '@/components/Toast';
@@ -63,24 +60,11 @@ const GENEROS = [
   { value: 'feminino', label: 'Feminino' },
 ];
 
-const TIPOS_PROVEEDOR = [
-  { value: 'fabricante', label: 'Fabricante' },
-  { value: 'importador', label: 'Importador' },
-];
-
-const EXPERIENCIAS = [
-  { value: '0_6_meses', label: '0 a 6 Meses' },
-  { value: '6_meses_1_anio', label: '6 Meses a 1 Año' },
-  { value: 'mas_1_anio', label: 'Más de un Año' },
-];
-
 export default function PerfilPage() {
   const { mensaje, mostrar } = useToast();
 
   const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
   const [data, setData] = useState<PerfilCompleto | null>(null);
-  const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
-  const [categoriasCheck, setCategoriasCheck] = useState<Set<number>>(new Set());
   const [tab, setTab] = useState<'datos' | 'bodega'>('datos');
 
   const [nombreTiendaTomadoFlag, setNombreTiendaTomadoFlag] = useState(false);
@@ -106,14 +90,8 @@ export default function PerfilPage() {
       }
       setEstado('cargando');
       const uid = sessionData.session.user.id;
-      const [perfil, cats, catsSel] = await Promise.all([
-        fetchPerfilCompleto(uid),
-        fetchCategoriasConSub(),
-        fetchCategoriasSeleccionadas(uid),
-      ]);
+      const perfil = await fetchPerfilCompleto(uid);
       setData(perfil);
-      setCategorias(cats.filter((c) => c.id !== 0));
-      setCategoriasCheck(new Set(catsSel));
       if (perfil?.rolname === 'proveedor') setEstadoProveedor(await fetchEstadoProveedor(uid));
       setEstado('listo');
     });
@@ -183,15 +161,6 @@ export default function PerfilPage() {
     mostrar('Exitoso');
   }
 
-  function toggleCategoria(id: number) {
-    setCategoriasCheck((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   async function actualizarDatos() {
     if (!data) return;
     if (nombreTiendaTomadoFlag) {
@@ -222,7 +191,6 @@ export default function PerfilPage() {
       supplierExperience: data.supplierExperience || '',
       supplierRunsAds: data.supplierRunsAds ?? undefined,
     });
-    if (ok) await guardarCategoriasSeleccionadas(data.id, Array.from(categoriasCheck));
     setGuardando(false);
     mostrar(ok ? 'Actualizado' : 'Error de Servidor');
   }
@@ -469,91 +437,6 @@ export default function PerfilPage() {
             </div>
 
             <Paso3Documentos profileId={data.id} />
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Nombre de tu bodega</label>
-                <input value={data.nombreTienda || ''} onChange={(e) => set('nombreTienda', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Numero contacto de soporte</label>
-                <input value={data.telefono || ''} onChange={(e) => set('telefono', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Correo electrónico soporte</label>
-                <input value={data.contactEmail || ''} onChange={(e) => set('contactEmail', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Ciudad</label>
-                <input
-                  list="ciudades-bodega"
-                  value={data.ciudad || ''}
-                  onChange={(e) => set('ciudad', e.target.value)}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-                <datalist id="ciudades-bodega">
-                  {ciudadesOrdenadas.map((c: any, idx: number) => (
-                    <option key={`${c.code}-${idx}`} value={c.name} />
-                  ))}
-                </datalist>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Dirección de bodega para mensajeria</label>
-                <input value={data.direccion || ''} onChange={(e) => set('direccion', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de Proveedor?</label>
-                <select value={data.supplierType || ''} onChange={(e) => set('supplierType', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">—</option>
-                  {TIPOS_PROVEEDOR.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Tiempo de Experiencia como Proveedor Dropshipping?</label>
-                <select value={data.supplierExperience || ''} onChange={(e) => set('supplierExperience', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">—</option>
-                  {EXPERIENCIAS.map((ex) => (
-                    <option key={ex.value} value={ex.value}>
-                      {ex.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">¿Estás vinculado alguna plataforma de dropshipping?</label>
-                <select
-                  value={data.supplierRunsAds === true ? 'si' : data.supplierRunsAds === false ? 'no' : ''}
-                  onChange={(e) => set('supplierRunsAds', e.target.value === 'si')}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                >
-                  <option value="">—</option>
-                  <option value="si">SI</option>
-                  <option value="no">NO</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-700">Seleccionar la o las categorías del tipo de producto que quiere promocionar</label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {categorias.map((cat) => (
-                    <label key={cat.id} className="flex items-center gap-1.5 text-xs text-gray-700">
-                      <input type="checkbox" checked={categoriasCheck.has(cat.id)} onChange={() => toggleCategoria(cat.id)} />
-                      {cat.title.slice(0, 10)}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 flex justify-end">
-                <button onClick={actualizarDatos} disabled={guardando} className="rounded-full bg-[#198754] px-5 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
-                  {guardando ? 'Guardando…' : 'Actualizar Datos'}
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>
