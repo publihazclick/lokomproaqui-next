@@ -64,8 +64,14 @@ export interface UsuarioAdminRow {
 
 export async function fetchUsuariosAdmin(opts: { search?: string; soloRol?: string; page: number; limit: number }): Promise<{ data: UsuarioAdminRow[]; count: number }> {
   const esProveedores = opts.soloRol === 'proveedor';
+  // OJO: filtrar por una columna de un recurso embebido (roles.name) solo restringe las filas base
+  // si el embed es un INNER JOIN explicito (`roles!inner(name)`). Sin el `!inner`, PostgREST aplica
+  // el filtro dentro del LEFT JOIN y deja `roles: null` en las filas que no matchean, PERO igual
+  // devuelve la fila del perfil -- el filtro por rol quedaba sin efecto real (bug encontrado
+  // 2026-07-24: /config/proveedores no mostraba a nadie con role_id=proveedor).
+  const rolesEmbed = opts.soloRol ? 'roles!inner(name)' : 'roles(name)';
   const columnas =
-    'id, full_name, last_name, phone, city, status, created_at, roles(name)' +
+    `id, full_name, last_name, phone, city, status, created_at, ${rolesEmbed}` +
     (esProveedores ? ', supplier_status, supplier_rejection_reason, supplier_doc_rut_url, supplier_doc_cc_url, supplier_doc_comercio_url' : '');
   let q = opts.soloRol
     ? supabase.from('profiles').select(columnas, { count: 'exact' }).eq('roles.name', opts.soloRol)

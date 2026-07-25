@@ -183,7 +183,7 @@ export default async function InfoPage() {
                 Tu socio confiable en el mundo del dropshipping. ¡Maximiza tus ganancias sin preocuparte por el inventario! Con nosotros, encontrarás productos de alta calidad y una experiencia de compra excepcional.
               </div>
               <div className={styles.frame33} style={{ margin: 'auto' }}>
-                <Link href="/singUp/vendedor/3213692393" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
+                <Link href="/singUp" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
                   Regístrate gratis
                 </Link>
               </div>
@@ -265,7 +265,7 @@ export default async function InfoPage() {
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Proveedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza con tu red de ventas</p>
-              <Link href="/singUp/proveedor/3213692393" className={styles.registroBoxButton}>
+              <Link href="/singUp" className={styles.registroBoxButton}>
                 Registrarme →
               </Link>
               <br />
@@ -277,7 +277,7 @@ export default async function InfoPage() {
             <div className={styles.colorFondo4}>
               <h3 className={styles.registroBoxTitle}>Registro Vendedor</h3>
               <p className={styles.registroBoxSubtitle}>Empieza a generar venta sin invertir</p>
-              <Link href="/singUp/vendedor/3213692393" className={styles.registroBoxButton}>
+              <Link href="/singUp" className={styles.registroBoxButton}>
                 Registrarme →
               </Link>
               <br />
@@ -308,7 +308,7 @@ export default async function InfoPage() {
                   Registrate no <br /> Pierdas Más Dinero
                 </h2>
                 <section style={{ width: '100%', maxWidth: '376px', fontSize: '25px', height: '70px', display: 'inline-block', boxSizing: 'border-box' }}>
-                  <Link href="/singUp/vendedor/3213692393" className={`${styles.btn} ${styles.btnDark} ${styles.customButton}`} style={{ textDecoration: 'none' }}>
+                  <Link href="/singUp" className={`${styles.btn} ${styles.btnDark} ${styles.customButton}`} style={{ textDecoration: 'none' }}>
                     Regístrate gratis
                   </Link>
                 </section>

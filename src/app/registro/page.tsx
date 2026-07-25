@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { departamento } from '@/lib/departamentos';
 import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
-import { Turnstile } from '@/components/Turnstile';
 
 // Port desde src/app/components/registro (Angular): registro de PROVEEDOR unicamente (ver
 // memoria lokomproaqui-nextjs-migration -- la variante "vendedor" de este formulario en
@@ -53,7 +52,6 @@ export default function RegistroPage() {
   const [clave, setClave] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const ciudadesDelDepartamento = useMemo(
     () => departamento.find((d: any) => d.departamento === departamentoSel)?.ciudades ?? [],
@@ -85,6 +83,17 @@ export default function RegistroPage() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
   }
 
+  // Igual que en /singUp: ya no se esconde el error real detras de un mensaje generico (pedido
+  // explicito del usuario 2026-07-24, tras confirmarse por pruebas directas contra Supabase que el
+  // registro backend funciona bien -- lo que fallaba era que el frontend no mostraba la causa real).
+  function mensajeErrorRegistro(mensajeOriginal: string): string {
+    if (mensajeOriginal.includes('already registered')) return 'Ya existe una cuenta con ese correo';
+    if (mensajeOriginal.includes('profiles_phone_key') || mensajeOriginal.includes('phone')) return 'Ya existe una cuenta con ese número de teléfono';
+    if (mensajeOriginal.toLowerCase().includes('password')) return 'La contraseña debe tener mínimo 6 caracteres';
+    if (mensajeOriginal.includes('profiles_referral_code_key') || mensajeOriginal.includes('referral_code')) return 'Ese nombre de bodega ya está en uso, elige otro';
+    return `No pudimos crear tu cuenta: ${mensajeOriginal}`;
+  }
+
   function validarPaso1(): boolean {
     if (!nombreBodega) return alertear('Falta el nombre de tu bodega'), false;
     if (!titular) return alertear('Falta el nombre del titular'), false;
@@ -98,9 +107,9 @@ export default function RegistroPage() {
     if (email !== emailRepetir) return alertear('Los correos no coinciden'), false;
     if (!emailValido(email)) return alertear('Correo inválido'), false;
     if (!clave) return alertear('Falta la contraseña'), false;
+    if (clave.length < 6) return alertear('La contraseña debe tener mínimo 6 caracteres'), false;
     if (clave !== confirmar) return alertear('Las claves no coinciden'), false;
     if (!aceptaTerminos) return alertear('Debes aceptar los términos de privacidad'), false;
-    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) return alertear('Confirma que no eres un robot'), false;
     return true;
   }
 
@@ -116,7 +125,6 @@ export default function RegistroPage() {
       email: email.trim(),
       password: clave,
       options: {
-        captchaToken: captchaToken || undefined,
         data: {
           full_name: titular,
           phone: telefono,
@@ -136,11 +144,7 @@ export default function RegistroPage() {
 
     if (error) {
       setEnviando(false);
-      setCaptchaToken(null);
-      let msg = 'No pudimos crear tu cuenta, intenta de nuevo';
-      if (error.message.includes('already registered')) msg = 'Ya existe una cuenta con ese correo';
-      else if (error.message.includes('profiles_phone_key') || error.message.includes('phone')) msg = 'Ya existe una cuenta con ese número de teléfono';
-      alert(msg);
+      alert(mensajeErrorRegistro(error.message));
       return;
     }
 
@@ -309,10 +313,6 @@ export default function RegistroPage() {
                   términos de privacidad
                 </button>
               </label>
-
-              <div className="flex justify-center">
-                <Turnstile onToken={setCaptchaToken} />
-              </div>
 
               <div className="mt-2 flex gap-2">
                 <button

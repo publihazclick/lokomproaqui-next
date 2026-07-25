@@ -6,10 +6,11 @@ import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
   Wallet, Users, UserPlus, Package, Truck, Landmark, RefreshCw, Settings,
-  GraduationCap, LogOut, Trash2, BookOpen, Video,
+  GraduationCap, LogOut, Trash2, BookOpen, Video, UserCheck,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
+import { useToast, Toast } from '@/components/Toast';
 
 // Port FIEL del header real de Angular (src/app/extra/header) -- a diferencia del SiteHeader
 // simplificado de Fase 2 (paginas publicas), Fase 3 en adelante el usuario pidio que se vea
@@ -51,6 +52,7 @@ const MENUS: MenuItem[] = [
   { Icon: Truck, nombre: 'Generación de Guías', href: '/config/guias', mostrar: (r) => r !== 'visitante' },
   { Icon: Wallet, nombre: 'Mis Cobros', href: '/config/cobros', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Store, nombre: 'Ventas Proveedor', href: '/config/ventasProveedor', mostrar: (r) => r === 'administrador' },
+  { Icon: UserCheck, nombre: 'Aprobar Proveedores', href: '/config/proveedores', mostrar: (r) => r === 'administrador' },
   { Icon: UserPlus, nombre: 'Mis Referidos', href: '/config/referidos', mostrar: (r) => ['administrador', 'subAdministrador', 'lider', 'vendedor'].includes(r) },
   { Icon: Package, nombre: 'Control Inventario', href: '/config/controlInventario', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
   { Icon: Landmark, nombre: 'Módulo Contable', href: '/config/bank/index', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
@@ -92,6 +94,11 @@ export function RealHeader() {
   // instante y despues lo ve saltar al lado correcto. Con este flag, el logo NO se renderiza hasta
   // saber de verdad si hay sesion o no -- aparece una sola vez, ya en su posicion final, nunca salta.
   const [sesionResuelta, setSesionResuelta] = useState(false);
+  // Pedido explicito del usuario 2026-07-24: badge de proveedores pendientes de aprobar ("en_revision")
+  // junto al item "Aprobar Proveedores" del menu, mas notificacion toast en vivo cuando un proveedor
+  // nuevo entra a revision (Supabase Realtime sobre profiles, ver efecto mas abajo).
+  const [proveedoresPendientes, setProveedoresPendientes] = useState(0);
+  const { mensaje: notificacion, mostrar: mostrarNotificacion } = useToast();
 
   useEffect(() => {
     let activo = true;
@@ -144,6 +151,50 @@ export function RealHeader() {
       document.body.style.overflow = '';
     };
   }, [menuAbierto, carritoAbierto]);
+
+  // Badge + notificacion de proveedores nuevos pendientes de aprobar. Solo para administradores.
+  // supplier_status pasa a 'en_revision' via RPC enviar_proveedor_a_revision cuando el proveedor ya
+  // subio el minimo de productos (ver src/lib/proveedorEstado.ts) -- ese es el momento en que
+  // realmente necesita atencion del admin, no apenas se registra (arranca en 'incompleto').
+  useEffect(() => {
+    if (rol !== 'administrador') {
+      setProveedoresPendientes(0);
+      return;
+    }
+    let activo = true;
+
+    async function cargarConteo() {
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('supplier_status', 'en_revision');
+      if (activo) setProveedoresPendientes(count ?? 0);
+    }
+    cargarConteo();
+
+    const canal = supabase
+      .channel('admin-proveedores-en-revision')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload) => {
+          const nuevo = payload.new as { full_name?: string; supplier_status?: string };
+          const anterior = payload.old as { supplier_status?: string };
+          if (nuevo.supplier_status === 'en_revision' && anterior?.supplier_status !== 'en_revision') {
+            setProveedoresPendientes((n) => n + 1);
+            mostrarNotificacion(`Nuevo proveedor para revisar: ${nuevo.full_name ?? 'sin nombre'}`);
+          } else if (anterior?.supplier_status === 'en_revision' && nuevo.supplier_status !== 'en_revision') {
+            setProveedoresPendientes((n) => Math.max(0, n - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      activo = false;
+      supabase.removeChannel(canal);
+    };
+  }, [rol, mostrarNotificacion]);
 
   // "Miembros Acelerador" no usa el patron MenuItem.mostrar(rol) normal a proposito -- depende del
   // flag es_lider_general, no del rol (que se queda en 'vendedor' de siempre), ver nota en
@@ -321,6 +372,11 @@ export function RealHeader() {
                     >
                       <item.Icon className="h-[18px] w-[18px] shrink-0" />
                       {item.nombre}
+                      {item.href === '/config/proveedores' && proveedoresPendientes > 0 && (
+                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+                          {proveedoresPendientes}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
@@ -392,6 +448,8 @@ export function RealHeader() {
           </div>
         </div>
       )}
+
+      <Toast mensaje={notificacion} />
     </>
   );
 }

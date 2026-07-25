@@ -1,19 +1,31 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Eye, EyeOff, Lock, Mail, User, Users, Phone } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, Users, Phone, Store, Truck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
+import { departamento } from '@/lib/departamentos';
 import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
-import { Turnstile } from '@/components/Turnstile';
 
 // Port desde src/app/layout/sign-up (Angular), ruta [[...slug]] para cubrir tanto /singUp como
-// /singUp/:type/:cel (mismo componente en Angular). Se replica el formulario COMPLETO tal cual
-// pidio el usuario -- incluidos 2 campos que en la version actual de Angular no hacen nada
-// (nombre de tienda con chequeo de disponibilidad, indicativo de pais separado del telefono):
-// solo se saca la restriccion de que el correo tenga que ser gmail.com/gmail.es (decision
-// explicita del usuario 2026-07-14, el resto del formulario no cambia de comportamiento).
+// /singUp/:type/:cel (mismo componente en Angular). Es el registro que de verdad usa casi todo
+// el sitio (CTAs de /info, /login, y el link de referido que cada vendedor comparte con
+// /config/perfil -> urlRegistro), asi que el selector de rol y el cel de referido de la URL se
+// preservan tal cual estaban.
+//
+// Pedido explicito del usuario 2026-07-24: el selector Vendedor/Proveedor debe ir AL INICIO del
+// formulario (no como checkbox al final, como estaba) y el formulario debe cambiar de verdad segun
+// cual se elija -- antes ambos roles veian exactamente los mismos campos, sin ninguna de las
+// preguntas de proveedor (tipo, experiencia, plataformas, direccion de recogida) que si existen en
+// /registro. Esos campos y sus mismas claves de metadata (supplier_type, supplier_experience,
+// supplier_linked_platform, supplier_platforms, department, city, address) se replican aca para
+// que el proveedor registrado por esta puerta quede identico al registrado por /registro.
+//
+// BUG REAL encontrado y corregido de paso: el campo "nombre de tienda" (usuUsuario) se validaba en
+// vivo (chequeo de disponibilidad) pero el submit() original NUNCA lo mandaba en el payload de
+// signUp -- se perdia siempre. Se agrega `desired_referral_code` (misma clave que usa /registro)
+// para que si quede guardado.
 export default function SignUpPage({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = use(params);
   const typeRol = slug?.[0]; // 'vendedor' | 'proveedor' | undefined
@@ -22,6 +34,14 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
   const [revisandoSesion, setRevisandoSesion] = useState(true);
   const [dataCabeza, setDataCabeza] = useState<{ referral_code: string | null } | null>(null);
 
+  // Pedido explicito del usuario 2026-07-24: ninguna opcion viene seleccionada por defecto (salvo
+  // que la URL ya traiga el tipo, ej. link de referido /singUp/vendedor/:cel) -- el usuario debe
+  // elegir a proposito antes de poder escribir en el formulario.
+  const [rol, setRol] = useState<'vendedor' | 'proveedor' | null>(
+    typeRol === 'proveedor' ? 'proveedor' : typeRol === 'vendedor' ? 'vendedor' : null
+  );
+
+  // Campos comunes
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [usuUsuario, setUsuUsuario] = useState('');
@@ -33,9 +53,21 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
   const [clave, setClave] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rol, setRol] = useState<'vendedor' | 'proveedor'>(typeRol === 'proveedor' ? 'proveedor' : 'vendedor');
   const [enviando, setEnviando] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  // Campos solo-proveedor (mismas opciones y claves que /registro)
+  const [tipoProveedor, setTipoProveedor] = useState('fabricante');
+  const [tiempoExperiencia, setTiempoExperiencia] = useState('0_6_meses');
+  const [vinculado, setVinculado] = useState<'si' | 'no'>('no');
+  const [plataformas, setPlataformas] = useState('');
+  const [departamentoSel, setDepartamentoSel] = useState(departamento[0]?.departamento ?? '');
+  const [ciudad, setCiudad] = useState('');
+  const [direccion, setDireccion] = useState('');
+
+  const ciudadesDelDepartamento = useMemo(
+    () => departamento.find((d: any) => d.departamento === departamentoSel)?.ciudades ?? [],
+    [departamentoSel]
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -57,8 +89,8 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
       .then(({ data }) => setDataCabeza(data));
   }, [cel]);
 
-  // Mismo chequeo que Angular: busca si el nombre de tienda ya esta tomado (referral_code) --
-  // no bloquea nada mas del formulario, solo muestra el aviso, igual que el original.
+  // Mismo chequeo que antes: busca si el nombre de tienda/bodega ya esta tomado (referral_code) --
+  // no bloquea nada mas del formulario, solo muestra el aviso.
   async function validarUsuario(valor: string) {
     const limpio = valor.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s/g, '');
     setUsuUsuario(limpio);
@@ -74,10 +106,39 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
   }
 
+  // Antes esta funcion escondia CUALQUIER error no reconocido detras de un mensaje generico
+  // ("No pudimos crear tu cuenta, intenta de nuevo") -- eso hacia imposible saber la causa real
+  // (ej. contraseña muy corta, formulario incompleto, o cualquier otro error de Supabase). Ahora
+  // se traducen los casos conocidos y, si no es ninguno, se muestra el mensaje real de Supabase en
+  // vez de ocultarlo -- pedido explicito del usuario 2026-07-24: "necesito que el registro
+  // funcione perfectamente", y para eso hay que poder ver por que falla si vuelve a pasar.
+  function mensajeErrorRegistro(mensajeOriginal: string): string {
+    if (mensajeOriginal.includes('already registered')) return 'Ya existe una cuenta con ese correo';
+    if (mensajeOriginal.includes('profiles_phone_key') || mensajeOriginal.includes('phone')) return 'Ya existe una cuenta con ese número de teléfono';
+    if (mensajeOriginal.toLowerCase().includes('password')) return 'La contraseña debe tener mínimo 6 caracteres';
+    if (mensajeOriginal.includes('profiles_referral_code_key') || mensajeOriginal.includes('referral_code')) return 'Ese nombre de tienda/bodega ya está en uso, elige otro';
+    return `No pudimos crear tu cuenta: ${mensajeOriginal}`;
+  }
+
+  const MENSAJE_FALTA_ROL = 'Debes seleccionar si la cuenta que quieres crear es de vendedor o proveedor antes de diligenciar este formulario';
+
+  // Pedido explicito del usuario 2026-07-24: si intenta escribir en cualquier campo del formulario
+  // sin haber elegido rol todavia, se le avisa y se le quita el foco (no se le deja escribir).
+  function bloquearSiFaltaRol(e: React.FocusEvent<HTMLElement>) {
+    if (!rol) {
+      (e.target as HTMLElement).blur();
+      alert(MENSAJE_FALTA_ROL);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (enviando) return;
 
+    if (!rol) {
+      alert(MENSAJE_FALTA_ROL);
+      return;
+    }
     if (!nombre || !apellido || !telefono || !email || !clave || !confirmar) {
       setEmailError(null);
       alert('Completa todos los campos obligatorios');
@@ -91,8 +152,12 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
       alert('Las claves no coinciden');
       return;
     }
-    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) {
-      alert('Confirma que no eres un robot');
+    if (clave.length < 6) {
+      alert('La contraseña debe tener mínimo 6 caracteres');
+      return;
+    }
+    if (rol === 'proveedor' && (!ciudad || !direccion)) {
+      alert('Completa la ciudad y la dirección de recogida');
       return;
     }
 
@@ -103,24 +168,32 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
       email: email.trim(),
       password: clave,
       options: {
-        captchaToken: captchaToken || undefined,
         data: {
           full_name: nombre,
           last_name: apellido,
           phone: telefono,
+          phone_country_code: indicativo,
           referrer_id: referrerId,
           role_name: rol,
+          desired_referral_code: usuUsuario || undefined,
+          ...(rol === 'proveedor'
+            ? {
+                supplier_type: tipoProveedor,
+                supplier_experience: tiempoExperiencia,
+                supplier_linked_platform: vinculado === 'si',
+                supplier_platforms: vinculado === 'si' ? plataformas : null,
+                department: departamentoSel,
+                city: ciudad,
+                address: direccion,
+              }
+            : {}),
         },
       },
     });
 
     if (error) {
       setEnviando(false);
-      setCaptchaToken(null);
-      let msg = 'No pudimos crear tu cuenta, intenta de nuevo';
-      if (error.message.includes('already registered')) msg = 'Ya existe una cuenta con ese correo';
-      else if (error.message.includes('profiles_phone_key') || error.message.includes('phone')) msg = 'Ya existe una cuenta con ese numero de telefono';
-      alert(msg);
+      alert(mensajeErrorRegistro(error.message));
       return;
     }
 
@@ -159,24 +232,66 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
         </Link>
 
         <div className="rounded-3xl bg-white p-8 shadow-2xl sm:p-10">
-          <h1 className="text-center text-2xl font-extrabold text-gray-900">Registrarme</h1>
+          <h1 className="text-center text-2xl font-extrabold text-gray-900">
+            {rol === 'proveedor' ? 'Registrarme como Proveedor' : rol === 'vendedor' ? 'Registrarme como Vendedor' : 'Registrarme'}
+          </h1>
           {dataCabeza && <p className="mt-1 text-center text-sm font-semibold text-[#02a0e3]">Te invitó {dataCabeza.referral_code}</p>}
-          <p className="mt-1 text-center text-sm text-gray-500">Rellena el siguiente formulario para crear una cuenta</p>
+          <p className="mt-1 text-center text-sm text-gray-500">
+            {rol === 'proveedor'
+              ? 'Tengo productos que otros pueden vender y yo despachar en menos de 48 Horas'
+              : rol === 'vendedor'
+                ? 'Quiero promocionar los productos de lokomproaqui.com para que cada proveedor despache mis pedidos directo a mi cliente y yo recibir mis comisiones'
+                : 'Elige qué tipo de cuenta quieres crear'}
+          </p>
 
-          <form onSubmit={submit} className="mt-6 flex flex-col gap-3.5">
-            <Campo icon={<User className="h-4.5 w-4.5" />} placeholder="Nombre" value={nombre} onChange={setNombre} />
-            <Campo icon={<Users className="h-4.5 w-4.5" />} placeholder="Apellido" value={apellido} onChange={setApellido} />
+          {/* Selector de rol -- lo primero del formulario, cambia los campos que siguen. */}
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setRol('vendedor')}
+              className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-colors ${
+                rol === 'vendedor' ? 'border-[#02a0e3] bg-[#02a0e3]/10 text-[#02a0e3]' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              }`}
+            >
+              <Store className="h-6 w-6" />
+              Vendedor
+            </button>
+            <button
+              type="button"
+              onClick={() => setRol('proveedor')}
+              className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-sm font-bold transition-colors ${
+                rol === 'proveedor' ? 'border-[#02a0e3] bg-[#02a0e3]/10 text-[#02a0e3]' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+              }`}
+            >
+              <Truck className="h-6 w-6" />
+              Proveedor
+            </button>
+          </div>
+
+          <form onSubmit={submit} onFocusCapture={bloquearSiFaltaRol} className="mt-5 flex flex-col gap-3.5">
+            <Campo
+              icon={<User className="h-4.5 w-4.5" />}
+              placeholder={rol === 'proveedor' ? 'Nombre del titular de la bodega' : 'Nombre'}
+              value={nombre}
+              onChange={setNombre}
+            />
+            <Campo
+              icon={<Users className="h-4.5 w-4.5" />}
+              placeholder={rol === 'proveedor' ? 'Apellido del titular de la bodega' : 'Apellido'}
+              value={apellido}
+              onChange={setApellido}
+            />
 
             <div>
               <Campo
                 icon={<User className="h-4.5 w-4.5" />}
-                placeholder="Cómo quieres llamar a tu tienda (Dayana Store)"
+                placeholder={rol === 'proveedor' ? 'Cómo se llama tu bodega' : 'Cómo quieres llamar a tu tienda (Dayana Store)'}
                 value={usuUsuario}
                 onChange={validarUsuario}
               />
               {usuarioTomado && (
                 <p className="mt-1 text-xs font-semibold text-red-600">
-                  El nombre de tu tienda ya se encuentra registrado, por favor utiliza otro.
+                  {rol === 'proveedor' ? 'Ese nombre de bodega ya está registrado, usa otro.' : 'El nombre de tu tienda ya se encuentra registrado, por favor utiliza otro.'}
                 </p>
               )}
             </div>
@@ -197,13 +312,96 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
                 <Phone className="h-4.5 w-4.5 shrink-0 text-gray-400" />
                 <input
                   type="tel"
-                  placeholder="Escribe número del cel"
+                  placeholder={rol === 'proveedor' ? 'Celular para el soporte' : 'Escribe número del cel'}
                   className="w-full text-sm outline-none"
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value.replace(/[^0-9]/g, ''))}
                 />
               </div>
             </div>
+
+            {rol === 'proveedor' && (
+              <>
+                <Selector
+                  label="Tipo de proveedor"
+                  value={tipoProveedor}
+                  onChange={setTipoProveedor}
+                  options={[
+                    { value: 'fabricante', label: 'Fabricante' },
+                    { value: 'importador', label: 'Importador' },
+                  ]}
+                />
+
+                <Selector
+                  label="Tiempo de experiencia como proveedor dropshipping"
+                  value={tiempoExperiencia}
+                  onChange={setTiempoExperiencia}
+                  options={[
+                    { value: '0_6_meses', label: '0 a 6 meses' },
+                    { value: '6_meses_1_anio', label: '6 meses a 1 año' },
+                    { value: 'mas_1_anio', label: 'Más de un año' },
+                  ]}
+                />
+
+                <Selector
+                  label="¿Estás vinculado a alguna plataforma de dropshipping?"
+                  value={vinculado}
+                  onChange={(v) => setVinculado(v as 'si' | 'no')}
+                  options={[
+                    { value: 'no', label: 'NO' },
+                    { value: 'si', label: 'SI' },
+                  ]}
+                />
+                {vinculado === 'si' && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-semibold text-gray-700">¿En cuáles plataformas has estado o estás como proveedor?</span>
+                    <textarea
+                      value={plataformas}
+                      onChange={(e) => setPlataformas(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#02a0e3]"
+                    />
+                  </label>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="mb-1.5 block text-sm font-semibold text-gray-700">Departamento</span>
+                    <select
+                      value={departamentoSel}
+                      onChange={(e) => {
+                        setDepartamentoSel(e.target.value);
+                        setCiudad('');
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-2 py-2.5 text-sm outline-none focus:border-[#02a0e3]"
+                    >
+                      {departamento.map((d: any) => (
+                        <option key={d.departamento} value={d.departamento}>
+                          {d.departamento}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="mb-1.5 block text-sm font-semibold text-gray-700">Ciudad</span>
+                    <select
+                      value={ciudad}
+                      onChange={(e) => setCiudad(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-2 py-2.5 text-sm outline-none focus:border-[#02a0e3]"
+                    >
+                      <option value="">Selecciona</option>
+                      {ciudadesDelDepartamento.map((c: string) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <Campo icon={<Truck className="h-4.5 w-4.5" />} placeholder="Dirección de recogida para el paquete" value={direccion} onChange={setDireccion} />
+              </>
+            )}
 
             <div>
               <Campo
@@ -240,21 +438,6 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
                 value={confirmar}
                 onChange={(e) => setConfirmar(e.target.value)}
               />
-            </div>
-
-            <div className="flex gap-6 py-1">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <input type="checkbox" checked={rol === 'vendedor'} onChange={() => setRol('vendedor')} className="h-4 w-4 accent-[#02a0e3]" />
-                Vendedor
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <input type="checkbox" checked={rol === 'proveedor'} onChange={() => setRol('proveedor')} className="h-4 w-4 accent-[#02a0e3]" />
-                Proveedor
-              </label>
-            </div>
-
-            <div className="flex justify-center">
-              <Turnstile onToken={setCaptchaToken} />
             </div>
 
             <button
@@ -305,5 +488,34 @@ function Campo({
         onBlur={onBlur}
       />
     </div>
+  );
+}
+
+function Selector({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-gray-700">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#02a0e3]"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
