@@ -266,7 +266,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       onClick={inline ? undefined : onClose}
     >
       <div
-        className={inline ? 'w-full rounded-xl border border-gray-200 bg-white' : 'max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-xl'}
+        className={inline ? 'w-full rounded-xl border border-gray-200 bg-white' : 'max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white shadow-xl'}
         onClick={inline ? undefined : (e) => e.stopPropagation()}
       >
         {!inline && (
