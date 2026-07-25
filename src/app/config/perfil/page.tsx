@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Upload, Package, CheckCircle2 } from 'lucide-react';
+import { Upload, Package, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   fetchPerfilCompleto,
@@ -18,7 +18,14 @@ import { EquipoVendedoresInfoModal } from '@/components/EquipoVendedoresInfoModa
 import { PickupAddressCard } from '@/components/PickupAddressCard';
 import { Paso3Documentos } from '@/components/Paso3Documentos';
 import { FormProductoModal } from '@/components/FormProductoModal';
-import { fetchEstadoProveedor, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor } from '@/lib/proveedorEstado';
+import { fetchEstadoProveedor, enviarProveedorARevision, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor } from '@/lib/proveedorEstado';
+
+const ESTADO_PROVEEDOR_ESTILO: Record<string, { bg: string; border: string; color: string }> = {
+  incompleto: { bg: '#f8fafc', border: '#e5e7eb', color: '#374151' },
+  en_revision: { bg: '#fffbeb', border: '#fde68a', color: '#92400e' },
+  aprobado: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+  rechazado: { bg: '#fef2f2', border: '#fecaca', color: '#991b1b' },
+};
 
 // Port 1:1 desde src/app/dashboard-config/components/perfil (Angular, PerfilComponent) -- "Mi
 // Cuenta", pantalla usada por todos los roles logueados. Primera pieza de Fase 5 (panel admin).
@@ -50,6 +57,11 @@ import { fetchEstadoProveedor, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor 
 //   "incompleto" -- ya no habia forma de editar la direccion de recogida o resubir un documento
 //   vencido despues de aprobado. Se agregan aca, dentro de "Datos de bodegas", sin la logica de
 //   gating de onboarding (siempre visibles para cualquier proveedor, sin importar su estado).
+// - Pedido explicito del usuario 2026-07-24 (segunda vuelta): /config/productos vuelve a ser
+//   SOLO subir/editar productos -- el banner de estado de cuenta (incompleto/en_revision/
+//   aprobado/rechazado) y el boton "Enviar a revisión" tambien se mudaron para aca completos,
+//   junto con los pasos. Ver src/app/config/productos/page.tsx (ya sin ninguna logica de
+//   onboarding).
 // - Bug real encontrado y NO corregido a proposito (bajo impacto, cosmetic): `disableBtn` en el
 //   original decide si mostrar "Link para crear mi equipo de vendedores" con una condicion OR que
 //   termina siendo SIEMPRE verdadera sin importar el rol (bug de logica, deberia ser AND). Se
@@ -79,8 +91,15 @@ export default function PerfilPage() {
 
   const [estadoProveedor, setEstadoProveedor] = useState<EstadoProveedor | null>(null);
   const [inlineFormKey, setInlineFormKey] = useState(0);
+  const [pickupConfirmado, setPickupConfirmado] = useState(false);
+  const [documentosOk, setDocumentosOk] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const ciudadesOrdenadas = useMemo(() => [...DANEGROUP].sort((a: any, b: any) => (a.city || '').localeCompare(b.city || '')), []);
+
+  async function cargarEstadoProveedor(uid: string) {
+    setEstadoProveedor(await fetchEstadoProveedor(uid));
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -92,10 +111,23 @@ export default function PerfilPage() {
       const uid = sessionData.session.user.id;
       const perfil = await fetchPerfilCompleto(uid);
       setData(perfil);
-      if (perfil?.rolname === 'proveedor') setEstadoProveedor(await fetchEstadoProveedor(uid));
+      if (perfil?.rolname === 'proveedor') await cargarEstadoProveedor(uid);
       setEstado('listo');
     });
   }, []);
+
+  async function enviarARevision() {
+    if (!data || enviando) return;
+    setEnviando(true);
+    const res = await enviarProveedorARevision(data.id);
+    setEnviando(false);
+    if (!res.ok) {
+      mostrar(res.message || 'No pudimos enviar tu cuenta a revisión');
+      return;
+    }
+    mostrar('¡Listo! Tu cuenta quedó en revisión, te avisamos apenas la aprueben.');
+    await cargarEstadoProveedor(data.id);
+  }
 
   if (estado === 'revisando' || estado === 'cargando') return null;
 
@@ -405,7 +437,49 @@ export default function PerfilPage() {
 
         {tab === 'bodega' && data.rolname === 'proveedor' && (
           <div className="mt-4">
-            <PickupAddressCard profileId={data.id} />
+            {estadoProveedor && (
+              <div
+                className="mb-3 rounded-2xl border p-4"
+                style={{ background: ESTADO_PROVEEDOR_ESTILO[estadoProveedor.status].bg, borderColor: ESTADO_PROVEEDOR_ESTILO[estadoProveedor.status].border }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" style={{ color: ESTADO_PROVEEDOR_ESTILO[estadoProveedor.status].color }} />
+                    <div>
+                      <p className="m-0 text-sm font-bold" style={{ color: ESTADO_PROVEEDOR_ESTILO[estadoProveedor.status].color }}>
+                        {estadoProveedor.status === 'incompleto' && 'Completa los pasos para enviar tu cuenta a revisión'}
+                        {estadoProveedor.status === 'en_revision' && 'Tu cuenta está en revisión'}
+                        {estadoProveedor.status === 'aprobado' && '¡Tu cuenta está aprobada!'}
+                        {estadoProveedor.status === 'rechazado' && 'Tu cuenta fue rechazada'}
+                      </p>
+                      <p className="m-0 mt-1 text-xs leading-relaxed" style={{ color: ESTADO_PROVEEDOR_ESTILO[estadoProveedor.status].color }}>
+                        {estadoProveedor.status === 'incompleto' &&
+                          `Confirma el Paso 1, sube como mínimo ${MINIMO_PRODUCTOS_PROVEEDOR} producto${MINIMO_PRODUCTOS_PROVEEDOR === 1 ? '' : 's'} en el Paso 2 (llevas ${estadoProveedor.productCount}/${MINIMO_PRODUCTOS_PROVEEDOR}) y completa el Paso 3 para poder enviar tu cuenta a revisión. Nuestro equipo la revisa y, una vez aprobada, tu bodega aparece en "Explorar productos" para que los vendedores te encuentren.`}
+                        {estadoProveedor.status === 'en_revision' &&
+                          'Nuestro equipo de proveedores está revisando tus productos. Te avisamos apenas quede aprobada y aparezcas en "Explorar Bodegas".'}
+                        {estadoProveedor.status === 'aprobado' && 'Tu bodega ya aparece en "Explorar Bodegas" para que los vendedores te encuentren.'}
+                        {estadoProveedor.status === 'rechazado' &&
+                          (estadoProveedor.rejectionReason
+                            ? `Motivo: "${estadoProveedor.rejectionReason}". Ajusta tus datos/productos y vuelve a enviar tu cuenta a revisión.`
+                            : 'Ajusta tus datos/productos y vuelve a enviar tu cuenta a revisión.')}
+                      </p>
+                    </div>
+                  </div>
+                  {(estadoProveedor.status === 'incompleto' || estadoProveedor.status === 'rechazado') && (
+                    <button
+                      onClick={enviarARevision}
+                      disabled={enviando || estadoProveedor.productCount < MINIMO_PRODUCTOS_PROVEEDOR || !pickupConfirmado || !documentosOk}
+                      className="shrink-0 rounded-full px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+                      style={{ background: '#02a0e3' }}
+                    >
+                      {enviando ? 'Enviando…' : 'Enviar a revisión'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <PickupAddressCard profileId={data.id} onEstadoCambia={setPickupConfirmado} />
 
             <div className="mb-3 rounded-2xl border border-gray-200 p-4">
               <div className="flex items-center gap-2">
@@ -430,13 +504,13 @@ export default function PerfilPage() {
                   onClose={() => {}}
                   onGuardado={async () => {
                     setInlineFormKey((k) => k + 1);
-                    setEstadoProveedor(await fetchEstadoProveedor(data.id));
+                    await cargarEstadoProveedor(data.id);
                   }}
                 />
               </div>
             </div>
 
-            <Paso3Documentos profileId={data.id} />
+            <Paso3Documentos profileId={data.id} onEstadoCambia={setDocumentosOk} />
           </div>
         )}
       </div>
