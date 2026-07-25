@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
+
+// Pedido explicito del usuario 2026-07-25: cambios reales desplegados no se veian en produccion --
+// el shell HTML de esta pagina (contenido 100% client-side, autenticado) quedaba cacheado en el
+// edge de Vercel (ISR) y no se invalidaba entre deploys sucesivos. Se fuerza render dinamico para
+// que cada visita sirva el HTML mas reciente en vez de una version potencialmente vieja en cache.
+export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { TableProductosPanel } from '@/components/TableProductosPanel';

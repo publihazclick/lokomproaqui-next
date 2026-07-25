@@ -20,6 +20,12 @@ import { Paso3Documentos } from '@/components/Paso3Documentos';
 import { FormProductoModal } from '@/components/FormProductoModal';
 import { fetchEstadoProveedor, enviarProveedorARevision, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor } from '@/lib/proveedorEstado';
 
+// Pedido explicito del usuario 2026-07-25: cambios reales desplegados no se veian en produccion --
+// el shell HTML de esta pagina (contenido 100% client-side, autenticado) quedaba cacheado en el
+// edge de Vercel (ISR) y no se invalidaba entre deploys sucesivos. Se fuerza render dinamico para
+// que cada visita sirva el HTML mas reciente en vez de una version potencialmente vieja en cache.
+export const dynamic = 'force-dynamic';
+
 const ESTADO_PROVEEDOR_ESTILO: Record<string, { bg: string; border: string; color: string }> = {
   incompleto: { bg: '#f8fafc', border: '#e5e7eb', color: '#374151' },
   en_revision: { bg: '#fffbeb', border: '#fde68a', color: '#92400e' },

@@ -1,16 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, Trash2, Copy, Search, Plus } from 'lucide-react';
+import { Eye, Trash2, Copy, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchProductosAdmin, eliminarProducto, duplicarProducto, activarProducto, type ProductoAdminRow, type ModoListaProductos } from '@/lib/productosAdmin';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port de TableProductComponent (Angular) -- tabla compartida por las 3 pestañas de
 // /config/productos. Ver src/lib/productosAdmin.ts para los 2 bugs reales corregidos (filtro roto
 // de la pestaña "Productos" y checkbox "Activar" que leia el valor viejo).
+//
+// Pedido explicito del usuario 2026-07-25: paginacion real "Items per page / X of Y / < >" igual a
+// la captura de referencia, en vez del "Ver mas" -- fetchProductosAdmin ya devolvia `count` exacto
+// (Supabase `{ count: 'exact' }`), simplemente no se usaba.
 
 const ESTADO_LABEL: Record<number, string> = { 0: 'Activo', 1: 'Eliminado', 3: 'Pendiente' };
-const LIMIT = 20;
+const OPCIONES_POR_PAGINA = [10, 25, 50];
 
 interface TableProductosPanelProps {
   modo: ModoListaProductos;
@@ -25,45 +29,45 @@ interface TableProductosPanelProps {
 export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }: TableProductosPanelProps) {
   const { mensaje, mostrar } = useToast();
   const [productos, setProductos] = useState<ProductoAdminRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(0);
-  const [notEmptyPost, setNotEmptyPost] = useState(true);
+  const [porPagina, setPorPagina] = useState(10);
   const [cargando, setCargando] = useState(false);
-  const [cargandoMas, setCargandoMas] = useState(false);
   const [duplicando, setDuplicando] = useState<number | null>(null);
 
   const cargar = useCallback(
-    async (page: number, reemplazar: boolean, search: string) => {
-      const setLoader = page === 0 ? setCargando : setCargandoMas;
-      setLoader(true);
-      const res = await fetchProductosAdmin({ modo, userId, esAdmin, search, page, limit: LIMIT });
-      setLoader(false);
-      setProductos((prev) => {
-        const base = reemplazar ? [] : prev;
-        const existentes = new Set(base.map((p) => p.id));
-        return [...base, ...res.data.filter((p) => !existentes.has(p.id))];
-      });
-      setNotEmptyPost(res.data.length > 0);
+    async (page: number, search: string, limit: number) => {
+      setCargando(true);
+      const res = await fetchProductosAdmin({ modo, userId, esAdmin, search, page, limit });
+      setCargando(false);
+      setProductos(res.data);
+      setTotal(res.count);
       setPage(page);
     },
     [modo, userId, esAdmin],
   );
 
   useEffect(() => {
-    cargar(0, true, '');
+    cargar(0, '', porPagina);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo]);
 
   function buscar() {
-    cargar(0, true, busqueda);
+    cargar(0, busqueda, porPagina);
+  }
+
+  function cambiarPorPagina(valor: number) {
+    setPorPagina(valor);
+    cargar(0, busqueda, valor);
   }
 
   async function eliminar(id: number) {
     if (!window.confirm('Deseas Eliminar Dato')) return;
     const ok = await eliminarProducto(id);
     if (!ok) return mostrar('Error de servidor');
-    setProductos((prev) => prev.filter((p) => p.id !== id));
     mostrar('Eliminado');
+    cargar(page, busqueda, porPagina);
   }
 
   async function duplicar(id: number) {
@@ -73,7 +77,7 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
     setDuplicando(null);
     if (!nuevoId) return mostrar('Problemas actualizar pagina...');
     mostrar('Duplicado exitoso');
-    cargar(0, true, busqueda);
+    cargar(0, busqueda, porPagina);
     onEditar(nuevoId);
   }
 
@@ -82,9 +86,12 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
     if (!checked) return; // el original solo activa, nunca desactiva desde este checkbox
     const ok = await activarProducto(row.id);
     if (!ok) return mostrar('Error pro_estado');
-    setProductos((prev) => prev.filter((p) => p.id !== row.id));
     mostrar('Actualizado pro_estado');
+    cargar(page, busqueda, porPagina);
   }
+
+  const desde = total === 0 ? 0 : page * porPagina + 1;
+  const hasta = Math.min((page + 1) * porPagina, total);
 
   return (
     <div className="mt-3">
@@ -170,13 +177,43 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
         {!cargando && productos.length === 0 && <p className="py-10 text-center text-gray-500">No hay productos para mostrar.</p>}
       </div>
 
-      {!cargando && notEmptyPost && productos.length > 0 && (
-        <div className="mt-4 text-center">
-          <button onClick={() => cargar(page + 1, false, busqueda)} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
-            {cargandoMas ? 'Cargando…' : 'Ver más'}
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-4 text-sm text-gray-600">
+        <div className="flex items-center gap-2">
+          <span>Items per page:</span>
+          <select
+            value={porPagina}
+            onChange={(e) => cambiarPorPagina(Number(e.target.value))}
+            className="rounded border border-gray-300 px-1.5 py-1 text-sm"
+          >
+            {OPCIONES_POR_PAGINA.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+        <span>
+          {desde === hasta ? desde : `${desde}-${hasta}`} of {total}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => cargar(page - 1, busqueda, porPagina)}
+            disabled={page === 0 || cargando}
+            aria-label="Anterior"
+            className="flex h-8 w-8 items-center justify-center rounded-full disabled:opacity-30 hover:bg-gray-100"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => cargar(page + 1, busqueda, porPagina)}
+            disabled={hasta >= total || cargando}
+            aria-label="Siguiente"
+            className="flex h-8 w-8 items-center justify-center rounded-full disabled:opacity-30 hover:bg-gray-100"
+          >
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-      )}
+      </div>
 
       <Toast mensaje={mensaje} />
     </div>
