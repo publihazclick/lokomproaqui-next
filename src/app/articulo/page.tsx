@@ -8,6 +8,7 @@ import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchBannersActivos, clasesPosicionBoton, type BannerImagen } from '@/lib/adminConfig';
 import { formatCOP } from '@/lib/cartStore';
 import { ViewProductosModal } from '@/components/ViewProductosModal';
+import { ProveedorDashboard } from '@/components/ProveedorDashboard';
 
 // Port 1:1 desde src/app/components/pedidos (Angular, mapeado a la ruta /articulo -- naming
 // heredado del backend viejo, PedidosComponent es la pagina de INICIO real del catalogo). Fase 3:
@@ -167,6 +168,14 @@ export default function ArticuloPage() {
       setDataUser(usuario);
       setEstado('cargando');
 
+      // Pedido explicito del usuario 2026-07-25: un proveedor no debe ver el catalogo de compra
+      // (ni el suyo propio ni el de otros proveedores) -- su "Inicio" es un dashboard aparte
+      // (ProveedorDashboard), asi que se salta por completo la carga de banners/categorias/productos.
+      if (usuario.rolname === 'proveedor') {
+        setEstado('listo');
+        return;
+      }
+
       const [cats, listaBanners] = await Promise.all([fetchCategoriasConSub(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
       setCategorias(cats);
       setBanners(listaBanners);
@@ -192,6 +201,10 @@ export default function ArticuloPage() {
   }, [estado, notEmptyPost, cargandoMas, dataUser, cargarPagina]);
 
   if (estado === 'revisando' || estado === 'cargando') return null;
+
+  if (dataUser?.rolname === 'proveedor') {
+    return <ProveedorDashboard userId={dataUser.id} nombre={dataUser.nombre} />;
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">

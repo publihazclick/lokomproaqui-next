@@ -257,6 +257,20 @@ export async function quitarPriceOverride(id: number): Promise<boolean> {
   return !error;
 }
 
+// Resumen para el dashboard de proveedor (/articulo): total de productos activos y cuantos estan
+// agotados (todas sus variantes en stock<=0), para mostrar una alerta accionable sin tener que
+// entrar a "Edición Productos" a revisar uno por uno.
+export async function fetchResumenInventarioProveedor(ownerProfileId: string): Promise<{ totalProductos: number; agotados: number }> {
+  const { data, count } = await supabase
+    .from('products')
+    .select('id, product_variants(stock)', { count: 'exact' })
+    .eq('owner_profile_id', ownerProfileId)
+    .eq('active', true);
+  if (!data) return { totalProductos: count ?? 0, agotados: 0 };
+  const agotados = data.filter((p: any) => (p.product_variants || []).every((v: any) => (v.stock || 0) <= 0)).length;
+  return { totalProductos: count ?? data.length, agotados };
+}
+
 // Equivalente a ProductoService.createPriceArticleFull: agrega de una vez TODOS los productos
 // activos de una bodega/proveedor a la tienda propia del usuario, saltando los que ya tiene.
 export async function agregarTodosLosProductosDeBodega(ownerProfileId: string, userId: string): Promise<boolean> {
