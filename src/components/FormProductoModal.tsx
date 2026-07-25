@@ -273,6 +273,21 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
             </div>
 
+            {/* Pedido explicito del usuario 2026-07-25: al crear, el boton de guardar es este
+                verde centrado "Subir imagen" (reemplaza a "Guardar Cambios", que solo queda para
+                cuando se edita un producto ya existente). */}
+            {esCreacion && (
+              <div className="flex justify-center">
+                <button
+                  onClick={guardar}
+                  disabled={cargando || guardando}
+                  className="rounded-full bg-[#198754] px-6 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {guardando ? 'Subiendo…' : 'Subir imagen'}
+                </button>
+              </div>
+            )}
+
             {/* Pedido explicito del usuario 2026-07-25: al crear, solo se ven foto + precio a
                 distribuidor + precio de venta + categoria (arriba) -- todo lo de aca abajo
                 (nombre, codigo, subcategoria, medidas, colores, descripcion, estado) queda oculto
@@ -482,9 +497,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               {activando ? 'Activando…' : 'Activar Producto / Mostrar a la Comunidad'}
             </button>
           )}
-          <button onClick={guardar} disabled={cargando || guardando} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
-            {guardando ? 'Guardando…' : form.id ? 'Actualizar Cambios' : 'Guardar Cambios'}
-          </button>
+          {!esCreacion && (
+            <button onClick={guardar} disabled={cargando || guardando} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
+              {guardando ? 'Guardando…' : 'Actualizar Cambios'}
+            </button>
+          )}
         </div>
       </div>
       <Toast mensaje={mensaje} />
