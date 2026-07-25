@@ -1,0 +1,122 @@
+'use client';
+
+import { useState } from 'react';
+import Cropper, { type Area } from 'react-easy-crop';
+import { Upload, Check, X } from 'lucide-react';
+import { recortarImagen } from '@/lib/cropImage';
+import { subirArchivoPublico } from '@/lib/perfil';
+
+// Pedido explicito del usuario 2026-07-24: la version vieja de Angular recortaba la foto principal
+// del producto a 1:1 antes de subirla (image-cropper) -- la version Next.js subia la foto cruda tal
+// cual. Se agrega este mismo paso, con react-easy-crop (arrastrar para mover, deslizador para
+// zoom, un boton "Listo") en vez de reconstruir a mano la logica de arrastre/zoom -- misma idea que
+// Angular, interaccion mas simple (nada que aprender: elegis foto, la acomodas, click en Listo).
+
+interface ImageCropUploadProps {
+  value: string | null;
+  onUploaded: (url: string) => void;
+  label: string;
+  subiendo: boolean;
+  setSubiendo: (v: boolean) => void;
+}
+
+export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiendo }: ImageCropUploadProps) {
+  const [archivoOriginal, setArchivoOriginal] = useState<File | null>(null);
+  const [imagenParaRecortar, setImagenParaRecortar] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [areaPixeles, setAreaPixeles] = useState<Area | null>(null);
+
+  function onFileSeleccionado(file: File) {
+    setArchivoOriginal(file);
+    setImagenParaRecortar(URL.createObjectURL(file));
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  }
+
+  function cancelarRecorte() {
+    if (imagenParaRecortar) URL.revokeObjectURL(imagenParaRecortar);
+    setImagenParaRecortar(null);
+    setArchivoOriginal(null);
+  }
+
+  async function confirmarRecorte() {
+    if (!imagenParaRecortar || !areaPixeles || !archivoOriginal) return;
+    setSubiendo(true);
+    try {
+      const archivoRecortado = await recortarImagen(imagenParaRecortar, areaPixeles, archivoOriginal.name);
+      const url = await subirArchivoPublico(archivoRecortado);
+      if (url) onUploaded(url);
+    } finally {
+      setSubiendo(false);
+      cancelarRecorte();
+    }
+  }
+
+  if (imagenParaRecortar) {
+    return (
+      <div className="w-full max-w-xs">
+        <div className="relative h-56 w-full overflow-hidden rounded-lg bg-gray-900">
+          <Cropper
+            image={imagenParaRecortar}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={(_area, areaPx) => setAreaPixeles(areaPx)}
+          />
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={3}
+          step={0.1}
+          value={zoom}
+          onChange={(e) => setZoom(Number(e.target.value))}
+          className="mt-2 w-full"
+          aria-label="Acercar o alejar"
+        />
+        <p className="mt-1 text-center text-xs text-gray-500">Arrastra la foto para acomodarla, usa la barra para acercar</p>
+        <div className="mt-2 flex justify-center gap-2">
+          <button
+            type="button"
+            onClick={confirmarRecorte}
+            disabled={subiendo}
+            className="flex items-center gap-1.5 rounded-full bg-[#02a0e3] px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+          >
+            <Check className="h-3.5 w-3.5" /> {subiendo ? 'Subiendo…' : 'Listo'}
+          </button>
+          <button type="button" onClick={cancelarRecorte} className="flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-xs font-bold text-gray-700">
+            <X className="h-3.5 w-3.5" /> Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Pedido explicito del usuario 2026-07-25 (fidelidad exacta a su captura de referencia): caja
+  // grande de borde punteado a todo el ancho, con la foto ya subida mostrada adentro en vez de un
+  // boton chico aparte -- reemplaza el diseño anterior (foto + boton pill separados).
+  if (value) {
+    return (
+      <label className="relative flex h-56 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400">
+        {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
+        <img src={value} alt="" className="h-full w-full object-contain" />
+        <span className="absolute bottom-2 right-2 rounded border border-gray-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-gray-700">
+          {subiendo ? 'Subiendo…' : 'Cambiar foto'}
+        </span>
+        <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
+      </label>
+    );
+  }
+
+  return (
+    <label className="flex h-56 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-center hover:border-gray-400">
+      <span className="rounded border border-gray-400 px-4 py-1.5 text-sm text-gray-700">
+        {subiendo ? 'Subiendo…' : label}
+      </span>
+      <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
+    </label>
+  );
+}
