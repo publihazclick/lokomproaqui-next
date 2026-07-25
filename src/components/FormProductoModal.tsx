@@ -57,10 +57,6 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   const [subiendoFoto, setSubiendoFoto] = useState<string | null>(null); // 'principal' | color.key | `${color.key}-galeria`
   const [guardando, setGuardando] = useState(false);
   const [activando, setActivando] = useState(false);
-  // Pedido explicito del usuario 2026-07-24: no todas las categorias necesitan subcategoria (ej.
-  // electrónica, hogar) -- el proveedor elige si su producto lleva o no, en vez de que sea siempre
-  // obligatoria. Por defecto "si" (mismo comportamiento de antes).
-  const [tieneSubcategoria, setTieneSubcategoria] = useState(true);
   // Pedido explicito del usuario 2026-07-25: campo cosmetico identico al original -- confirmado que
   // ProductoService nunca lo guarda (ver comentario de alcance recortado arriba), asi que no forma
   // parte de ProductoForm ni se manda al guardar, solo se muestra para fidelidad visual.
@@ -154,7 +150,6 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         return;
       }
       setForm(p);
-      setTieneSubcategoria(!!p.subcategoriaId);
       setCodigosColor(Object.fromEntries(p.colores.map((c) => [c.key, generarCodigoColor()])));
       if (p.categoriaId) setSubcategorias(await fetchSubcategorias(p.categoriaId));
       if (p.tipoTallaId) {
@@ -310,30 +305,19 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     onGuardado();
   }
 
-  function validarParaActivar(): string | null {
-    if (!form.nombre) return 'Falta el nombre del producto';
-    if (!form.categoriaId) return 'Falta la categoría del producto';
-    if (tieneSubcategoria && !form.subcategoriaId) return 'Falta la subcategoría del producto';
-    if (!form.precioDistribuidor) return 'Falta el precio de distribuidor';
-    if (!form.precioVenta) return 'Falta el precio de venta al cliente final';
-    if (!form.alto || !form.ancho || !form.largo || !form.peso) return 'Faltan las dimensiones del producto (alto/ancho/largo/peso)';
-    if (form.colores.length === 0) return 'Falta agregar al menos un color';
-    for (const color of form.colores) {
-      if (!color.foto) return `Falta la foto del color "${color.nombre}"`;
-      if (!color.tallas.some((t) => t.check && t.cantidad > 0)) {
-        return form.tipoTallaId
-          ? `Falta cantidad disponible en al menos una talla del color "${color.nombre}"`
-          : `Falta la cantidad disponible del color "${color.nombre}"`;
-      }
-    }
-    if (!form.descripcion) return 'Falta la descripción del producto';
-    if (!form.foto) return 'Falta la foto principal del producto';
-    return null;
-  }
-
+  // Pedido explicito del usuario 2026-07-25 ("asegurate que todos los botones tienen funcion"):
+  // esta validacion separada quedo desactualizada tras quitar las medidas (alto/ancho/largo/peso)
+  // y la subcategoria obligatoria del formulario -- exigia campos que ya no existen en ninguna
+  // parte de la UI, asi que "Activar Producto" fallaba SIEMPRE, para cualquier producto. Se
+  // unifica con `validar()` (las mismas reglas usadas para "Subir imagen"/"Actualizar Cambios").
   async function activar() {
-    const problema = validarParaActivar();
-    if (problema) return mostrar(problema);
+    const erroresActuales = validar();
+    if (Object.keys(erroresActuales).length > 0) {
+      setErrores(erroresActuales);
+      setIntentoGuardar(true);
+      mostrar('Faltan campos obligatorios, revisa lo marcado en rojo');
+      return;
+    }
     if (!form.id) return;
     setActivando(true);
     const id = await guardarProducto(form, ownerProfileId, esAdmin);
