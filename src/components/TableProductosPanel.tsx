@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Eye, Trash2, Copy, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchProductosAdmin, eliminarProducto, duplicarProducto, activarProducto, type ProductoAdminRow, type ModoListaProductos } from '@/lib/productosAdmin';
+import { fetchProductosAdmin, eliminarProducto, eliminarProductos, duplicarProducto, activarProducto, type ProductoAdminRow, type ModoListaProductos } from '@/lib/productosAdmin';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port de TableProductComponent (Angular) -- tabla compartida por las 3 pestañas de
@@ -35,6 +35,10 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
   const [porPagina, setPorPagina] = useState(10);
   const [cargando, setCargando] = useState(false);
   const [duplicando, setDuplicando] = useState<number | null>(null);
+  // Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda eliminar varios
+  // productos al tiempo"): checkboxes por fila + "seleccionar todos" de la pagina actual.
+  const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
+  const [eliminandoLote, setEliminandoLote] = useState(false);
 
   const cargar = useCallback(
     async (page: number, search: string, limit: number) => {
@@ -44,9 +48,36 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
       setProductos(res.data);
       setTotal(res.count);
       setPage(page);
+      // La seleccion es de la pagina/busqueda actual -- si cambia lo que se ve, se limpia.
+      setSeleccionados(new Set());
     },
     [modo, userId, esAdmin],
   );
+
+  function toggleSeleccion(id: number) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSeleccionarTodos(checked: boolean) {
+    setSeleccionados(checked ? new Set(productos.map((p) => p.id)) : new Set());
+  }
+
+  async function eliminarSeleccionados() {
+    const ids = Array.from(seleccionados);
+    if (!ids.length) return;
+    if (!window.confirm(`¿Deseas eliminar los ${ids.length} productos seleccionados?`)) return;
+    setEliminandoLote(true);
+    const ok = await eliminarProductos(ids);
+    setEliminandoLote(false);
+    if (!ok) return mostrar('Error de servidor');
+    mostrar('Eliminados');
+    cargar(page, busqueda, porPagina);
+  }
 
   useEffect(() => {
     cargar(0, '', porPagina);
@@ -124,6 +155,18 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
             <Plus className="h-5 w-5" />
           </button>
         )}
+        {seleccionados.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">{seleccionados.size} seleccionado{seleccionados.size === 1 ? '' : 's'}</span>
+            <button
+              onClick={eliminarSeleccionados}
+              disabled={eliminandoLote}
+              className="flex items-center gap-1.5 rounded bg-[#dc3545] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> {eliminandoLote ? 'Eliminando…' : 'Eliminar seleccionados'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -133,6 +176,14 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
           <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
+                <th className="py-2 pr-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todos"
+                    checked={productos.length > 0 && seleccionados.size === productos.length}
+                    onChange={(e) => toggleSeleccionarTodos(e.target.checked)}
+                  />
+                </th>
                 <th className="py-2 pr-3">Acciones</th>
                 <th className="py-2 pr-3">Foto</th>
                 <th className="py-2 pr-3">Nombre</th>
@@ -147,6 +198,9 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
             <tbody>
               {productos.map((p) => (
                 <tr key={p.id} className="border-b border-gray-100">
+                  <td className="py-2 pr-3">
+                    <input type="checkbox" aria-label={`Seleccionar ${p.nombre}`} checked={seleccionados.has(p.id)} onChange={() => toggleSeleccion(p.id)} />
+                  </td>
                   <td className="py-2 pr-3">
                     <div className="flex flex-wrap gap-1">
                       <button onClick={() => onEditar(p.id)} className="rounded bg-[#0d6efd] px-2 py-1 text-xs text-white">

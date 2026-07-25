@@ -109,6 +109,15 @@ export async function eliminarProducto(id: number): Promise<boolean> {
   return !error;
 }
 
+// Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda eliminar varios
+// productos al tiempo"): mismo efecto que eliminarProducto, pero para una tanda de ids en una
+// sola consulta (in vez de N updates sueltos).
+export async function eliminarProductos(ids: number[]): Promise<boolean> {
+  if (!ids.length) return true;
+  const { error } = await supabase.from('products').update({ active: false, pending_review: false }).in('id', ids);
+  return !error;
+}
+
 // Activa un producto pendiente (lo hace visible en el catalogo real).
 export async function activarProducto(id: number): Promise<boolean> {
   const { error } = await supabase.from('products').update({ active: true, pending_review: false }).eq('id', id);
