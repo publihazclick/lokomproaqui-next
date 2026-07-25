@@ -62,15 +62,17 @@ const ESTADO_PROVEEDOR_ESTILO: Record<string, { bg: string; border: string; colo
 //   aprobado/rechazado) y el boton "Enviar a revisión" tambien se mudaron para aca completos,
 //   junto con los pasos. Ver src/app/config/productos/page.tsx (ya sin ninguna logica de
 //   onboarding).
+// - Pedido explicito del usuario 2026-07-24 (tercera vuelta): "Datos Iniciales" solo debe mostrar
+//   los campos que el formulario de registro (/registro y /singUp) realmente pide -- se quitan
+//   correo de contacto, redes sociales, fecha de nacimiento y genero (nunca se piden en ningun
+//   registro, quedaban ahi sin ningun uso real en el resto de la app). Ciudad/Direccion solo se
+//   muestran para rolname==='proveedor' porque son las UNICAS con esa pregunta en el registro (el
+//   de vendedor no la hace). Foto y color de tienda quedan a proposito aunque tampoco se piden en
+//   el registro -- son la unica forma de configurarlos y se usan de verdad en la tienda publica.
 // - Bug real encontrado y NO corregido a proposito (bajo impacto, cosmetic): `disableBtn` en el
 //   original decide si mostrar "Link para crear mi equipo de vendedores" con una condicion OR que
 //   termina siendo SIEMPRE verdadera sin importar el rol (bug de logica, deberia ser AND). Se
 //   replica la realidad actual: el boton se muestra siempre.
-
-const GENEROS = [
-  { value: 'masculino', label: 'Masculino' },
-  { value: 'feminino', label: 'Feminino' },
-];
 
 export default function PerfilPage() {
   const { mensaje, mostrar } = useToast();
@@ -80,7 +82,6 @@ export default function PerfilPage() {
   const [tab, setTab] = useState<'datos' | 'bodega'>('datos');
 
   const [nombreTiendaTomadoFlag, setNombreTiendaTomadoFlag] = useState(false);
-  const [emailInvalido, setEmailInvalido] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
@@ -162,12 +163,6 @@ export default function PerfilPage() {
     setNombreTiendaTomadoFlag(await nombreTiendaTomado(limpio, data.id));
   }
 
-  function onEmailChange(valor: string) {
-    set('contactEmail', valor);
-    const dominio = (valor.split('@')[1] || '').toLowerCase();
-    setEmailInvalido(!!valor && dominio !== 'gmail.com' && dominio !== 'gmail.es');
-  }
-
   async function copiar(texto: string, etiqueta: string) {
     if (!data?.telefono) {
       mostrar('Debe registrar un número de teléfono en su perfil antes de compartir su tienda');
@@ -199,10 +194,6 @@ export default function PerfilPage() {
       mostrar('Error tenemos problemas en el formulario por favor revisar gracias');
       return;
     }
-    if (emailInvalido) {
-      mostrar('Error tenemos problemas en el formulario por favor revisar gracias');
-      return;
-    }
     setGuardando(true);
     const ok = await actualizarPerfil(data.id, {
       nombre: data.nombre || '',
@@ -212,16 +203,7 @@ export default function PerfilPage() {
       indicativo: data.indicativo,
       ciudad: data.ciudad || '',
       direccion: data.direccion || '',
-      contactEmail: data.contactEmail || '',
-      facebookUrl: data.facebookUrl || '',
-      instagramUrl: data.instagramUrl || '',
-      youtubeUrl: data.youtubeUrl || '',
-      fechaNacimiento: data.fechaNacimiento || '',
-      genero: data.genero || '',
       colorTienda: data.colorTienda || '',
-      supplierType: data.supplierType || '',
-      supplierExperience: data.supplierExperience || '',
-      supplierRunsAds: data.supplierRunsAds ?? undefined,
     });
     setGuardando(false);
     mostrar(ok ? 'Actualizado' : 'Error de Servidor');
@@ -346,59 +328,37 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Ciudad</label>
-              <input
-                list="ciudades-perfil"
-                value={data.ciudad || ''}
-                onChange={(e) => set('ciudad', e.target.value)}
-                placeholder="Buscar Ciudad"
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-              <datalist id="ciudades-perfil">
-                {ciudadesOrdenadas.map((c: any, idx: number) => (
-                  <option key={`${c.code}-${idx}`} value={c.name} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Dirección</label>
-              <input value={data.direccion || ''} onChange={(e) => set('direccion', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
+            {/* Ciudad/Dirección solo se piden en el registro de PROVEEDOR (/registro y /singUp con
+                rol proveedor) -- un vendedor nunca las diligencia al registrarse, asi que no se
+                muestran para ese rol aca. */}
+            {data.rolname === 'proveedor' && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Ciudad</label>
+                  <input
+                    list="ciudades-perfil"
+                    value={data.ciudad || ''}
+                    onChange={(e) => set('ciudad', e.target.value)}
+                    placeholder="Buscar Ciudad"
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <datalist id="ciudades-perfil">
+                    {ciudadesOrdenadas.map((c: any, idx: number) => (
+                      <option key={`${c.code}-${idx}`} value={c.name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Dirección</label>
+                  <input value={data.direccion || ''} onChange={(e) => set('direccion', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                </div>
+              </>
+            )}
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Correo Electronico</label>
-              <input value={data.contactEmail || ''} onChange={(e) => onEmailChange(e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              {emailInvalido && <p className="mt-1 rounded bg-red-100 px-2 py-1 text-xs text-red-700">El Email Solo Seran Correos Con Dominio Gmail</p>}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Fecha Nacimiento</label>
-              <input type="date" value={data.fechaNacimiento || ''} onChange={(e) => set('fechaNacimiento', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Url de Facebook</label>
-              <input value={data.facebookUrl || ''} onChange={(e) => set('facebookUrl', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Url de Instagram</label>
-              <input value={data.instagramUrl || ''} onChange={(e) => set('instagramUrl', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Url de youtube</label>
-              <input value={data.youtubeUrl || ''} onChange={(e) => set('youtubeUrl', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Genero</label>
-              <select value={data.genero || ''} onChange={(e) => set('genero', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                <option value="">—</option>
-                {GENEROS.map((g) => (
-                  <option key={g.value} value={g.value}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Foto y color de tienda NO se piden en ningun formulario de registro, pero se quedan
+                aca a proposito (pedido explicito del usuario 2026-07-24): se usan de verdad en la
+                tienda publica y esta es la UNICA pantalla donde se pueden configurar -- quitarlas
+                dejaria a todo proveedor/vendedor sin forma de subir su foto o elegir su color. */}
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">Color de tu tienda</label>
               <input type="color" value={data.colorTienda || '#02a0e3'} onChange={(e) => set('colorTienda', e.target.value)} className="h-10 w-full rounded border border-gray-300" />
