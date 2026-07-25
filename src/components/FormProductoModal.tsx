@@ -71,6 +71,13 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // para eso en product_variants, asi que se genera y guarda solo en memoria (codigosColor).
   const [nuevoColorChip, setNuevoColorChip] = useState('');
   const [codigosColor, setCodigosColor] = useState<Record<string, string>>({});
+  // Pedido explicito del usuario 2026-07-25: "Tipo de medida" ahora tiene 2 opciones fijas ademas de
+  // las reales de la base de datos -- "Producto sin talla" (una sola Cantidad disponible, como ya
+  // funcionaba) y "Talla única" (una sola caja pero rotulada "Talla única", para que quede claro que
+  // SI es una talla, solo que unica -- no hay una talla real "Unica" en la base de datos, asi que
+  // esto es puramente de interfaz: en ambos casos se guarda tipoTallaId=null y una sola variante sin
+  // size_id, la diferencia es solo el rotulo que ve el proveedor).
+  const [modoTalla, setModoTalla] = useState<'ninguno' | 'unica' | 'real'>('ninguno');
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -97,7 +104,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       setTieneSubcategoria(!!p.subcategoriaId);
       setCodigosColor(Object.fromEntries(p.colores.map((c) => [c.key, generarCodigoColor()])));
       if (p.categoriaId) setSubcategorias(await fetchSubcategorias(p.categoriaId));
-      if (p.tipoTallaId) setTallasDisponibles(await fetchTallasPorTipo(p.tipoTallaId));
+      if (p.tipoTallaId) {
+        setModoTalla('real');
+        setTallasDisponibles(await fetchTallasPorTipo(p.tipoTallaId));
+      }
       setCargando(false);
     });
   }, [productoId]);
@@ -118,15 +128,20 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     }));
   }
 
-  async function onCambiarTipoMedida(tipoId: number) {
-    set('tipoTallaId', tipoId);
-    if (!tipoId) {
+  async function onCambiarTipoMedida(valor: string) {
+    // "sin_talla"/"unica" no son tipos reales de la base de datos -- se guardan como
+    // tipoTallaId=null (ver comentario de modoTalla arriba), solo cambia el rotulo mostrado.
+    if (valor === 'sin_talla' || valor === 'unica') {
+      setModoTalla(valor === 'unica' ? 'unica' : 'ninguno');
       setTallasDisponibles([]);
+      set('tipoTallaId', null);
       return;
     }
+    const tipoId = Number(valor);
+    setModoTalla('real');
     const tallas = await fetchTallasPorTipo(tipoId);
     setTallasDisponibles(tallas);
-    setForm((prev) => ({ ...prev, colores: mergeColoresConTallas(prev.colores, tallas) }));
+    setForm((prev) => ({ ...prev, tipoTallaId: tipoId, colores: mergeColoresConTallas(prev.colores, tallas) }));
   }
 
   function generarCodigoColor(): string {
@@ -149,7 +164,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       nombre,
       foto: null,
       galeria: [],
-      tallas: form.tipoTallaId
+      tallas: modoTalla === 'real'
         ? tallasDisponibles.map((t) => ({ tallaId: t.id, nombre: t.nombre, check: false, cantidad: 0 }))
         : [{ tallaId: 0, nombre: '', check: true, cantidad: 0 }],
     };
@@ -392,8 +407,13 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de medida</label>
-                <select value={form.tipoTallaId ?? ''} onChange={(e) => onCambiarTipoMedida(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
-                  <option value="">Selecciona…</option>
+                <select
+                  value={form.tipoTallaId ? String(form.tipoTallaId) : modoTalla === 'unica' ? 'unica' : 'sin_talla'}
+                  onChange={(e) => onCambiarTipoMedida(e.target.value)}
+                  className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                >
+                  <option value="sin_talla">Producto sin talla</option>
+                  <option value="unica">Talla única</option>
                   {tiposTalla.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.nombre}
@@ -437,7 +457,6 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 <p className="mb-2 text-sm font-semibold text-gray-800">Lista Colores</p>
                 <div className="flex flex-wrap gap-4">
                   {form.colores.map((color) => {
-                    const mostrarTallas = !!form.tipoTallaId;
                     return (
                       <div key={color.key} className="w-full max-w-sm rounded-lg border border-gray-200 p-4 sm:w-[380px]">
                         <label className="mb-1 block text-xs font-medium text-gray-700">Color</label>
@@ -463,19 +482,19 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           </label>
                         </div>
 
-                        {mostrarTallas ? (
+                        {modoTalla === 'real' ? (
                           <div className="mt-3 grid grid-cols-3 gap-2">
                             {color.tallas.map((t) => (
                               <div key={t.tallaId}>
                                 <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-700">
                                   <input type="checkbox" checked={t.check} onChange={(e) => actualizarTalla(color.key, t.tallaId, { check: e.target.checked })} />
-                                  {t.nombre}
+                                  Talla {t.nombre}
                                 </label>
                                 <input
                                   type="number"
                                   value={t.cantidad}
                                   onChange={(e) => actualizarTalla(color.key, t.tallaId, { cantidad: Number(e.target.value) })}
-                                  placeholder="Cantidad dispon"
+                                  placeholder="Cantidad disponible"
                                   className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs"
                                 />
                               </div>
@@ -483,11 +502,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           </div>
                         ) : (
                           <div className="mt-3">
-                            <label className="mb-1 block text-xs font-medium text-gray-700">Cantidad disponible</label>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">{modoTalla === 'unica' ? 'Talla única' : 'Cantidad disponible'}</label>
                             <input
                               type="number"
                               value={color.tallas[0]?.cantidad ?? 0}
                               onChange={(e) => actualizarCantidadSinTalla(color.key, Number(e.target.value))}
+                              placeholder="Cantidad disponible"
                               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
                             />
                           </div>
