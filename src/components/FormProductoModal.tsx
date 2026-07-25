@@ -11,6 +11,7 @@ import {
   guardarProducto,
   activarProducto,
   productoFormVacio,
+  derivarTallasLibres,
   type ProductoForm,
   type ColorForm,
   type OpcionSimple,
@@ -73,7 +74,21 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // SI es una talla, solo que unica -- no hay una talla real "Unica" en la base de datos, asi que
   // esto es puramente de interfaz: en ambos casos se guarda tipoTallaId=null y una sola variante sin
   // size_id, la diferencia es solo el rotulo que ve el proveedor).
-  const [modoTalla, setModoTalla] = useState<'ninguno' | 'unica' | 'real'>('ninguno');
+  const [modoTalla, setModoTalla] = useState<'ninguno' | 'unica' | 'real' | 'libre'>('ninguno');
+  // Generalizacion 2026-07-25, pedido explicito del usuario ("que se pueda subir cualquier tipo
+  // de producto y que no cambie demasiado el flujo"): antes TODO producto necesitaba un "color"
+  // (aunque fuera un producto sin variantes reales), y la "talla" solo podia venir del catalogo
+  // fijo de ropa/calzado. Ahora: `tieneVariantes` decide si el producto tiene un primer eje en
+  // absoluto (si no, una sola "Cantidad disponible" y listo); si lo tiene, su nombre es editable
+  // (form.variante1Label, ya no fijo "Color") y puede tener un segundo eje opcional que viene del
+  // catalogo real de tallas (modoTalla='real', igual que antes) O de valores que el proveedor
+  // escribe el mismo (modoTalla='libre', para cualquier cosa que no sea ropa/calzado: capacidad,
+  // sabor, presentacion...). Mismo shape de datos por debajo (product_variants.color/size_id +
+  // las 2 columnas nuevas variant1_label/variant2_label/size_label, migracion 079) -- el resto del
+  // sistema (carrito, pedidos, comisiones) no se entera del cambio.
+  const [tieneVariantes, setTieneVariantes] = useState(false);
+  const [nuevaTallaLibreChip, setNuevaTallaLibreChip] = useState('');
+  const [siguienteIdTallaLibre, setSiguienteIdTallaLibre] = useState(-1);
   // Pedido explicito del usuario 2026-07-25: todos los campos del flujo son obligatorios salvo "URL
   // de medios drive" y "Sub Categoría" -- no se deja guardar si falta algo, y el campo que falta se
   // marca en rojo con su mensaje. `errores` se calcula al intentar guardar; una vez que hay un
@@ -99,32 +114,45 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     if (!form.precioVenta) errs.precioVenta = 'Falta el precio sugerido de venta';
     if (!form.categoriaId) errs.categoriaId = 'Falta la categoría';
     if (!esCreacion) {
-      if (!(form.colores[0]?.nombre || '').trim()) errs.colorPrincipal = 'Falta el color de la foto principal';
       if (!form.nombre.trim()) errs.nombre = 'Falta el nombre del producto';
       if (!form.alto) errs.alto = 'Falta el alto empacado';
       if (!form.ancho) errs.ancho = 'Falta el ancho empacado';
       if (!form.largo) errs.largo = 'Falta el largo empacado';
       if (!form.peso) errs.peso = 'Falta el peso empacado';
-      if (form.colores.length === 0) {
-        errs.colores = 'Falta agregar al menos un color';
+
+      if (!tieneVariantes) {
+        // Producto sin variantes: una sola cantidad, sin pedir nombre de nada.
+        const cantidad = form.colores[0]?.tallas?.[0]?.cantidad || 0;
+        if (!(cantidad > 0)) errs.cantidadSimple = 'Falta la cantidad disponible';
       } else {
-        for (const color of form.colores) {
-          if (!color.nombre.trim()) errs[`colorNombre:${color.key}`] = 'Falta el nombre del color';
-          if (!color.foto) errs[`colorFoto:${color.key}`] = 'Falta la foto de este color';
-          if (modoTalla === 'real') {
-            // Pedido explicito del usuario 2026-07-25: cada talla que se marca obliga a poner su
-            // cantidad -- no alcanza con que UNA cualquiera tenga cantidad, todas las marcadas.
-            const algunaMarcada = color.tallas.some((t) => t.check);
-            if (!algunaMarcada) {
-              errs[`colorCantidad:${color.key}`] = 'Selecciona al menos una talla disponible';
-            } else {
-              for (const t of color.tallas) {
-                if (t.check && !(t.cantidad > 0)) errs[`colorTalla:${color.key}:${t.tallaId}`] = 'Falta la cantidad';
+        const etiqueta1 = (form.variante1Label || 'variante').trim();
+        if (!form.variante1Label.trim()) errs.variante1Label = 'Falta ponerle nombre a esta variante';
+        if (!(form.colores[0]?.nombre || '').trim()) errs.colorPrincipal = `Falta el ${etiqueta1.toLowerCase()} de la foto principal`;
+        if (form.colores.length === 0) {
+          errs.colores = `Falta agregar al menos un valor de ${etiqueta1}`;
+        } else {
+          for (const color of form.colores) {
+            if (!color.nombre.trim()) errs[`colorNombre:${color.key}`] = 'Falta el nombre';
+            if (!color.foto) errs[`colorFoto:${color.key}`] = 'Falta la foto';
+            if (modoTalla === 'real' || modoTalla === 'libre') {
+              // Pedido explicito del usuario 2026-07-25: cada valor que se marca obliga a poner su
+              // cantidad -- no alcanza con que UNO cualquiera tenga cantidad, todos los marcados.
+              const algunaMarcada = color.tallas.some((t) => t.check);
+              if (!algunaMarcada) {
+                errs[`colorCantidad:${color.key}`] = `Selecciona al menos un valor de ${form.variante2Label || 'la segunda variante'} disponible`;
+              } else {
+                for (const t of color.tallas) {
+                  if (t.check && !(t.cantidad > 0)) errs[`colorTalla:${color.key}:${t.tallaId}`] = 'Falta la cantidad';
+                }
               }
+            } else if (!color.tallas.some((t) => t.check && t.cantidad > 0)) {
+              errs[`colorCantidad:${color.key}`] = 'Falta la cantidad disponible';
             }
-          } else if (!color.tallas.some((t) => t.check && t.cantidad > 0)) {
-            errs[`colorCantidad:${color.key}`] = 'Falta la cantidad disponible';
           }
+        }
+        if (modoTalla === 'libre') {
+          if (!form.variante2Label || !form.variante2Label.trim()) errs.variante2Label = 'Falta ponerle nombre a esta segunda variante';
+          if (tallasDisponibles.length === 0) errs.tallasLibres = 'Agrega al menos un valor';
         }
       }
       if (!form.descripcion.trim()) errs.descripcion = 'Falta la descripción detallada';
@@ -168,15 +196,47 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         return;
       }
       setForm(p);
+      setTieneVariantes(p.colores.length > 0 && !!p.colores[0]?.nombre?.trim());
       setCodigosColor(Object.fromEntries(p.colores.map((c) => [c.key, generarCodigoColor()])));
       if (p.categoriaId) setSubcategorias(await fetchSubcategorias(p.categoriaId));
       if (p.tipoTallaId) {
         setModoTalla('real');
         setTallasDisponibles(await fetchTallasPorTipo(p.tipoTallaId));
+      } else if (p.variante2Label) {
+        setModoTalla('libre');
+        const libres = derivarTallasLibres(p.colores);
+        setTallasDisponibles(libres);
+        setSiguienteIdTallaLibre(libres.reduce((min, t) => Math.min(min, t.id), 0) - 1);
       }
       setCargando(false);
     });
   }, [productoId]);
+
+  function onToggleTieneVariantes(valor: boolean) {
+    setTieneVariantes(valor);
+    if (!valor) {
+      // Producto sin variantes: se colapsa todo a una sola cantidad, sin nombre de nada.
+      const cantidadActual = form.colores[0]?.tallas?.[0]?.cantidad || 0;
+      setForm((prev) => ({
+        ...prev,
+        variante2Label: null,
+        colores: [{ key: 'sin-variante', nombre: '', foto: prev.foto, galeria: [], tallas: [{ tallaId: 0, nombre: '', check: true, cantidad: cantidadActual }] }],
+      }));
+      set('tipoTallaId', null);
+      setModoTalla('ninguno');
+      setTallasDisponibles([]);
+    } else {
+      // Quita el "color" implicito vacio (nombre '') que representaba "sin variantes", si existia.
+      setForm((prev) => ({ ...prev, colores: prev.colores.filter((c) => c.nombre.trim() !== '') }));
+    }
+  }
+
+  function actualizarCantidadUnica(cantidad: number) {
+    setForm((prev) => ({
+      ...prev,
+      colores: [{ key: prev.colores[0]?.key || 'sin-variante', nombre: '', foto: prev.foto, galeria: [], tallas: [{ tallaId: 0, nombre: '', check: true, cantidad }] }],
+    }));
+  }
 
   async function onCambiarCategoria(catId: number) {
     set('categoriaId', catId);
@@ -201,13 +261,49 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       setModoTalla(valor === 'unica' ? 'unica' : 'ninguno');
       setTallasDisponibles([]);
       set('tipoTallaId', null);
+      set('variante2Label', null);
+      return;
+    }
+    if (valor === 'libre') {
+      setModoTalla('libre');
+      set('tipoTallaId', null);
+      if (!form.variante2Label) set('variante2Label', '');
       return;
     }
     const tipoId = Number(valor);
     setModoTalla('real');
     const tallas = await fetchTallasPorTipo(tipoId);
     setTallasDisponibles(tallas);
-    setForm((prev) => ({ ...prev, tipoTallaId: tipoId, colores: mergeColoresConTallas(prev.colores, tallas) }));
+    setForm((prev) => ({
+      ...prev,
+      tipoTallaId: tipoId,
+      variante2Label: tiposTalla.find((t) => t.id === tipoId)?.nombre || null,
+      colores: mergeColoresConTallas(prev.colores, tallas),
+    }));
+  }
+
+  // Pedido explicito del usuario 2026-07-25: cuando el segundo eje es libre (no catalogo real),
+  // el proveedor escribe sus propios valores (ej "64GB", "128GB") igual que escribe colores --
+  // mismo patron de chip, cada valor nuevo recibe un id local negativo estable y se agrega a
+  // TODAS las tarjetas de color ya creadas (mergeColoresConTallas, reusada tal cual).
+  function agregarTallaLibreChip() {
+    const nombre = nuevaTallaLibreChip.trim();
+    if (!nombre) return;
+    if (tallasDisponibles.some((t) => t.nombre.toLowerCase() === nombre.toLowerCase())) {
+      setNuevaTallaLibreChip('');
+      return;
+    }
+    const nuevasTallas = [...tallasDisponibles, { id: siguienteIdTallaLibre, nombre }];
+    setTallasDisponibles(nuevasTallas);
+    setSiguienteIdTallaLibre((prev) => prev - 1);
+    setForm((prev) => ({ ...prev, colores: mergeColoresConTallas(prev.colores, nuevasTallas) }));
+    setNuevaTallaLibreChip('');
+  }
+
+  function quitarTallaLibre(id: number) {
+    const nuevasTallas = tallasDisponibles.filter((t) => t.id !== id);
+    setTallasDisponibles(nuevasTallas);
+    setForm((prev) => ({ ...prev, colores: prev.colores.map((c) => ({ ...c, tallas: c.tallas.filter((t) => t.tallaId !== id) })) }));
   }
 
   function generarCodigoColor(): string {
@@ -224,7 +320,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         nombre,
         foto: form.foto,
         galeria: [],
-        tallas: modoTalla === 'real'
+        tallas: modoTalla === 'real' || modoTalla === 'libre'
           ? tallasDisponibles.map((t) => ({ tallaId: t.id, nombre: t.nombre, check: false, cantidad: 0 }))
           : [{ tallaId: 0, nombre: '', check: true, cantidad: 0 }],
       };
@@ -251,7 +347,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       nombre,
       foto: null,
       galeria: [],
-      tallas: modoTalla === 'real'
+      tallas: modoTalla === 'real' || modoTalla === 'libre'
         ? tallasDisponibles.map((t) => ({ tallaId: t.id, nombre: t.nombre, check: false, cantidad: 0 }))
         : [{ tallaId: 0, nombre: '', check: true, cantidad: 0 }],
     };
@@ -455,19 +551,69 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 distribuidor/Precio sugerido de venta, Tipo de medida) -- "URL DE MEDIOS DRIVE" es
                 cosmetico nada mas (confirmado en el original que ProductoService nunca lo guarda),
                 se muestra igual mas no se manda al guardar. */}
+            {/* Generalizacion 2026-07-25: antes TODO producto necesitaba un "color" para poder
+                guardar una cantidad, aunque fuera un libro o un gadget de una sola presentacion.
+                Esta pregunta decide si el producto tiene variantes en absoluto -- "No" deja solo
+                una cantidad simple mas abajo, sin pedir ningun nombre. */}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">¿Este producto tiene variantes? (color, sabor, presentación, talla…)</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleTieneVariantes(false)}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${!tieneVariantes ? 'bg-[#0d6efd] text-white' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  No, es un solo producto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleTieneVariantes(true)}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-bold ${tieneVariantes ? 'bg-[#0d6efd] text-white' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  Sí, tiene variantes
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Código</label>
                 <input value={form.codigo} disabled className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm" />
               </div>
-              <div className="sm:col-span-2">
-                {/* Pedido explicito del usuario 2026-07-25: antes de Nombre, el color de la foto
-                    principal ya subida -- se convierte en el primer color de "Lista Colores" (con
-                    esa misma foto), para no tener que subirla de nuevo mas abajo. */}
-                <label className="mb-1 block text-xs font-medium text-gray-700">Color de la foto principal</label>
-                <input value={form.colores[0]?.nombre ?? ''} onChange={(e) => onColorPrincipalChange(e.target.value)} className={claseInput('colorPrincipal')} />
-                <MensajeError campo="colorPrincipal" />
-              </div>
+              {tieneVariantes ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">Nombre de esta variante</label>
+                    <input
+                      value={form.variante1Label}
+                      onChange={(e) => set('variante1Label', e.target.value)}
+                      placeholder="Color, Sabor, Presentación…"
+                      className={claseInput('variante1Label')}
+                    />
+                    <MensajeError campo="variante1Label" />
+                  </div>
+                  <div>
+                    {/* Pedido explicito del usuario 2026-07-25: antes de Nombre, el valor de la
+                        foto principal ya subida -- se convierte en el primer valor de "Opciones
+                        de {variante1Label}" (con esa misma foto), para no tener que subirla de
+                        nuevo mas abajo. */}
+                    <label className="mb-1 block text-xs font-medium text-gray-700">{form.variante1Label || 'Color'} de la foto principal</label>
+                    <input value={form.colores[0]?.nombre ?? ''} onChange={(e) => onColorPrincipalChange(e.target.value)} className={claseInput('colorPrincipal')} />
+                    <MensajeError campo="colorPrincipal" />
+                  </div>
+                </>
+              ) : (
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Cantidad disponible</label>
+                  <input
+                    type="number"
+                    value={form.colores[0]?.tallas?.[0]?.cantidad || ''}
+                    onChange={(e) => actualizarCantidadUnica(Number(e.target.value))}
+                    className={claseInput('cantidadSimple')}
+                  />
+                  <MensajeError campo="cantidadSimple" />
+                </div>
+              )}
               <div className="sm:col-span-3">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
                 <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={claseInput('nombre')} />
@@ -513,22 +659,25 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 <MensajeError campo="precioVenta" />
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de medida</label>
-                <select
-                  value={form.tipoTallaId ? String(form.tipoTallaId) : modoTalla === 'unica' ? 'unica' : 'sin_talla'}
-                  onChange={(e) => onCambiarTipoMedida(e.target.value)}
-                  className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
-                >
-                  <option value="sin_talla">Producto sin talla</option>
-                  <option value="unica">Talla única</option>
-                  {tiposTalla.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {tieneVariantes && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de medida</label>
+                  <select
+                    value={form.tipoTallaId ? String(form.tipoTallaId) : modoTalla === 'unica' ? 'unica' : modoTalla === 'libre' ? 'libre' : 'sin_talla'}
+                    onChange={(e) => onCambiarTipoMedida(e.target.value)}
+                    className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                  >
+                    <option value="sin_talla">Producto sin talla</option>
+                    <option value="unica">Talla única</option>
+                    <option value="libre">Escribir mis propias opciones (capacidad, sabor…)</option>
+                    {tiposTalla.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Pedido explicito del usuario 2026-07-25: dimensiones del producto YA EMPACADO --
                   con esto se puede cotizar el flete real de cada pedido segun el paquete, en vez de
@@ -555,16 +704,56 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
             </div>
 
+            {tieneVariantes && modoTalla === 'libre' && (
+              <div className="rounded border border-gray-200 p-3">
+                <label className="mb-1 block text-xs font-medium text-gray-700">Nombre de esta segunda variante</label>
+                <input
+                  value={form.variante2Label ?? ''}
+                  onChange={(e) => set('variante2Label', e.target.value)}
+                  placeholder="Capacidad, Presentación, Talla…"
+                  className={claseInput('variante2Label')}
+                />
+                <MensajeError campo="variante2Label" />
+
+                <label className="mb-1 mt-3 block text-xs font-medium text-gray-700">Valores disponibles</label>
+                <div className={`flex flex-wrap items-center gap-1.5 rounded border px-2 py-1.5 ${errores.tallasLibres ? 'border-red-500' : 'border-gray-300'}`}>
+                  {tallasDisponibles.map((t) => (
+                    <span key={t.id} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+                      {t.nombre}
+                      <button type="button" onClick={() => quitarTallaLibre(t.id)} aria-label={`Quitar ${t.nombre}`} className="text-gray-400 hover:text-gray-700">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    value={nuevaTallaLibreChip}
+                    onChange={(e) => setNuevaTallaLibreChip(e.target.value.replace(',', ''))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        agregarTallaLibreChip();
+                      }
+                    }}
+                    placeholder={`Nuevo valor de ${form.variante2Label || 'esta variante'}…`}
+                    className="min-w-[100px] flex-1 border-none px-1 py-1 text-sm outline-none"
+                  />
+                </div>
+                <MensajeError campo="tallasLibres" />
+              </div>
+            )}
+
             {/* Pedido explicito del usuario 2026-07-25: escribir un color y darle Enter/coma lo
                 agrega como chip y crea su tarjeta en "Lista Colores", identico a la captura de
                 referencia. Cada tarjeta trae tallas (si el producto tiene Tipo de medida) o solo
-                una cantidad disponible (si no). */}
+                una cantidad disponible (si no). Generalizado 2026-07-25: el label es dinamico
+                (form.variante1Label) y toda la seccion solo aplica si tieneVariantes. */}
+            {tieneVariantes && (
             <div>
               <div className={`flex flex-wrap items-center gap-1.5 rounded border px-2 py-1.5 ${errores.colores ? 'border-red-500' : 'border-gray-300'}`}>
                 {form.colores.map((c) => (
                   <span key={c.key} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
                     {c.nombre}
-                    <button type="button" onClick={() => quitarColor(c.key)} aria-label={`Quitar color ${c.nombre}`} className="text-gray-400 hover:text-gray-700">
+                    <button type="button" onClick={() => quitarColor(c.key)} aria-label={`Quitar ${c.nombre}`} className="text-gray-400 hover:text-gray-700">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -578,16 +767,17 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                       agregarColorChip();
                     }
                   }}
-                  placeholder="Nuevo color…"
+                  placeholder={`Nuevo valor de ${form.variante1Label || 'Color'}…`}
                   className="min-w-[100px] flex-1 border-none px-1 py-1 text-sm outline-none"
                 />
               </div>
               <MensajeError campo="colores" />
             </div>
+            )}
 
-            {form.colores.length > 0 && (
+            {tieneVariantes && form.colores.length > 0 && (
               <div>
-                <p className="mb-2 text-sm font-semibold text-gray-800">Lista Colores</p>
+                <p className="mb-2 text-sm font-semibold text-gray-800">Opciones de {form.variante1Label || 'Color'}</p>
                 <div className="flex flex-wrap gap-4">
                   {form.colores.map((color) => {
                     return (
@@ -599,7 +789,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           <img src={color.foto} alt="" className="mx-auto mb-3 aspect-square w-28 rounded-md border border-gray-200 object-cover" />
                         )}
 
-                        <label className="mb-1 block text-xs font-medium text-gray-700">Color</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">{form.variante1Label || 'Color'}</label>
                         <input
                           value={color.nombre}
                           onChange={(e) => actualizarColor(color.key, { nombre: e.target.value })}
@@ -627,14 +817,14 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           <MensajeError campo={`colorFoto:${color.key}`} />
                         </div>
 
-                        {modoTalla === 'real' ? (
+                        {modoTalla === 'real' || modoTalla === 'libre' ? (
                           <div className="mt-3">
                             <div className="grid grid-cols-3 gap-2">
                               {color.tallas.map((t) => (
                                 <div key={t.tallaId}>
                                   <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-700">
                                     <input type="checkbox" checked={t.check} onChange={(e) => actualizarTalla(color.key, t.tallaId, { check: e.target.checked })} />
-                                    Talla {t.nombre}
+                                    {form.variante2Label || 'Talla'} {t.nombre}
                                   </label>
                                   <input
                                     type="number"

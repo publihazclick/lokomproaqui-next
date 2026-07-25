@@ -43,8 +43,8 @@ export default function FrontCarritoPage() {
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800">{item.nombre}</p>
                     <p className="text-xs text-gray-500">
-                      {item.talla && `Talla: ${item.talla} · `}
-                      {item.color && `Color: ${item.color} · `}Cant: {item.cantidad}
+                      {item.talla && `${item.tallaLabel || 'Talla'}: ${item.talla} · `}
+                      {item.color && `${item.colorLabel || 'Color'}: ${item.color} · `}Cant: {item.cantidad}
                     </p>
                     <p className="text-sm font-semibold text-green-700">$ {formatCOP(item.precio * item.cantidad)}</p>
                   </div>

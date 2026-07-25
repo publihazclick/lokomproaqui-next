@@ -5,7 +5,7 @@ import { Store, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchShopifyPendingOrders, buscarProductoParaShopify, resolverPedidoShopify, type ShopifyPendingOrder } from '@/lib/shopify';
-import type { ProductoLegacy } from '@/lib/productos';
+import { SIN_VARIANTE, type ProductoLegacy } from '@/lib/productos';
 import { useToast, Toast } from '@/components/Toast';
 
 // Port de ShopifyPendingComponent (Angular, "/config/shopifyPendientes") -- port 1:1, sin bugs
@@ -55,7 +55,7 @@ export default function ShopifyPendingPage() {
                 product_variant_id: null,
                 _productoNombre: producto.pro_nombre,
                 _variantes: producto.listColor.flatMap((grupo) =>
-                  grupo.tallaSelect.map((v) => ({ id: v.id, label: [grupo.talla, v.tal_descripcion].filter((x) => x && x !== 'unico').join(' - ') || 'Unica' })),
+                  grupo.tallaSelect.map((v) => ({ id: v.id, label: [grupo.talla, v.tal_descripcion].filter((x) => x && x !== 'unico' && x !== SIN_VARIANTE).join(' - ') || 'Unica' })),
                 ),
               }
             : it,

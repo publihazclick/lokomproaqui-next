@@ -91,13 +91,25 @@ async function resolverVariantId(productId: number, talla: string | null, color:
     let q = supabase.from('product_variants').select('id, sizes!inner(name)').eq('product_id', productId).eq('sizes.name', talla);
     if (color) q = q.eq('color', color);
     const { data } = await q.maybeSingle();
-    return data ? (data as any).id : null;
+    if (data) return (data as any).id;
+    // Generalizacion 2026-07-25: si no matcheo por el catalogo real de tallas, puede ser un
+    // segundo eje libre (size_label, migracion 079) -- ej "128GB" escrito por el proveedor, no
+    // una talla real. Sin esto, cualquier producto con eje 2 libre no podia comprarse nunca.
+    let qLibre = supabase.from('product_variants').select('id').eq('product_id', productId).eq('size_label', talla);
+    if (color) qLibre = qLibre.eq('color', color);
+    const { data: dataLibre } = await qLibre.maybeSingle();
+    return dataLibre ? (dataLibre as any).id : null;
   }
   if (color) {
-    const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).eq('color', color).is('size_id', null).maybeSingle();
+    const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).eq('color', color).is('size_id', null).is('size_label', null).maybeSingle();
     return data ? (data as any).id : null;
   }
-  return null;
+  // Generalizacion 2026-07-25: producto sin ningun eje de variante (nuevo desde la migracion 079)
+  // -- una unica variante con color/size_id/size_label todos null. Antes esto era imposible (color
+  // siempre era obligatorio), asi que este caso no existia; sin resolverlo aca, product_variant_id
+  // quedaba null en el pedido y el stock de ese producto nunca se descontaba.
+  const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).is('color', null).is('size_id', null).is('size_label', null).maybeSingle();
+  return data ? (data as any).id : null;
 }
 
 export async function crearPedidoRapido(sellerId: string, comprador: DatosComprador, item: { productId: number; nombre: string; precio: number; cantidad: number; talla: string | null; color: string | null }): Promise<{ success: boolean; message?: string; id?: number }> {
@@ -164,6 +176,10 @@ export interface ItemCarritoFront {
   cantidad: number;
   talla: string | null;
   color: string | null;
+  // Generalizacion 2026-07-25: nombre del eje que eligio el comprador (ej "Sabor"/"Capacidad", no
+  // siempre literalmente "Color"/"Talla") -- solo para mostrarlo bien en el resumen del carrito.
+  colorLabel?: string | null;
+  tallaLabel?: string | null;
 }
 
 // Equivalente a VentasService.createOrder (checkout de carrito completo, multi-item). Fase 2 del

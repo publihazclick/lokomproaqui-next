@@ -7,6 +7,12 @@ import { supabase } from './supabase';
 
 const PRODUCT_SELECT = '*, categories:categories!products_category_id_fkey(id, name), product_variants(*, sizes(name))';
 
+// Sentinela interno para agrupar la unica variante de un producto sin primer eje (ver
+// esVariante en ProductoColor) -- exportado para que las pantallas que arman un label combinado
+// de "talla - color" (ej woocommercePendientes/shopifyPendientes) lo filtren igual que el viejo
+// 'unico', y no le muestren este texto interno al admin.
+export const SIN_VARIANTE = '__sin_variante__';
+
 export interface ProductoTallaSelect {
   id: number;
   tal_descripcion: string;
@@ -19,6 +25,11 @@ export interface ProductoColor {
   foto: string;
   tallaSelect: ProductoTallaSelect[];
   galeriaList: { id: string; foto: string }[];
+  // Generalizacion 2026-07-25: un producto "sin variantes" (nunca existio antes de la migracion
+  // 079) tiene igual UN bucket en listColor (para poder resolver stock/fotos), pero con
+  // esVariante=false -- el selector de "Color" en pantalla debe ocultarse en ese caso, no mostrar
+  // un boton huerfano con el nombre interno "unico".
+  esVariante: boolean;
 }
 
 export interface ProductoComentario {
@@ -43,12 +54,18 @@ export interface ProductoLegacy {
   listColor: ProductoColor[];
   listComment: ProductoComentario[];
   checkMayor: boolean;
+  // Generalizacion 2026-07-25 (migracion 079): nombre visible de cada eje de variante, definido
+  // por el proveedor al montar el producto (default 'Color'/null -- ver FormProductoModal). El
+  // storefront ya no puede asumir "Color"/"Talla" fijos, cualquier producto puede llamarlos distinto.
+  variante1Label: string;
+  variante2Label: string | null;
 }
 
 export function mapProductToLegacy(product: any, computedPrice?: number): ProductoLegacy {
   const variantsByColor: Record<string, ProductoColor> = {};
   for (const v of product.product_variants || []) {
-    const color = v.color || 'unico';
+    const esVariante = v.color != null && v.color !== '';
+    const color = v.color || SIN_VARIANTE;
     if (!variantsByColor[color]) {
       const colorImages: string[] = v.images && v.images.length ? v.images : [product.image_url];
       variantsByColor[color] = {
@@ -56,11 +73,15 @@ export function mapProductToLegacy(product: any, computedPrice?: number): Produc
         foto: colorImages[0],
         tallaSelect: [],
         galeriaList: colorImages.map((url: string, idx: number) => ({ id: `${v.id}-${idx}`, foto: url })),
+        esVariante,
       };
     }
     variantsByColor[color].tallaSelect.push({
       id: v.id,
-      tal_descripcion: v.sizes ? v.sizes.name : '',
+      // Generalizacion 2026-07-25: si no viene del catalogo real de tallas (sizes), cae al valor
+      // libre escrito por el proveedor (size_label) -- antes quedaba en blanco siempre que no
+      // hubiera size_id, escondiendo por completo cualquier segundo eje que no fuera ropa/calzado.
+      tal_descripcion: v.sizes ? v.sizes.name : v.size_label || '',
       cantidad: v.stock,
       check: v.stock > 0,
     });
@@ -81,6 +102,8 @@ export function mapProductToLegacy(product: any, computedPrice?: number): Produc
     listColor: Object.values(variantsByColor),
     listComment: [],
     checkMayor: !!product.wholesale_enabled,
+    variante1Label: product.variant1_label || 'Color',
+    variante2Label: product.variant2_label || null,
   };
 }
 

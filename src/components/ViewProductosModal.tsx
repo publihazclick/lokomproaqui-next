@@ -65,7 +65,12 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     [producto.listColor],
   );
 
-  const [colorSel, setColorSel] = useState<string>(listColor.length ? 'null' : '');
+  // Generalizacion 2026-07-25 (migracion 079): un producto "sin variantes" (nuevo, antes
+  // imposible) tiene igual 1 bucket en listColor (para resolver stock/foto), con esVariante=false
+  // -- se autoselecciona de una, sin pedirle nada al comprador ni mostrar un selector de "Color"
+  // vacio de sentido.
+  const hayVariante1 = listColor.some((c) => c.esVariante);
+  const [colorSel, setColorSel] = useState<string>(hayVariante1 ? (listColor.length ? 'null' : '') : listColor[0]?.talla ?? '');
   const [tallaSel, setTallaSel] = useState('');
   const [cantidadAdquirir, setCantidadAdquirir] = useState(1);
   const [urlFoto, setUrlFoto] = useState(producto.foto);
@@ -136,8 +141,8 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       mostrar('lo sentimos pero no se puedes vender este producto en este precio');
       return;
     }
-    if (!colorSel || colorSel === 'null') {
-      mostrar('Lo sentimos tienes que seleccionar un color');
+    if (hayVariante1 && (!colorSel || colorSel === 'null')) {
+      mostrar(`Lo sentimos tienes que seleccionar ${producto.variante1Label.toLowerCase()}`);
       return;
     }
     if ((seleccionnTalla?.cantidad ?? 0) < cantidadAdquirir) {
@@ -166,7 +171,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       articulo: producto.id,
       codigo: producto.pro_codigo,
       titulo: producto.pro_nombre,
-      color: colorSel,
+      color: hayVariante1 ? colorSel : undefined,
       tallaSelect: tallas,
       foto: urlFoto,
       cantidad,
@@ -227,7 +232,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       mostrar('Debes iniciar sesión para continuar');
       return;
     }
-    if (!colorSel || colorSel === 'null') {
+    if (hayVariante1 && (!colorSel || colorSel === 'null')) {
       mostrar('Primero debes seleccionar talla y color');
       return;
     }
@@ -296,19 +301,23 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
           <div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Colores disponibles:</label>
-                <select
-                  value={colorSel}
-                  onChange={(e) => onChangeColor(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                >
-                  <option value="null">Todos</option>
-                  {listColor.map((c) => (
-                    <option key={c.talla} value={c.talla}>
-                      {c.talla}
-                    </option>
-                  ))}
-                </select>
+                {hayVariante1 && (
+                  <>
+                    <label className="block text-xs font-medium text-gray-700">{producto.variante1Label} disponibles:</label>
+                    <select
+                      value={colorSel}
+                      onChange={(e) => onChangeColor(e.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                    >
+                      <option value="null">Todos</option>
+                      {listColor.map((c) => (
+                        <option key={c.talla} value={c.talla}>
+                          {c.talla}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
 
                 <label className="mt-2 block text-xs font-medium text-gray-700">Cantidad Adquirir</label>
                 <input
@@ -322,7 +331,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
               <div>
                 {colorSel && colorSel !== 'null' && seleccionoColor?.tallaSelect[0]?.tal_descripcion ? (
                   <>
-                    <label className="block text-xs font-medium text-gray-700">Tallas disponibles:</label>
+                    <label className="block text-xs font-medium text-gray-700">{producto.variante2Label || 'Tallas'} disponibles:</label>
                     <select
                       value={tallaSel}
                       onChange={(e) => onChangeTalla(e.target.value)}
@@ -333,7 +342,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
                       </option>
                       {seleccionoColor.tallaSelect.map((t) => (
                         <option key={t.id} value={t.tal_descripcion}>
-                          Talla: {t.tal_descripcion} UND: {t.cantidad}
+                          {producto.variante2Label || 'Talla'}: {t.tal_descripcion} UND: {t.cantidad}
                         </option>
                       ))}
                     </select>
@@ -343,9 +352,9 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
                     <label className="block text-xs font-medium text-gray-700">Cantidades disponibles:</label>
                     <p className="mt-1 text-sm text-gray-800">{seleccionoColor?.tallaSelect[0]?.cantidad ?? 0}</p>
                   </>
-                ) : (
-                  <label className="block text-xs font-medium text-gray-500">Elige un color primero</label>
-                )}
+                ) : hayVariante1 ? (
+                  <label className="block text-xs font-medium text-gray-500">Elige {producto.variante1Label.toLowerCase()} primero</label>
+                ) : null}
 
                 <label className="mt-2 block text-xs font-medium text-gray-700">Lo Vendiste</label>
                 <input
@@ -362,8 +371,8 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
               <img src={urlFoto || '/assets/noimagen.jpg'} alt="" className="h-14 w-14 shrink-0 rounded object-cover" />
               <div className="min-w-0">
                 <h4 className="truncate text-sm font-bold text-gray-900">{producto.pro_nombre}</h4>
-                <p className="text-xs text-gray-500">Colores: {nameColores}</p>
-                <p className="text-xs text-gray-500">Tamaños Disponibles: {nemeTalla}</p>
+                {hayVariante1 && <p className="text-xs text-gray-500">{producto.variante1Label}: {nameColores}</p>}
+                {!!nemeTalla && <p className="text-xs text-gray-500">{producto.variante2Label || 'Tamaños'} Disponibles: {nemeTalla}</p>}
               </div>
             </div>
 

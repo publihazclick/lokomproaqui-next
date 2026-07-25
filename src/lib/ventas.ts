@@ -42,17 +42,28 @@ interface DatosPedidoDropshipping {
 // Resuelve la variante real (product_variants.id) del color/talla elegidos, igual que
 // VentasService._buildOrderItems -- create_order la necesita para descontar stock de la fila correcta.
 async function resolverVariantId(productId: number, talla: string | null, color: string | null): Promise<number | null> {
+  const colorReal = color && color !== 'null' ? color : null;
   if (talla) {
     let q = supabase.from('product_variants').select('id, sizes!inner(name)').eq('product_id', productId).eq('sizes.name', talla);
-    if (color && color !== 'null') q = q.eq('color', color);
+    if (colorReal) q = q.eq('color', colorReal);
     const { data } = await q.maybeSingle();
+    if (data) return (data as any).id;
+    // Generalizacion 2026-07-25: si no matcheo por el catalogo real de tallas, puede ser un
+    // segundo eje libre (size_label, migracion 079) -- ej "128GB" escrito por el proveedor, no
+    // una talla real. Sin esto, cualquier producto con eje 2 libre no podia venderse por aca.
+    let qLibre = supabase.from('product_variants').select('id').eq('product_id', productId).eq('size_label', talla);
+    if (colorReal) qLibre = qLibre.eq('color', colorReal);
+    const { data: dataLibre } = await qLibre.maybeSingle();
+    return dataLibre ? (dataLibre as any).id : null;
+  }
+  if (colorReal) {
+    const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).eq('color', colorReal).is('size_id', null).is('size_label', null).maybeSingle();
     return data ? (data as any).id : null;
   }
-  if (color && color !== 'null') {
-    const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).eq('color', color).is('size_id', null).maybeSingle();
-    return data ? (data as any).id : null;
-  }
-  return null;
+  // Generalizacion 2026-07-25: producto sin ningun eje de variante (nuevo desde la migracion 079)
+  // -- una unica variante con color/size_id/size_label todos null.
+  const { data } = await supabase.from('product_variants').select('id').eq('product_id', productId).is('color', null).is('size_id', null).is('size_label', null).maybeSingle();
+  return data ? (data as any).id : null;
 }
 
 // Equivalente a VentasService.create2: pedido de un solo articulo (Dropshipping/Muestra), decremento

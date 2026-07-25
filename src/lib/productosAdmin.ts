@@ -43,6 +43,16 @@ export interface ProductoAdminRow {
 
 const PRODUCT_SELECT_ADMIN = '*, categories:categories!products_category_id_fkey(id, name), product_variants(*, sizes(name))';
 
+// Generalizacion 2026-07-25: el modelo de variantes ya no es un par fijo color+talla-de-ropa.
+// Cada producto define hasta 2 "ejes" con nombre propio (products.variant1_label/variant2_label,
+// migracion 079) -- por defecto "Color" (asi que todo producto existente, que siempre tenia un
+// nombre de color cargado, se sigue viendo exactamente igual sin backfill). El eje 2 puede venir
+// del catalogo real (`sizes`/`size_type_id`, para ropa/calzado que quiere tallas normalizadas) O
+// ser texto libre por producto (`product_variants.size_label`, para cualquier otra cosa: sabor,
+// capacidad, presentacion, material...). Un producto tambien puede no tener NINGUN eje (antes era
+// imposible, "color" era obligatorio siempre): en ese caso se guarda una unica variante con
+// `color=null` y una sola cantidad, sin pedir nombre de variante en absoluto.
+
 function mapAdminRow(p: any): ProductoAdminRow {
   const cantidadTallas = (p.product_variants || []).reduce((sum: number, v: any) => sum + (Number(v.stock) || 0), 0);
   return {
@@ -124,6 +134,8 @@ export async function duplicarProducto(id: number): Promise<number | null> {
       client_sale_price: original.client_sale_price,
       distributor_price: original.distributor_price,
       size_type_id: original.size_type_id,
+      variant1_label: original.variant1_label,
+      variant2_label: original.variant2_label,
       gallery: original.gallery,
       width: original.width,
       height: original.height,
@@ -138,6 +150,7 @@ export async function duplicarProducto(id: number): Promise<number | null> {
     product_id: inserted.id,
     color: v.color,
     size_id: v.size_id,
+    size_label: v.size_label,
     stock: v.stock,
     images: v.images,
   }));
@@ -221,6 +234,12 @@ export interface ProductoForm {
   largo: number | null;
   peso: number | null;
   tipoTallaId: number | null;
+  // Nombre visible del primer eje de variante (default "Color", editable -- puede ser "Sabor",
+  // "Presentación", etc). Segundo eje solo tiene nombre propio cuando es libre (no catalogo real
+  // de tallas); si viene del catalogo, el nombre real es el de size_types y se copia aca al
+  // guardar para que el resto de pantallas no necesite ese join.
+  variante1Label: string;
+  variante2Label: string | null;
   estado: number; // pro_activo: 0 activo, 1 eliminado, 3 pendiente
   colores: ColorForm[];
 }
@@ -245,14 +264,41 @@ export function productoFormVacio(): ProductoForm {
     largo: null,
     peso: null,
     tipoTallaId: null,
+    variante1Label: 'Color',
+    variante2Label: null,
     estado: 0,
     colores: [],
   };
 }
 
+// Colecciona los valores libres de eje 2 (size_label) ya guardados en las tallas de un producto,
+// en el mismo shape que fetchTallasPorTipo devuelve para el catalogo real -- asi el formulario
+// puede alimentar tallasDisponibles/mergeColoresConTallas igual en ambos modos.
+export function derivarTallasLibres(colores: ColorForm[]): OpcionSimple[] {
+  const vistas = new Map<number, string>();
+  for (const color of colores) {
+    for (const t of color.tallas) {
+      if (t.tallaId < 0 && !vistas.has(t.tallaId)) vistas.set(t.tallaId, t.nombre);
+    }
+  }
+  return Array.from(vistas.entries())
+    .sort((a, b) => b[0] - a[0]) // ids negativos: el primero asignado (-1) queda primero
+    .map(([id, nombre]) => ({ id, nombre }));
+}
+
 export async function fetchProductoParaEditar(id: number): Promise<ProductoForm | null> {
   const { data, error } = await supabase.from('products').select(PRODUCT_SELECT_ADMIN).eq('id', id).maybeSingle();
   if (error || !data) return null;
+
+  // Los valores libres de eje 2 (sin size_id, con size_label) reciben un id local negativo
+  // ESTABLE por texto -- se comparte entre colores para que la grilla de checkboxes alinee la
+  // misma columna en todas las tarjetas (igual que hace un id real del catalogo de tallas).
+  const idsLibres: Record<string, number> = {};
+  let siguienteIdLibre = -1;
+  function idParaTallaLibre(nombre: string): number {
+    if (!(nombre in idsLibres)) idsLibres[nombre] = siguienteIdLibre--;
+    return idsLibres[nombre];
+  }
 
   const coloresPorNombre: Record<string, ColorForm> = {};
   for (const v of data.product_variants || []) {
@@ -261,15 +307,16 @@ export async function fetchProductoParaEditar(id: number): Promise<ProductoForm 
       const imagenes: string[] = v.images || [];
       coloresPorNombre[colorNombre] = {
         key: colorNombre,
-        nombre: colorNombre,
+        nombre: v.color || '',
         foto: imagenes[0] || data.image_url,
         galeria: imagenes.slice(1),
         tallas: [],
       };
     }
+    const esLibre = !v.size_id && !!v.size_label;
     coloresPorNombre[colorNombre].tallas.push({
-      tallaId: v.size_id,
-      nombre: v.sizes ? v.sizes.name : '',
+      tallaId: v.size_id ?? (esLibre ? idParaTallaLibre(v.size_label) : 0),
+      nombre: v.sizes ? v.sizes.name : v.size_label || '',
       check: true,
       cantidad: v.stock || 0,
     });
@@ -290,13 +337,19 @@ export async function fetchProductoParaEditar(id: number): Promise<ProductoForm 
     largo: data.length,
     peso: data.weight,
     tipoTallaId: data.size_type_id,
+    variante1Label: data.variant1_label || 'Color',
+    variante2Label: data.variant2_label,
     estado: data.active ? 0 : data.pending_review ? 3 : 1,
     colores: Object.values(coloresPorNombre),
   };
 }
 
 // Equivalente a ProductoService.syncVariants (Angular): reemplaza TODAS las variantes del
-// producto a partir de la lista de colores/tallas del formulario.
+// producto a partir de la lista de colores/tallas del formulario. `size_id` se usa cuando la
+// talla viene del catalogo real (tallaId > 0); `size_label` cuando es un valor libre escrito por
+// el proveedor (tallaId < 0, asignado localmente en el formulario); ninguno de los dos cuando el
+// producto no tiene segundo eje (tallaId === 0). `color` queda null cuando el producto no tiene
+// primer eje en absoluto (producto "sin variantes", nombre vacio).
 async function syncVariants(productId: number, colores: ColorForm[]) {
   await supabase.from('product_variants').delete().eq('product_id', productId);
   const rows: any[] = [];
@@ -304,7 +357,14 @@ async function syncVariants(productId: number, colores: ColorForm[]) {
     const images = [color.foto, ...(color.galeria || [])].filter(Boolean) as string[];
     for (const talla of color.tallas) {
       if (!talla.check) continue;
-      rows.push({ product_id: productId, color: color.nombre || null, size_id: talla.tallaId || null, stock: Number(talla.cantidad) || 0, images });
+      rows.push({
+        product_id: productId,
+        color: color.nombre.trim() ? color.nombre.trim() : null,
+        size_id: talla.tallaId > 0 ? talla.tallaId : null,
+        size_label: talla.tallaId < 0 ? talla.nombre || null : null,
+        stock: Number(talla.cantidad) || 0,
+        images,
+      });
     }
   }
   if (rows.length) await supabase.from('product_variants').insert(rows);
@@ -321,6 +381,8 @@ export async function guardarProducto(form: ProductoForm, ownerProfileId: string
     client_sale_price: form.precioVenta,
     distributor_price: form.precioDistribuidor,
     size_type_id: form.tipoTallaId,
+    variant1_label: form.variante1Label?.trim() || 'Color',
+    variant2_label: form.variante2Label,
     width: form.ancho,
     height: form.alto,
     length: form.largo,

@@ -45,12 +45,20 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
       setTienda(t);
       setProducto(p);
       setFotoActual(p.foto);
-      if (p.listColor.length) setColorSeleccionado(p.listColor[0].talla);
+      // Generalizacion 2026-07-25: un producto "sin variantes" tiene igual 1 bucket interno en
+      // listColor (esVariante=false, talla=sentinel) -- NO auto-seleccionarlo, o ese sentinel se
+      // cuela hasta el carrito/pedido como si fuera un "color" real y nunca matchea la variante
+      // real en la base de datos (que tiene color=NULL, no el sentinel).
+      if (p.listColor.length && p.listColor[0].esVariante) setColorSeleccionado(p.listColor[0].talla);
       setEstado('listo');
     })();
   }, [productoId, telefono]);
 
   const colorActual = producto?.listColor.find((c) => c.talla === colorSeleccionado);
+  // Generalizacion 2026-07-25: un producto "sin variantes" tiene igual 1 bucket en listColor (para
+  // resolver stock/foto), pero con esVariante=false -- no mostrar el selector "Color"/lo que sea
+  // en ese caso, ni exigirlo al comprar.
+  const hayVariante1 = !!producto?.listColor.some((c) => c.esVariante);
 
   function seleccionarColor(color: string) {
     setColorSeleccionado(color);
@@ -62,7 +70,17 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
   function agregarAlCarrito() {
     if (!producto || !tienda) return;
     fijarVendedorCarritoFront(tienda.telefono || telefono);
-    agregarAlCarritoFront({ productId: producto.id, nombre: producto.pro_nombre, foto: fotoActual, precio: producto.pro_uni_venta, cantidad, talla: tallaSeleccionada, color: colorSeleccionado });
+    agregarAlCarritoFront({
+      productId: producto.id,
+      nombre: producto.pro_nombre,
+      foto: fotoActual,
+      precio: producto.pro_uni_venta,
+      cantidad,
+      talla: tallaSeleccionada,
+      color: colorSeleccionado,
+      colorLabel: hayVariante1 ? producto.variante1Label : null,
+      tallaLabel: tallaSeleccionada ? producto.variante2Label || 'Talla' : null,
+    });
     mostrar('Producto agregado al carro');
   }
 
@@ -95,8 +113,8 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
       mostrar('Error falta el punto de referencia (ayuda al mensajero a encontrar la casa)');
       return false;
     }
-    if (producto && producto.listColor.length && !colorSeleccionado) {
-      mostrar('Error falta el color');
+    if (producto && hayVariante1 && !colorSeleccionado) {
+      mostrar(`Error falta ${producto.variante1Label.toLowerCase()}`);
       return false;
     }
     return true;
@@ -119,8 +137,10 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
       return;
     }
     mostrar('Exitoso! Tu pedido esta en proceso. Un asesor se pondra en contacto contigo.');
+    const lineaVariante1 = hayVariante1 ? `\n${producto.variante1Label}: ${colorSeleccionado || '-'}` : '';
+    const lineaVariante2 = tallaSeleccionada ? `\n${producto.variante2Label || 'Talla'}: ${tallaSeleccionada}` : '';
     const url = `https://wa.me/57${tienda.telefono}?text=${encodeURIComponent(
-      `DATOS DE CONFIRMACIÓN DE COMPRA:\nNombre: ${form.nombre}\nCelular: ${form.telefono}\nDireccion: ${direccionCompleta}\nCiudad: ${form.ciudad}\nCantidad: ${cantidad}\nTalla: ${tallaSeleccionada || '-'}\nColor: ${colorSeleccionado || '-'}\nTotal a pagar: ${producto.pro_uni_venta * cantidad} (PAGO CONTRA ENTREGA)`,
+      `DATOS DE CONFIRMACIÓN DE COMPRA:\nNombre: ${form.nombre}\nCelular: ${form.telefono}\nDireccion: ${direccionCompleta}\nCiudad: ${form.ciudad}\nCantidad: ${cantidad}${lineaVariante2}${lineaVariante1}\nTotal a pagar: ${producto.pro_uni_venta * cantidad} (PAGO CONTRA ENTREGA)`,
     )}`;
     window.open(url);
   }
@@ -151,9 +171,9 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
               />
             )}
 
-            {producto.listColor.length > 0 && (
+            {hayVariante1 && (
               <div className="mt-4">
-                <label className="mb-1 block text-xs font-semibold text-gray-700">Color</label>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">{producto.variante1Label}</label>
                 <div className="flex flex-wrap gap-2">
                   {producto.listColor.map((c) => (
                     <button
@@ -170,7 +190,7 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
 
             {colorActual && colorActual.tallaSelect.some((t) => t.tal_descripcion && t.tal_descripcion !== 'unico') && (
               <div className="mt-3">
-                <label className="mb-1 block text-xs font-semibold text-gray-700">Talla</label>
+                <label className="mb-1 block text-xs font-semibold text-gray-700">{producto.variante2Label || 'Talla'}</label>
                 <div className="flex flex-wrap gap-2">
                   {colorActual.tallaSelect.map((t) => (
                     <button

@@ -85,7 +85,7 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
     let precio = data.pro_uni_venta;
 
     const matched = data.listColor.find((c) => c.foto === foto);
-    if (matched) color = matched.talla;
+    if (matched && matched.esVariante) color = matched.talla;
 
     let costoTotal: number;
     if (opt) {
@@ -137,7 +137,7 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
             $ {formatCOP(data.pro_uni_venta)} COP
           </h3>
 
-          {data.listColor.length > 0 && (
+          {data.listColor.some((c) => c.esVariante) && (
             <select
               className="mt-1 block w-full max-w-xs rounded border border-gray-300 px-2 py-1 text-sm"
               value={foto}
