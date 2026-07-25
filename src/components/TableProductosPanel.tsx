@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, Trash2, Copy } from 'lucide-react';
+import { Eye, Trash2, Copy, Search, Plus } from 'lucide-react';
 import { fetchProductosAdmin, eliminarProducto, duplicarProducto, activarProducto, type ProductoAdminRow, type ModoListaProductos } from '@/lib/productosAdmin';
 import { useToast, Toast } from '@/components/Toast';
 
@@ -17,9 +17,12 @@ interface TableProductosPanelProps {
   userId: string;
   esAdmin: boolean;
   onEditar: (id: number) => void;
+  // Pedido explicito del usuario 2026-07-24: el boton para crear producto va como circulo azul "+"
+  // junto a la barra de busqueda (igual al diseño de referencia), no arriba en un banner aparte.
+  onCrear?: () => void;
 }
 
-export function TableProductosPanel({ modo, userId, esAdmin, onEditar }: TableProductosPanelProps) {
+export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }: TableProductosPanelProps) {
   const { mensaje, mostrar } = useToast();
   const [productos, setProductos] = useState<ProductoAdminRow[]>([]);
   const [busqueda, setBusqueda] = useState('');
@@ -85,18 +88,28 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar }: TablePr
 
   return (
     <div className="mt-3">
-      <div className="flex gap-2">
-        <input
-          type="search"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && buscar()}
-          placeholder="Buscar Producto"
-          className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-        />
-        <button onClick={buscar} disabled={cargando} className="rounded bg-[#0d6efd] px-3 py-2 text-sm text-white disabled:opacity-60">
-          Buscar
-        </button>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && buscar()}
+            placeholder="Buscar Producto"
+            className="w-full rounded border border-gray-300 py-2 pl-9 pr-3 text-sm"
+          />
+        </div>
+        {onCrear && (
+          <button
+            onClick={onCrear}
+            aria-label="Nuevo producto"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white hover:opacity-90"
+            style={{ background: '#0d6efd' }}
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="mt-4 overflow-x-auto">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { TableProductosPanel } from '@/components/TableProductosPanel';
@@ -44,16 +44,11 @@ export default function ProductosPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-6">
-      <div className="flex items-center justify-between rounded-t-xl bg-[#0d6efd] px-4 py-3 text-white">
-        <h4 className="text-lg font-bold">Productos</h4>
-        <button
-          onClick={() => setModalId('crear')}
-          className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#0d6efd]"
-        >
-          <Plus className="h-4 w-4" /> Nuevo
-        </button>
+      <div className="flex items-center gap-2 px-1 py-2">
+        <ClipboardList className="h-5 w-5 text-gray-700" />
+        <h4 className="text-lg font-bold text-gray-900">Productos</h4>
       </div>
-      <div className="rounded-b-xl border border-t-0 border-gray-100 p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-100 p-4 shadow-sm">
         <div className="flex flex-wrap gap-2 border-b border-gray-200">
           {esAdmin && (
             <button onClick={() => setTab('otros')} className={`px-4 py-2 text-sm font-semibold ${tab === 'otros' ? 'border-b-2 border-[#0d6efd] text-[#0d6efd]' : 'text-gray-500'}`}>
@@ -68,7 +63,7 @@ export default function ProductosPage() {
           </button>
         </div>
 
-        <TableProductosPanel key={`${tab}-${refrescarKey}`} modo={tab} userId={dataUser.id} esAdmin={esAdmin} onEditar={(id) => setModalId(id)} />
+        <TableProductosPanel key={`${tab}-${refrescarKey}`} modo={tab} userId={dataUser.id} esAdmin={esAdmin} onEditar={(id) => setModalId(id)} onCrear={() => setModalId('crear')} />
       </div>
 
       {modalId !== null && (
