@@ -18,9 +18,15 @@ interface ImageCropUploadProps {
   label: string;
   subiendo: boolean;
   setSubiendo: (v: boolean) => void;
+  // Pedido explicito del usuario 2026-07-25: una vez el producto ya existe (editando), la foto se
+  // muestra distinto a como se pide al crear -- una miniatura chica con el nombre y "Eliminar" a la
+  // izquierda, y la foto grande con boton "Agregar Foto" a la derecha, identico a su captura.
+  variant?: 'dropzone' | 'edit';
+  nombreProducto?: string;
+  onEliminar?: () => void;
 }
 
-export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiendo }: ImageCropUploadProps) {
+export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiendo, variant = 'dropzone', nombreProducto, onEliminar }: ImageCropUploadProps) {
   const [archivoOriginal, setArchivoOriginal] = useState<File | null>(null);
   const [imagenParaRecortar, setImagenParaRecortar] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -90,6 +96,30 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
           <button type="button" onClick={cancelarRecorte} className="flex items-center gap-1.5 rounded-full border border-gray-300 px-4 py-2 text-xs font-bold text-gray-700">
             <X className="h-3.5 w-3.5" /> Cancelar
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (value && variant === 'edit') {
+    return (
+      <div className="flex flex-wrap items-start gap-8">
+        <div className="w-36 shrink-0 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
+          <img src={value} alt="" className="aspect-square w-full rounded-md border border-gray-200 object-cover" />
+          <p className="mt-1.5 truncate text-xs font-medium text-gray-700">{nombreProducto || 'Sin nombre'}</p>
+          <button type="button" onClick={onEliminar} className="text-xs font-medium text-[#0d6efd] hover:underline">
+            Eliminar
+          </button>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
+          <img src={value} alt="" className="h-44 w-44 rounded-md border border-gray-200 bg-gray-50 object-contain" />
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded bg-[#0d6efd] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+            <Upload className="h-4 w-4" />
+            {subiendo ? 'Subiendo…' : 'Agregar Foto'}
+            <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
+          </label>
         </div>
       </div>
     );

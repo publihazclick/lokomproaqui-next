@@ -64,6 +64,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // el proveedor lo desactiva cuando no aplique.
   const [tieneSubcategoria, setTieneSubcategoria] = useState(true);
   const [tieneTalla, setTieneTalla] = useState(true);
+  // Pedido explicito del usuario 2026-07-25: campo cosmetico identico al original -- confirmado que
+  // ProductoService nunca lo guarda (ver comentario de alcance recortado arriba), asi que no forma
+  // parte de ProductoForm ni se manda al guardar, solo se muestra para fidelidad visual.
+  const [urlMediosDrive, setUrlMediosDrive] = useState('');
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -246,32 +250,38 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               label="Subir Fotos"
               subiendo={subiendoFoto === 'principal'}
               setSubiendo={(v) => setSubiendoFoto(v ? 'principal' : null)}
+              variant={esCreacion ? 'dropzone' : 'edit'}
+              nombreProducto={form.nombre}
+              onEliminar={() => set('foto', null)}
             />
 
             {/* Pedido explicito del usuario 2026-07-25: estos 3 campos van justo debajo de la foto,
-                en una sola fila, identico a la captura de referencia -- el resto de campos (codigo,
-                nombre, subcategoria, medidas) se conservan mas abajo, sin quitar nada. */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                en una sola fila, identico a la captura de referencia -- solo mientras se esta
+                creando (todavia sin id). Una vez creado, estos mismos campos pasan a vivir dentro
+                de la grilla completa de abajo (ver bloque !esCreacion). */}
+            {esCreacion && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
+                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
+                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Categoría</label>
+                  <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                    <option value="">Selecciona…</option>
+                    {categorias.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Categoría</label>
-                <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
-                  <option value="">Selecciona…</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
 
             {/* Pedido explicito del usuario 2026-07-25: al crear, el boton de guardar es este
                 verde centrado "Subir imagen" (reemplaza a "Guardar Cambios", que solo queda para
@@ -294,98 +304,67 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 hasta que el producto ya existe y se abre para editar, igual que el flujo original. */}
             {!esCreacion && (
             <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Pedido explicito del usuario 2026-07-25: campos y orden identicos a la captura de
+                referencia (Codigo/Nombre, URL DE MEDIOS DRIVE/Categoria, Sub Categoria/Precio a
+                distribuidor/Precio sugerido de venta, Tipo de medida) -- "URL DE MEDIOS DRIVE" es
+                cosmetico nada mas (confirmado en el original que ProductoService nunca lo guarda),
+                se muestra igual mas no se manda al guardar. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Código</label>
                 <input value={form.codigo} disabled className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm" />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
                 <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
               </div>
+
               <div>
-                <div className="mb-1 flex items-center justify-between">
-                  <label className="text-xs font-medium text-gray-700">Subcategoría</label>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={tieneSubcategoria}
-                      onChange={(e) => {
-                        setTieneSubcategoria(e.target.checked);
-                        if (!e.target.checked) set('subcategoriaId', null);
-                      }}
-                    />
-                    Este producto lleva subcategoría
-                  </label>
-                </div>
-                {tieneSubcategoria ? (
-                  <select value={form.subcategoriaId ?? ''} onChange={(e) => set('subcategoriaId', Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
-                    <option value="">Selecciona…</option>
-                    {subcategorias.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="rounded border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400">Sin subcategoría</p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Alto (CM)</label>
-                <input type="number" value={form.alto ?? ''} onChange={(e) => set('alto', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Ancho (CM)</label>
-                <input type="number" value={form.ancho ?? ''} onChange={(e) => set('ancho', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Largo (CM)</label>
-                <input type="number" value={form.largo ?? ''} onChange={(e) => set('largo', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Peso (KL)</label>
-                <input type="number" value={form.peso ?? ''} onChange={(e) => set('peso', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                <label className="mb-1 block text-xs font-medium text-gray-700">URL de medios drive</label>
+                <input value={urlMediosDrive} onChange={(e) => setUrlMediosDrive(e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
               </div>
               <div className="sm:col-span-2">
-                <div className="mb-1 flex items-center justify-between">
-                  <label className="text-xs font-medium text-gray-700">Tipo de medida</label>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={tieneTalla}
-                      onChange={(e) => {
-                        const marcado = e.target.checked;
-                        setTieneTalla(marcado);
-                        if (!marcado) {
-                          set('tipoTallaId', null);
-                          // Los colores ya agregados pasan a llevar una sola cantidad total, sin tallas
-                          // (se suma lo que ya tenian marcado, para no perder cantidades cargadas).
-                          setForm((prev) => ({
-                            ...prev,
-                            colores: prev.colores.map((c) => ({
-                              ...c,
-                              tallas: [{ tallaId: 0, nombre: '', check: true, cantidad: c.tallas.reduce((s, t) => s + (t.check ? t.cantidad : 0), 0) }],
-                            })),
-                          }));
-                        }
-                      }}
-                    />
-                    Este producto lleva tallas o tamaños
-                  </label>
-                </div>
-                {tieneTalla ? (
-                  <select value={form.tipoTallaId ?? ''} onChange={(e) => onCambiarTipoTalla(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
-                    <option value="">Selecciona…</option>
-                    {tiposTalla.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nombre}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="rounded border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400">Sin tallas — cada color solo lleva una cantidad total</p>
-                )}
+                <label className="mb-1 block text-xs font-medium text-gray-700">Categoría</label>
+                <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                  <option value="">Selecciona…</option>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Sub Categoría</label>
+                <select value={form.subcategoriaId ?? ''} onChange={(e) => set('subcategoriaId', Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                  <option value="">Selecciona…</option>
+                  {subcategorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
+                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
+                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de medida</label>
+                <select value={form.tipoTallaId ?? ''} onChange={(e) => onCambiarTipoTalla(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                  <option value="">Selecciona…</option>
+                  {tiposTalla.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
