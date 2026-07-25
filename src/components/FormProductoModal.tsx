@@ -106,7 +106,20 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         for (const color of form.colores) {
           if (!color.nombre.trim()) errs[`colorNombre:${color.key}`] = 'Falta el nombre del color';
           if (!color.foto) errs[`colorFoto:${color.key}`] = 'Falta la foto de este color';
-          if (!color.tallas.some((t) => t.check && t.cantidad > 0)) errs[`colorCantidad:${color.key}`] = 'Falta la cantidad disponible';
+          if (modoTalla === 'real') {
+            // Pedido explicito del usuario 2026-07-25: cada talla que se marca obliga a poner su
+            // cantidad -- no alcanza con que UNA cualquiera tenga cantidad, todas las marcadas.
+            const algunaMarcada = color.tallas.some((t) => t.check);
+            if (!algunaMarcada) {
+              errs[`colorCantidad:${color.key}`] = 'Selecciona al menos una talla disponible';
+            } else {
+              for (const t of color.tallas) {
+                if (t.check && !(t.cantidad > 0)) errs[`colorTalla:${color.key}:${t.tallaId}`] = 'Falta la cantidad';
+              }
+            }
+          } else if (!color.tallas.some((t) => t.check && t.cantidad > 0)) {
+            errs[`colorCantidad:${color.key}`] = 'Falta la cantidad disponible';
+          }
         }
       }
       if (!form.descripcion.trim()) errs.descripcion = 'Falta la descripción detallada';
@@ -525,7 +538,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                             ve arriba de la tarjeta, para saber que es lo que se esta montando. */}
                         {color.foto && (
                           // eslint-disable-next-line @next/next/no-img-element -- foto de color (Supabase Storage)
-                          <img src={color.foto} alt="" className="mb-3 aspect-square w-full rounded-md border border-gray-200 object-cover" />
+                          <img src={color.foto} alt="" className="mx-auto mb-3 aspect-square w-28 rounded-md border border-gray-200 object-cover" />
                         )}
 
                         <label className="mb-1 block text-xs font-medium text-gray-700">Color</label>
@@ -570,8 +583,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                                     value={t.cantidad || ''}
                                     onChange={(e) => actualizarTalla(color.key, t.tallaId, { cantidad: Number(e.target.value) })}
                                     placeholder="Cantidad disponible"
-                                    className={`w-full rounded border px-2 py-1.5 text-xs ${errores[`colorCantidad:${color.key}`] ? 'border-red-500' : 'border-gray-300'}`}
+                                    className={`w-full rounded border px-2 py-1.5 text-xs ${errores[`colorTalla:${color.key}:${t.tallaId}`] ? 'border-red-500' : 'border-gray-300'}`}
                                   />
+                                  {errores[`colorTalla:${color.key}:${t.tallaId}`] && (
+                                    <p className="mt-0.5 text-[10px] font-medium text-red-600">{errores[`colorTalla:${color.key}:${t.tallaId}`]}</p>
+                                  )}
                                 </div>
                               ))}
                             </div>

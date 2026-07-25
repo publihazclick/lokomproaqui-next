@@ -88,6 +88,9 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
           aria-label="Acercar o alejar"
         />
         <p className="mt-1 text-center text-xs text-gray-500">Arrastra la foto para acomodarla, usa la barra para acercar</p>
+        {/* Pedido explicito del usuario 2026-07-25: si intento guardar sin haber confirmado el
+            recorte con "Listo", se le avisa en rojo aca mismo (no solo con un toast generico). */}
+        {error && <p className="mt-1 text-center text-xs font-medium text-red-600">Todavía no confirmaste la foto -- ajústala y presiona &quot;Listo&quot;</p>}
         <div className="mt-2 flex justify-center gap-2">
           <button
             type="button"
