@@ -95,23 +95,25 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
 
   return (
     <div className="mt-3">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscar()}
-            placeholder="Buscar Producto"
-            className="w-full rounded border border-gray-300 py-2 pl-9 pr-3 text-sm"
-          />
-        </div>
+      {/* Grupo compacto pegado a la izquierda (icono | input | boton), igual a la referencia -- NO
+          un input de ancho completo con un boton circular separado. */}
+      <div className="flex w-fit items-stretch overflow-hidden rounded border border-gray-300">
+        <span className="flex items-center justify-center border-r border-gray-300 bg-gray-50 px-3">
+          <Search className="h-4 w-4 text-gray-400" />
+        </span>
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && buscar()}
+          placeholder="Buscar Producto"
+          className="w-56 px-3 py-2 text-sm outline-none"
+        />
         {onCrear && (
           <button
             onClick={onCrear}
             aria-label="Nuevo producto"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white hover:opacity-90"
+            className="flex shrink-0 items-center justify-center px-4 text-white hover:opacity-90"
             style={{ background: '#0d6efd' }}
           >
             <Plus className="h-5 w-5" />
