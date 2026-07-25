@@ -100,6 +100,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     if (!form.categoriaId) errs.categoriaId = 'Falta la categoría';
     if (!esCreacion) {
       if (!form.nombre.trim()) errs.nombre = 'Falta el nombre del producto';
+      if (!form.alto) errs.alto = 'Falta el alto empacado';
+      if (!form.ancho) errs.ancho = 'Falta el ancho empacado';
+      if (!form.largo) errs.largo = 'Falta el largo empacado';
+      if (!form.peso) errs.peso = 'Falta el peso empacado';
       if (form.colores.length === 0) {
         errs.colores = 'Falta agregar al menos un color';
       } else {
@@ -494,6 +498,30 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Pedido explicito del usuario 2026-07-25: dimensiones del producto YA EMPACADO --
+                  con esto se puede cotizar el flete real de cada pedido segun el paquete, en vez de
+                  perder plata cobrando un flete generico que no corresponde al tamaño/peso real. */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Alto empacado (CM)</label>
+                <input type="number" value={form.alto ?? ''} onChange={(e) => set('alto', Number(e.target.value))} className={claseInput('alto')} />
+                <MensajeError campo="alto" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Ancho empacado (CM)</label>
+                <input type="number" value={form.ancho ?? ''} onChange={(e) => set('ancho', Number(e.target.value))} className={claseInput('ancho')} />
+                <MensajeError campo="ancho" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Largo empacado (CM)</label>
+                <input type="number" value={form.largo ?? ''} onChange={(e) => set('largo', Number(e.target.value))} className={claseInput('largo')} />
+                <MensajeError campo="largo" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Peso empacado (KG)</label>
+                <input type="number" value={form.peso ?? ''} onChange={(e) => set('peso', Number(e.target.value))} className={claseInput('peso')} />
+                <MensajeError campo="peso" />
               </div>
             </div>
 
