@@ -199,6 +199,10 @@ export interface ColorForm {
   key: string; // id local, no persiste
   nombre: string;
   foto: string | null;
+  // Pedido explicito del usuario 2026-07-25: galeria de fotos adicionales por color ("Subir imagen
+  // Galeria" en el formulario) -- la tabla product_variants ya guarda `images` como array, solo no
+  // se usaba mas que la primera posicion.
+  galeria: string[];
   tallas: TallaColorForm[];
 }
 
@@ -254,7 +258,14 @@ export async function fetchProductoParaEditar(id: number): Promise<ProductoForm 
   for (const v of data.product_variants || []) {
     const colorNombre = v.color || 'unico';
     if (!coloresPorNombre[colorNombre]) {
-      coloresPorNombre[colorNombre] = { key: colorNombre, nombre: colorNombre, foto: (v.images && v.images[0]) || data.image_url, tallas: [] };
+      const imagenes: string[] = v.images || [];
+      coloresPorNombre[colorNombre] = {
+        key: colorNombre,
+        nombre: colorNombre,
+        foto: imagenes[0] || data.image_url,
+        galeria: imagenes.slice(1),
+        tallas: [],
+      };
     }
     coloresPorNombre[colorNombre].tallas.push({
       tallaId: v.size_id,
@@ -290,7 +301,7 @@ async function syncVariants(productId: number, colores: ColorForm[]) {
   await supabase.from('product_variants').delete().eq('product_id', productId);
   const rows: any[] = [];
   for (const color of colores) {
-    const images = color.foto ? [color.foto] : [];
+    const images = [color.foto, ...(color.galeria || [])].filter(Boolean) as string[];
     for (const talla of color.tallas) {
       if (!talla.check) continue;
       rows.push({ product_id: productId, color: color.nombre || null, size_id: talla.tallaId || null, stock: Number(talla.cantidad) || 0, images });
