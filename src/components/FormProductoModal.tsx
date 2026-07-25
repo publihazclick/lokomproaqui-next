@@ -434,7 +434,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     // vista nueva. El modo inline (Paso 2 de onboarding en Mi Cuenta) sigue cerrando/reseteando de
     // una, porque ahi el flujo real es "agregar varios productos seguidos", no editar cada uno.
     if (eraCreacion && !inline) {
-      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre }));
+      // BUG REAL CORREGIDO: guardarProducto() inserta el producto nuevo con pending_review=true
+      // (estado 3, "Por Activar") para cualquier no-admin -- pero aca nunca se actualizaba
+      // form.estado, asi que se quedaba en el 0 por defecto de productoFormVacio() y el boton
+      // "Activar Producto" nunca aparecia justo despues de crear (recien reportado por el
+      // proveedor: "cuando el proveedor esta subiendo el producto desaparecio el boton").
+      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: esAdmin ? 0 : 3 }));
       return;
     }
     onGuardado();
