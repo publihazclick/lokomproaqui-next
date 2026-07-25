@@ -971,8 +971,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               onClick={activar}
               disabled={activando || !cambiosGuardados}
               title={!cambiosGuardados ? 'Primero da click en "Actualizar Cambios"' : undefined}
-              className={`rounded px-3 py-1.5 text-sm font-medium ${
-                cambiosGuardados ? 'bg-[#198754] text-white disabled:opacity-60' : 'cursor-not-allowed bg-gray-200 text-gray-400'
+              className={`rounded border px-3 py-1.5 text-sm font-medium ${
+                cambiosGuardados
+                  ? 'border-[#198754] bg-[#198754] text-white disabled:opacity-60'
+                  : 'cursor-not-allowed border-gray-300 bg-transparent text-gray-400'
               }`}
             >
               {activando ? 'Activando…' : 'Activar Producto / Mostrar a la Comunidad'}
