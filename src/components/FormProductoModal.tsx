@@ -109,6 +109,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // "Actualizar Cambios" en esta misma sesion del modal, para forzar que el proveedor confirme sus
   // datos actuales justo antes de publicar el producto.
   const [cambiosGuardados, setCambiosGuardados] = useState(false);
+  // Pedido explicito del usuario 2026-07-25: despues de dar click a "Actualizar Cambios" (edicion
+  // real, no el "Subir imagen" del paso 1), TODOS los campos quedan bloqueados -- el boton pasa a
+  // decir "Editar información" y solo volviendo a clickearlo se puede tocar algo de nuevo. Es una
+  // confirmacion extra antes de poder cambiar datos ya guardados. No aplica a modoMasivo (carga
+  // masiva rapida), que tiene su propio footer y arranca cada producto en blanco.
+  const [bloqueadoParaEditar, setBloqueadoParaEditar] = useState(false);
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -209,6 +215,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
   useEffect(() => {
     setCambiosGuardados(false);
+    setBloqueadoParaEditar(false);
     if (!productoId) {
       setCargando(false);
       return;
@@ -472,6 +479,10 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
       // se habilita justo aca, recien despues de un click real de "Actualizar Cambios" (no del
       // primer guardado de creacion).
       setCambiosGuardados(true);
+      // Pedido explicito del usuario 2026-07-25: despues de guardar de verdad, todos los campos se
+      // bloquean (el boton pasa a "Editar información") -- evita cambios accidentales sobre datos
+      // ya guardados, solo se desbloquean si el proveedor lo pide a proposito.
+      setBloqueadoParaEditar(true);
     }
     setErrores({});
     setIntentoGuardar(false);
@@ -579,7 +590,16 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
         {cargando ? (
           <p className="px-4 py-10 text-center text-sm text-gray-500">Cargando…</p>
         ) : (
-          <div className="space-y-4 px-4 py-4">
+          <fieldset
+            disabled={!modoMasivo && bloqueadoParaEditar}
+            className={`m-0 min-w-0 space-y-4 border-0 px-4 py-4 ${!modoMasivo && bloqueadoParaEditar ? 'pointer-events-none opacity-60' : ''}`}
+          >
+            {!modoMasivo && bloqueadoParaEditar && (
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+                Esta información ya quedó guardada y está bloqueada para que no se cambie por accidente. Da click en &quot;Editar
+                información&quot; si necesitas corregir algo.
+              </p>
+            )}
             <ImageCropUpload
               value={form.foto}
               onUploaded={(url) => set('foto', url)}
@@ -1002,13 +1022,19 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">Descripción detallada</label>
-              <SimpleRichTextEditor key={form.id ?? 'nuevo'} value={form.descripcion} onChange={(html) => set('descripcion', html)} error={!!errores.descripcion} />
+              <SimpleRichTextEditor
+                key={form.id ?? 'nuevo'}
+                value={form.descripcion}
+                onChange={(html) => set('descripcion', html)}
+                error={!!errores.descripcion}
+                disabled={!modoMasivo && bloqueadoParaEditar}
+              />
               <MensajeError campo="descripcion" />
             </div>
 
             </>
             )}
-          </div>
+          </fieldset>
         )}
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 px-4 py-3">
@@ -1048,8 +1074,22 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 </button>
               )}
               {!esCreacion && (
-                <button onClick={guardar} disabled={cargando || guardando} className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
-                  {guardando ? 'Guardando…' : 'Actualizar Cambios'}
+                <button
+                  onClick={
+                    bloqueadoParaEditar
+                      ? () => {
+                          setBloqueadoParaEditar(false);
+                          // Al volver a habilitar la edicion, "Activar Producto" vuelve a pedir un
+                          // guardado real -- lo que estaba confirmado antes ya no aplica si se va a
+                          // cambiar algo.
+                          setCambiosGuardados(false);
+                        }
+                      : guardar
+                  }
+                  disabled={cargando || guardando}
+                  className="rounded bg-[#0d6efd] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {guardando ? 'Guardando…' : bloqueadoParaEditar ? 'Editar información' : 'Actualizar Cambios'}
                 </button>
               )}
               {form.estado === 3 && (

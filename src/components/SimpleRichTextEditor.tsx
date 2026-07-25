@@ -17,9 +17,14 @@ interface SimpleRichTextEditorProps {
   // Pedido explicito del usuario 2026-07-25: la descripcion es obligatoria -- si falta, el borde se
   // marca en rojo (mismo patron que el resto de campos obligatorios).
   error?: boolean;
+  // Pedido explicito del usuario 2026-07-25: cuando el formulario padre esta bloqueado ("Editar
+  // información" sin clickear todavia), este campo tambien debe quedar sin poder escribirse --
+  // un <fieldset disabled> del padre NO alcanza a bloquear un div contentEditable (solo bloquea
+  // elementos de formulario reales), hay que apagarlo aca a mano.
+  disabled?: boolean;
 }
 
-export function SimpleRichTextEditor({ value, onChange, error }: SimpleRichTextEditorProps) {
+export function SimpleRichTextEditor({ value, onChange, error, disabled }: SimpleRichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   // Solo pone el HTML inicial UNA vez al montar (nunca reactivo a `value`), para no pelearle al
@@ -55,9 +60,9 @@ export function SimpleRichTextEditor({ value, onChange, error }: SimpleRichTextE
       </div>
       <div
         ref={ref}
-        contentEditable
+        contentEditable={!disabled}
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="min-h-[120px] px-3 py-2 text-sm outline-none"
+        className={`min-h-[120px] px-3 py-2 text-sm outline-none ${disabled ? 'bg-gray-50 text-gray-500' : ''}`}
         data-placeholder="Cuéntale a los vendedores por qué este producto se vende bien…"
       />
     </div>
