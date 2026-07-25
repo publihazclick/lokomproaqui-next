@@ -109,3 +109,21 @@ body {
 .boton-pulso {
   animation: boton-pulso-glow 2s ease-in-out infinite;
 }
+
+/* Entrada de los mensajes (Toast.tsx, rediseño 2026-07-25) -- desliza desde abajo y aparece con
+   fundido, en vez de aparecer de golpe. En celular ya viene "de abajo" naturalmente porque el
+   mensaje ocupa el ancho completo pegado al borde inferior. */
+@keyframes toast-entrar-anim {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-entrar {
+  animation: toast-entrar-anim 0.25s ease-out;
+}
