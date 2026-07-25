@@ -74,7 +74,7 @@ const MENUS: MenuItem[] = [
   { Icon: Home, nombre: 'Inicio', href: '/articulo', mostrar: (r) => r !== 'visitante' },
   { Icon: LayoutGrid, nombre: 'Productos/Bodegas', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: ShoppingCart, nombre: 'Hacer Compra', href: '/pedidos', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
-  { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' || r === 'proveedor' },
+  { Icon: Store, nombre: 'Mis Producto En la Tienda', href: '/config/storeProductActivated/', mostrar: (r) => r === 'administrador' },
   { Icon: ClipboardCheck, nombre: 'Autorizar Despacho', href: '/config/ventasPosibles', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: History, nombre: 'Historial de Ventas', href: '/config/ventas', mostrar: (r) => r !== 'visitante' && r !== 'proveedor' },
   { Icon: Truck, nombre: 'Generación de Guías', href: '/config/guias', mostrar: (r) => r !== 'visitante' },
@@ -261,6 +261,24 @@ export function RealHeader() {
   // profiles.es_lider_general / migracion 058.
   const menusVisibles = useMemo(() => {
     const base = MENUS.filter((m) => m.mostrar(rol));
+    // Orden explicito pedido por el usuario 2026-07-25, SOLO para proveedor -- el resto de roles
+    // sigue el orden natural de MENUS de arriba (reordenar el array global movería tambien el
+    // menu de administrador/vendedor, que no fue lo pedido). "Lista de Transportadoras" quedo
+    // afuera a pedido explicito (no existe esa pantalla todavia).
+    if (rol === 'proveedor') {
+      const orden = [
+        '/articulo',
+        '/config/guias',
+        '/config/controlInventario',
+        '/config/bank/index',
+        '/config/misDespacho',
+        '/config/productos',
+        '/config/perfil',
+        '/acelerador',
+        '/tutoriales',
+      ];
+      base.sort((a, b) => orden.indexOf(a.href) - orden.indexOf(b.href));
+    }
     if (esLiderGeneral || rol === 'administrador') {
       base.push({
         Icon: Users,
