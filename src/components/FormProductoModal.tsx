@@ -101,6 +101,15 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
+  // Pedido explicito del usuario 2026-07-25 ("a la hora de subir el producto estas mostrando en
+  // algunos campos el 0 por default quitalo"): precio/alto/ancho/largo/peso usan `?? ''` para
+  // mostrar vacio mientras el campo es null -- pero al borrar el campo por completo, `Number('')`
+  // da 0 (no null), y como 0 no es null, `?? ''` deja de esconderlo: el campo "rebotaba" a "0" en
+  // vez de quedar vacio. Con esto, un campo vacio se guarda como null (sigue vacio en pantalla).
+  function numOrNull(texto: string): number | null {
+    return texto === '' ? null : Number(texto);
+  }
+
   const esCreacion = !form.id;
 
   // Pedido explicito del usuario 2026-07-25: obligatorios todos los campos del flujo salvo "URL de
@@ -507,12 +516,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className={claseInput('precioDistribuidor')} />
+                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', numOrNull(e.target.value))} className={claseInput('precioDistribuidor')} />
                   <MensajeError campo="precioDistribuidor" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className={claseInput('precioVenta')} />
+                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', numOrNull(e.target.value))} className={claseInput('precioVenta')} />
                   <MensajeError campo="precioVenta" />
                 </div>
                 <div>
@@ -655,12 +664,12 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className={claseInput('precioDistribuidor')} />
+                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', numOrNull(e.target.value))} className={claseInput('precioDistribuidor')} />
                 <MensajeError campo="precioDistribuidor" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className={claseInput('precioVenta')} />
+                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', numOrNull(e.target.value))} className={claseInput('precioVenta')} />
                 <MensajeError campo="precioVenta" />
               </div>
 
@@ -689,22 +698,22 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                   perder plata cobrando un flete generico que no corresponde al tamaño/peso real. */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Alto empacado (CM)</label>
-                <input type="number" value={form.alto ?? ''} onChange={(e) => set('alto', Number(e.target.value))} className={claseInput('alto')} />
+                <input type="number" value={form.alto ?? ''} onChange={(e) => set('alto', numOrNull(e.target.value))} className={claseInput('alto')} />
                 <MensajeError campo="alto" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Ancho empacado (CM)</label>
-                <input type="number" value={form.ancho ?? ''} onChange={(e) => set('ancho', Number(e.target.value))} className={claseInput('ancho')} />
+                <input type="number" value={form.ancho ?? ''} onChange={(e) => set('ancho', numOrNull(e.target.value))} className={claseInput('ancho')} />
                 <MensajeError campo="ancho" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Largo empacado (CM)</label>
-                <input type="number" value={form.largo ?? ''} onChange={(e) => set('largo', Number(e.target.value))} className={claseInput('largo')} />
+                <input type="number" value={form.largo ?? ''} onChange={(e) => set('largo', numOrNull(e.target.value))} className={claseInput('largo')} />
                 <MensajeError campo="largo" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Peso empacado (KG)</label>
-                <input type="number" value={form.peso ?? ''} onChange={(e) => set('peso', Number(e.target.value))} className={claseInput('peso')} />
+                <input type="number" value={form.peso ?? ''} onChange={(e) => set('peso', numOrNull(e.target.value))} className={claseInput('peso')} />
                 <MensajeError campo="peso" />
               </div>
             </div>
