@@ -445,19 +445,28 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     // boton "Activar Producto" nunca aparecia justo despues de crear. Al editar (no creacion), el
     // estado real no cambia con un simple guardado, se deja igual.
     const estadoNuevo = eraCreacion ? (esAdmin ? 0 : 3) : form.estado;
-    // Pedido explicito del usuario 2026-07-25: si el producto queda pendiente de activar, el
-    // mensaje le dice exactamente cual es el siguiente paso (dar click a "Activar Producto") en
-    // vez de un generico "Actualizado" que no explica que falta.
-    mostrar(
-      estadoNuevo === 3
-        ? 'Este producto se ha guardado, ahora solo falta que des click al botón "Activar Producto / Mostrar a la Comunidad" para que tu producto esté público para todos los vendedores de LokomproAqui.'
-        : eraCreacion ? 'Exitoso' : 'Actualizado',
-    );
+    // CORREGIDO: el boton verde "Subir imagen" (paso 1, esCreacion) llama a esta MISMA funcion --
+    // el mensaje de "ya falta activar" y la habilitacion de "Activar Producto" son solo para el
+    // click real de "Actualizar Cambios" (edicion, eraCreacion ya false), no para el primer guardado
+    // que recien crea el producto y pasa a la vista de edicion.
+    if (eraCreacion) {
+      mostrar('Exitoso');
+    } else {
+      // Pedido explicito del usuario 2026-07-25: si el producto queda pendiente de activar, el
+      // mensaje le dice exactamente cual es el siguiente paso (dar click a "Activar Producto") en
+      // vez de un generico "Actualizado" que no explica que falta.
+      mostrar(
+        estadoNuevo === 3
+          ? 'Este producto se ha guardado, ahora solo falta que des click al botón "Activar Producto / Mostrar a la Comunidad" para que tu producto esté público para todos los vendedores de LokomproAqui.'
+          : 'Actualizado',
+      );
+      // Pedido explicito del usuario 2026-07-25: "Activar Producto" arranca siempre inhabilitado --
+      // se habilita justo aca, recien despues de un click real de "Actualizar Cambios" (no del
+      // primer guardado de creacion).
+      setCambiosGuardados(true);
+    }
     setErrores({});
     setIntentoGuardar(false);
-    // Pedido explicito del usuario 2026-07-25: "Activar Producto" arranca siempre inhabilitado --
-    // se habilita justo aca, recien despues de un guardado exitoso en esta misma sesion del modal.
-    setCambiosGuardados(true);
     // Pedido explicito del usuario 2026-07-25: "Actualizar Cambios" (crear O editar) NO cierra el
     // modal -- se queda abierto para que, si el producto esta pendiente, el boton "Activar
     // Producto / Mostrar a la Comunidad" quede ahi mismo listo para clickear, sin tener que volver
