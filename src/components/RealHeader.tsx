@@ -6,11 +6,12 @@ import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
   Wallet, Users, UserPlus, Package, Truck, Landmark, RefreshCw, Settings,
-  GraduationCap, LogOut, Trash2, BookOpen, Video, UserCheck,
+  GraduationCap, LogOut, Trash2, BookOpen, Video, UserCheck, CheckCircle2, Clock, AlertTriangle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCart, formatCOP, type CartItem } from '@/lib/cartStore';
 import { useToast, Toast } from '@/components/Toast';
+import { fetchEstadoProveedor, type EstadoProveedor } from '@/lib/proveedorEstado';
 
 // Port FIEL del header real de Angular (src/app/extra/header) -- a diferencia del SiteHeader
 // simplificado de Fase 2 (paginas publicas), Fase 3 en adelante el usuario pidio que se vea
@@ -36,6 +37,33 @@ interface MenuItem {
   href: string;
   mostrar: (rol: Rol) => boolean;
 }
+
+// Pedido explicito del usuario 2026-07-25: barra de estado de la bodega, colores solidos (no
+// pasteles como el Toast) a proposito -- esta debe notarse a simple vista, no es un mensaje
+// pasajero. Mismo criterio de colores de marca ya usado en el resto del sitio (verde #198754,
+// rojo #dc3545, amarillo #ffc107).
+const ESTADO_PROVEEDOR_BANNER: Record<string, { Icono: typeof CheckCircle2; clases: string; texto: string }> = {
+  incompleto: {
+    Icono: Clock,
+    clases: 'bg-slate-600 text-white',
+    texto: 'Tu bodega todavía no está aprobada — completa tu registro en Mi Cuenta para que los vendedores te encuentren',
+  },
+  en_revision: {
+    Icono: Clock,
+    clases: 'bg-[#ffc107] text-gray-900',
+    texto: 'Tu bodega está en revisión — te avisamos apenas quede aprobada',
+  },
+  aprobado: {
+    Icono: CheckCircle2,
+    clases: 'bg-[#198754] text-white',
+    texto: '✓ Bodega Aprobada — ya eres visible para todos los vendedores de LokomproAqui',
+  },
+  rechazado: {
+    Icono: AlertTriangle,
+    clases: 'bg-[#dc3545] text-white',
+    texto: 'Tu bodega fue rechazada — revisa el motivo en Mi Cuenta',
+  },
+};
 
 // OJO -- nombre confuso pero verificado en el codigo real (header.component.ts, listMenus()):
 // el campo se llama "disable" pero en realidad significa "mostrar" (`_.filter(menus, row =>
@@ -99,6 +127,11 @@ export function RealHeader() {
   // nuevo entra a revision (Supabase Realtime sobre profiles, ver efecto mas abajo).
   const [proveedoresPendientes, setProveedoresPendientes] = useState(0);
   const { mensaje: notificacion, mostrar: mostrarNotificacion } = useToast();
+  // Pedido explicito del usuario 2026-07-25 ("quiero que el proveedor pueda ver muy notable en su
+  // cuenta cuando su bodega ya se encuentra aprobada y cuando aun no"): estado de la cuenta de
+  // proveedor, mostrado como una barra fija en TODAS las pantallas (no solo en Mi Cuenta) mientras
+  // haya sesion de proveedor -- ver el banner mas abajo, justo debajo del header.
+  const [estadoProveedor, setEstadoProveedor] = useState<EstadoProveedor | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -195,6 +228,33 @@ export function RealHeader() {
       supabase.removeChannel(canal);
     };
   }, [rol, mostrarNotificacion]);
+
+  // Estado de la cuenta del PROPIO proveedor (banner "muy notable" de abajo). Se suscribe a
+  // cambios en vivo de su propia fila -- si un admin lo aprueba mientras esta navegando, el banner
+  // cambia solo a verde sin que tenga que refrescar la pagina.
+  useEffect(() => {
+    if (rol !== 'proveedor' || !userId) {
+      setEstadoProveedor(null);
+      return;
+    }
+    let activo = true;
+
+    async function cargar() {
+      const estado = await fetchEstadoProveedor(userId!);
+      if (activo) setEstadoProveedor(estado);
+    }
+    cargar();
+
+    const canal = supabase
+      .channel(`mi-estado-proveedor-${userId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => cargar())
+      .subscribe();
+
+    return () => {
+      activo = false;
+      supabase.removeChannel(canal);
+    };
+  }, [rol, userId]);
 
   // "Miembros Acelerador" no usa el patron MenuItem.mostrar(rol) normal a proposito -- depende del
   // flag es_lider_general, no del rol (que se queda en 'vendedor' de siempre), ver nota en
@@ -332,6 +392,25 @@ export function RealHeader() {
           </div>
         </div>
       </header>
+
+      {/* Pedido explicito del usuario 2026-07-25: estado de la bodega "muy notable", visible en
+          TODAS las pantallas mientras haya sesion de proveedor (no solo en Mi Cuenta) -- barra
+          solida de color segun el estado, no una tarjeta discreta, justo para que sea imposible
+          no notarla tanto si esta aprobada como si todavia no. */}
+      {estadoProveedor && (
+        <Link
+          href="/config/perfil"
+          className={`flex items-center justify-center gap-2 px-3 py-2 text-center text-xs font-bold hover:opacity-90 sm:text-sm ${
+            ESTADO_PROVEEDOR_BANNER[estadoProveedor.status].clases
+          }`}
+        >
+          {(() => {
+            const Icono = ESTADO_PROVEEDOR_BANNER[estadoProveedor.status].Icono;
+            return <Icono className="h-4 w-4 shrink-0" />;
+          })()}
+          {ESTADO_PROVEEDOR_BANNER[estadoProveedor.status].texto}
+        </Link>
+      )}
       </div>
 
       {/* Menu lateral (hamburguesa) -- siempre montado (no `{menuAbierto && ...}`) para que el nav
