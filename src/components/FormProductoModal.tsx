@@ -78,12 +78,65 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // esto es puramente de interfaz: en ambos casos se guarda tipoTallaId=null y una sola variante sin
   // size_id, la diferencia es solo el rotulo que ve el proveedor).
   const [modoTalla, setModoTalla] = useState<'ninguno' | 'unica' | 'real'>('ninguno');
+  // Pedido explicito del usuario 2026-07-25: todos los campos del flujo son obligatorios salvo "URL
+  // de medios drive" y "Sub Categoría" -- no se deja guardar si falta algo, y el campo que falta se
+  // marca en rojo con su mensaje. `errores` se calcula al intentar guardar; una vez que hay un
+  // intento fallido (`intentoGuardar`), se recalcula en vivo para que el rojo desaparezca apenas se
+  // completa cada campo, sin tener que volver a apretar el boton.
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [intentoGuardar, setIntentoGuardar] = useState(false);
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
   const esCreacion = !form.id;
+
+  // Pedido explicito del usuario 2026-07-25: obligatorios todos los campos del flujo salvo "URL de
+  // medios drive" y "Sub Categoría". Al crear (esCreacion) solo estan visibles foto/precios/
+  // categoria, asi que nombre/colores/descripcion no se piden todavia -- se validan recien cuando
+  // ya existen esos campos en pantalla (editando).
+  function validar(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!form.foto) errs.foto = 'Falta la foto del producto';
+    if (!form.precioDistribuidor) errs.precioDistribuidor = 'Falta el precio a distribuidor';
+    if (!form.precioVenta) errs.precioVenta = 'Falta el precio sugerido de venta';
+    if (!form.categoriaId) errs.categoriaId = 'Falta la categoría';
+    if (!esCreacion) {
+      if (!form.nombre.trim()) errs.nombre = 'Falta el nombre del producto';
+      if (form.colores.length === 0) {
+        errs.colores = 'Falta agregar al menos un color';
+      } else {
+        for (const color of form.colores) {
+          if (!color.nombre.trim()) errs[`colorNombre:${color.key}`] = 'Falta el nombre del color';
+          if (!color.foto) errs[`colorFoto:${color.key}`] = 'Falta la foto de este color';
+          if (!color.tallas.some((t) => t.check && t.cantidad > 0)) errs[`colorCantidad:${color.key}`] = 'Falta la cantidad disponible';
+        }
+      }
+      if (!form.descripcion.trim()) errs.descripcion = 'Falta la descripción detallada';
+    }
+    return errs;
+  }
+
+  function claseInput(campo: string): string {
+    return `w-full rounded border px-3 py-2 text-sm ${errores[campo] ? 'border-red-500' : 'border-gray-300'}`;
+  }
+
+  function claseSelect(campo: string): string {
+    return `w-full rounded border px-2 py-2 text-sm ${errores[campo] ? 'border-red-500' : 'border-gray-300'}`;
+  }
+
+  function MensajeError({ campo }: { campo: string }) {
+    return errores[campo] ? <p className="mt-1 text-xs font-medium text-red-600">{errores[campo]}</p> : null;
+  }
+
+  // Una vez hubo un intento de guardar fallido, los errores se recalculan en vivo con cada cambio
+  // para que el rojo desaparezca apenas el proveedor completa el campo, sin que tenga que volver a
+  // apretar el boton para verlo.
+  useEffect(() => {
+    if (intentoGuardar) setErrores(validar());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, intentoGuardar]);
 
   useEffect(() => {
     fetchCategoriasPrincipales().then(setCategorias);
@@ -219,8 +272,13 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // nombre real se completa despues, al editar. Mientras tanto se autogenera un nombre placeholder
   // (mismo comportamiento del original: "productos borrador con nombre/codigo aleatorios").
   async function guardar() {
-    if (!form.categoriaId) return mostrar('Falta la categoría del producto');
-    if (!esCreacion && !form.nombre.trim()) return mostrar('Falta el nombre del producto');
+    const erroresActuales = validar();
+    if (Object.keys(erroresActuales).length > 0) {
+      setErrores(erroresActuales);
+      setIntentoGuardar(true);
+      mostrar('Faltan campos obligatorios, revisa lo marcado en rojo');
+      return;
+    }
     const eraCreacion = esCreacion;
     const formAGuardar = form.nombre.trim() ? form : { ...form, nombre: `Producto ${form.codigo}` };
     setGuardando(true);
@@ -228,6 +286,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     setGuardando(false);
     if (!id) return mostrar('Error de servidor');
     mostrar(eraCreacion ? 'Exitoso' : 'Actualizado');
+    setErrores({});
+    setIntentoGuardar(false);
     // Pedido explicito del usuario 2026-07-25: al crear en el MODAL (no inline), no se cierra --
     // se queda abierto y pasa a mostrar la vista de edicion completa (foto grande + grilla), igual
     // a la captura de referencia. Antes esto llamaba a onGuardado(), que el padre usa para cerrar
@@ -303,6 +363,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               variant={esCreacion ? 'dropzone' : 'edit'}
               nombreProducto={form.nombre}
               onEliminar={() => set('foto', null)}
+              error={errores.foto}
             />
 
             {/* Pedido explicito del usuario 2026-07-25: estos 3 campos van justo debajo de la foto,
@@ -313,15 +374,17 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className={claseInput('precioDistribuidor')} />
+                  <MensajeError campo="precioDistribuidor" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className={claseInput('precioVenta')} />
+                  <MensajeError campo="precioVenta" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Categoría</label>
-                  <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                  <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className={claseSelect('categoriaId')}>
                     <option value="">Selecciona…</option>
                     {categorias.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -329,6 +392,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                       </option>
                     ))}
                   </select>
+                  <MensajeError campo="categoriaId" />
                 </div>
               </div>
             )}
@@ -366,7 +430,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Nombre</label>
-                <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={claseInput('nombre')} />
+                <MensajeError campo="nombre" />
               </div>
 
               <div>
@@ -375,7 +440,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-700">Categoría</label>
-                <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-2 text-sm">
+                <select value={form.categoriaId ?? ''} onChange={(e) => onCambiarCategoria(Number(e.target.value))} className={claseSelect('categoriaId')}>
                   <option value="">Selecciona…</option>
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -383,6 +448,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                     </option>
                   ))}
                 </select>
+                <MensajeError campo="categoriaId" />
               </div>
 
               <div>
@@ -398,11 +464,13 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', Number(e.target.value))} className={claseInput('precioDistribuidor')} />
+                <MensajeError campo="precioDistribuidor" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', Number(e.target.value))} className={claseInput('precioVenta')} />
+                <MensajeError campo="precioVenta" />
               </div>
 
               <div>
@@ -428,7 +496,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                 referencia. Cada tarjeta trae tallas (si el producto tiene Tipo de medida) o solo
                 una cantidad disponible (si no). */}
             <div>
-              <div className="flex flex-wrap items-center gap-1.5 rounded border border-gray-300 px-2 py-1.5">
+              <div className={`flex flex-wrap items-center gap-1.5 rounded border px-2 py-1.5 ${errores.colores ? 'border-red-500' : 'border-gray-300'}`}>
                 {form.colores.map((c) => (
                   <span key={c.key} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
                     {c.nombre}
@@ -450,6 +518,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                   className="min-w-[100px] flex-1 border-none px-1 py-1 text-sm outline-none"
                 />
               </div>
+              <MensajeError campo="colores" />
             </div>
 
             {form.colores.length > 0 && (
@@ -463,14 +532,18 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                         <input
                           value={color.nombre}
                           onChange={(e) => actualizarColor(color.key, { nombre: e.target.value })}
-                          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                          className={claseInput(`colorNombre:${color.key}`)}
                         />
+                        <MensajeError campo={`colorNombre:${color.key}`} />
 
                         <label className="mb-1 mt-3 block text-xs font-medium text-gray-700">Codigo</label>
                         <input value={codigosColor[color.key] || ''} disabled className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm" />
 
-                        <div className="mt-3 flex justify-center">
-                          <label className="inline-flex cursor-pointer items-center rounded bg-[#198754] px-4 py-2 text-sm font-semibold text-white">
+                        <div className="mt-3 flex flex-col items-center">
+                          <label
+                            className="inline-flex cursor-pointer items-center rounded px-4 py-2 text-sm font-semibold text-white"
+                            style={{ background: errores[`colorFoto:${color.key}`] ? '#dc3545' : '#198754' }}
+                          >
                             {subiendoFoto === color.key ? 'Subiendo…' : 'Agregar una foto'}
                             <input
                               type="file"
@@ -480,25 +553,29 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                               onChange={(e) => e.target.files?.[0] && subirFotoColorPrincipal(color.key, e.target.files[0])}
                             />
                           </label>
+                          <MensajeError campo={`colorFoto:${color.key}`} />
                         </div>
 
                         {modoTalla === 'real' ? (
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {color.tallas.map((t) => (
-                              <div key={t.tallaId}>
-                                <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                                  <input type="checkbox" checked={t.check} onChange={(e) => actualizarTalla(color.key, t.tallaId, { check: e.target.checked })} />
-                                  Talla {t.nombre}
-                                </label>
-                                <input
-                                  type="number"
-                                  value={t.cantidad}
-                                  onChange={(e) => actualizarTalla(color.key, t.tallaId, { cantidad: Number(e.target.value) })}
-                                  placeholder="Cantidad disponible"
-                                  className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs"
-                                />
-                              </div>
-                            ))}
+                          <div className="mt-3">
+                            <div className="grid grid-cols-3 gap-2">
+                              {color.tallas.map((t) => (
+                                <div key={t.tallaId}>
+                                  <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                                    <input type="checkbox" checked={t.check} onChange={(e) => actualizarTalla(color.key, t.tallaId, { check: e.target.checked })} />
+                                    Talla {t.nombre}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={t.cantidad}
+                                    onChange={(e) => actualizarTalla(color.key, t.tallaId, { cantidad: Number(e.target.value) })}
+                                    placeholder="Cantidad disponible"
+                                    className={`w-full rounded border px-2 py-1.5 text-xs ${errores[`colorCantidad:${color.key}`] ? 'border-red-500' : 'border-gray-300'}`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <MensajeError campo={`colorCantidad:${color.key}`} />
                           </div>
                         ) : (
                           <div className="mt-3">
@@ -508,8 +585,9 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                               value={color.tallas[0]?.cantidad ?? 0}
                               onChange={(e) => actualizarCantidadSinTalla(color.key, Number(e.target.value))}
                               placeholder="Cantidad disponible"
-                              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                              className={claseInput(`colorCantidad:${color.key}`)}
                             />
+                            <MensajeError campo={`colorCantidad:${color.key}`} />
                           </div>
                         )}
 
@@ -540,7 +618,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">Descripción detallada</label>
-              <SimpleRichTextEditor key={form.id ?? 'nuevo'} value={form.descripcion} onChange={(html) => set('descripcion', html)} />
+              <SimpleRichTextEditor key={form.id ?? 'nuevo'} value={form.descripcion} onChange={(html) => set('descripcion', html)} error={!!errores.descripcion} />
+              <MensajeError campo="descripcion" />
             </div>
 
             </>

@@ -14,9 +14,12 @@ import { Bold, Italic, List, ListOrdered } from 'lucide-react';
 interface SimpleRichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
+  // Pedido explicito del usuario 2026-07-25: la descripcion es obligatoria -- si falta, el borde se
+  // marca en rojo (mismo patron que el resto de campos obligatorios).
+  error?: boolean;
 }
 
-export function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorProps) {
+export function SimpleRichTextEditor({ value, onChange, error }: SimpleRichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   // Solo pone el HTML inicial UNA vez al montar (nunca reactivo a `value`), para no pelearle al
@@ -35,7 +38,7 @@ export function SimpleRichTextEditor({ value, onChange }: SimpleRichTextEditorPr
   }
 
   return (
-    <div className="rounded border border-gray-300">
+    <div className={`rounded border ${error ? 'border-red-500' : 'border-gray-300'}`}>
       <div className="flex gap-1 border-b border-gray-200 bg-gray-50 p-1.5">
         <button type="button" onClick={() => comando('bold')} className="rounded p-1.5 hover:bg-gray-200" aria-label="Negrita" title="Negrita">
           <Bold className="h-4 w-4" />

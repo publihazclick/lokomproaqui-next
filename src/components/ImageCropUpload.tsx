@@ -24,9 +24,13 @@ interface ImageCropUploadProps {
   variant?: 'dropzone' | 'edit';
   nombreProducto?: string;
   onEliminar?: () => void;
+  // Pedido explicito del usuario 2026-07-25: la foto es obligatoria -- si falta al intentar
+  // guardar, la caja se marca en rojo con este mensaje debajo (mismo patron que el resto de
+  // campos obligatorios del formulario).
+  error?: string;
 }
 
-export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiendo, variant = 'dropzone', nombreProducto, onEliminar }: ImageCropUploadProps) {
+export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiendo, variant = 'dropzone', nombreProducto, onEliminar, error }: ImageCropUploadProps) {
   const [archivoOriginal, setArchivoOriginal] = useState<File | null>(null);
   const [imagenParaRecortar, setImagenParaRecortar] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -142,11 +146,18 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
   }
 
   return (
-    <label className="flex h-56 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-center hover:border-gray-400">
-      <span className="rounded border border-gray-400 px-4 py-1.5 text-sm text-gray-700">
-        {subiendo ? 'Subiendo…' : label}
-      </span>
-      <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
-    </label>
+    <div>
+      <label
+        className={`flex h-56 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-center ${
+          error ? 'border-red-400 hover:border-red-500' : 'border-gray-300 hover:border-gray-400'
+        }`}
+      >
+        <span className={`rounded border px-4 py-1.5 text-sm ${error ? 'border-red-400 text-red-600' : 'border-gray-400 text-gray-700'}`}>
+          {subiendo ? 'Subiendo…' : label}
+        </span>
+        <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
+      </label>
+      {error && <p className="mt-1 text-xs font-medium text-red-600">{error}</p>}
+    </div>
   );
 }
