@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, Package, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   fetchPerfilCompleto,
@@ -18,6 +18,10 @@ import { Indicativo } from '@/lib/indicativo';
 import { DANEGROUP } from '@/lib/dane-cities';
 import { useToast, Toast } from '@/components/Toast';
 import { EquipoVendedoresInfoModal } from '@/components/EquipoVendedoresInfoModal';
+import { PickupAddressCard } from '@/components/PickupAddressCard';
+import { Paso3Documentos } from '@/components/Paso3Documentos';
+import { FormProductoModal } from '@/components/FormProductoModal';
+import { fetchEstadoProveedor, MINIMO_PRODUCTOS_PROVEEDOR, type EstadoProveedor } from '@/lib/proveedorEstado';
 
 // Port 1:1 desde src/app/dashboard-config/components/perfil (Angular, PerfilComponent) -- "Mi
 // Cuenta", pantalla usada por todos los roles logueados. Primera pieza de Fase 5 (panel admin).
@@ -43,6 +47,12 @@ import { EquipoVendedoresInfoModal } from '@/components/EquipoVendedoresInfoModa
 //   margins..."), nunca conectado a datos reales, sin boton que lo dispare en el HTML. No se porta.
 // - "IMPRIMIR" (tarjeta VIP): sigue linkeando a /imprimirTarjeta, ruta que se queda en Angular
 //   (no es parte de esta migracion).
+// - Pedido explicito del usuario 2026-07-24: los "Paso 1/2/3" del onboarding de proveedor
+//   (PickupAddressCard, alta rapida de producto, Paso3Documentos) antes solo vivian en
+//   /config/productos y encima desaparecian ahi mismo apenas el proveedor dejaba de estar
+//   "incompleto" -- ya no habia forma de editar la direccion de recogida o resubir un documento
+//   vencido despues de aprobado. Se agregan aca, dentro de "Datos de bodegas", sin la logica de
+//   gating de onboarding (siempre visibles para cualquier proveedor, sin importar su estado).
 // - Bug real encontrado y NO corregido a proposito (bajo impacto, cosmetic): `disableBtn` en el
 //   original decide si mostrar "Link para crear mi equipo de vendedores" con una condicion OR que
 //   termina siendo SIEMPRE verdadera sin importar el rol (bug de logica, deberia ser AND). Se
@@ -77,12 +87,14 @@ export default function PerfilPage() {
   const [emailInvalido, setEmailInvalido] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
-  const [subiendoPdf, setSubiendoPdf] = useState<string | null>(null);
 
   const [cambiandoClave, setCambiandoClave] = useState(false);
   const [claveNueva, setClaveNueva] = useState('');
   const [verClave, setVerClave] = useState(false);
   const [mostrarInfoEquipo, setMostrarInfoEquipo] = useState(false);
+
+  const [estadoProveedor, setEstadoProveedor] = useState<EstadoProveedor | null>(null);
+  const [inlineFormKey, setInlineFormKey] = useState(0);
 
   const ciudadesOrdenadas = useMemo(() => [...DANEGROUP].sort((a: any, b: any) => (a.city || '').localeCompare(b.city || '')), []);
 
@@ -102,6 +114,7 @@ export default function PerfilPage() {
       setData(perfil);
       setCategorias(cats.filter((c) => c.id !== 0));
       setCategoriasCheck(new Set(catsSel));
+      if (perfil?.rolname === 'proveedor') setEstadoProveedor(await fetchEstadoProveedor(uid));
       setEstado('listo');
     });
   }, []);
@@ -168,20 +181,6 @@ export default function PerfilPage() {
     set('avatarUrl', url);
     await actualizarPerfil(data.id, { avatarUrl: url });
     mostrar('Exitoso');
-  }
-
-  async function onSubirPdf(file: File, campo: 'pdfRutUrl' | 'pdfCedulaUrl' | 'pdfCamaraComercioUrl') {
-    if (!data) return;
-    setSubiendoPdf(campo);
-    const url = await subirArchivoPublico(file);
-    setSubiendoPdf(null);
-    if (!url) {
-      mostrar('Error de servidor subiendo el documento');
-      return;
-    }
-    set(campo, url);
-    await actualizarPerfil(data.id, { [campo]: url });
-    mostrar('Documento guardado');
   }
 
   function toggleCategoria(id: number) {
@@ -437,112 +436,123 @@ export default function PerfilPage() {
         )}
 
         {tab === 'bodega' && data.rolname === 'proveedor' && (
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Nombre de tu bodega</label>
-              <input value={data.nombreTienda || ''} onChange={(e) => set('nombreTienda', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Numero contacto de soporte</label>
-              <input value={data.telefono || ''} onChange={(e) => set('telefono', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Correo electrónico soporte</label>
-              <input value={data.contactEmail || ''} onChange={(e) => set('contactEmail', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Ciudad</label>
-              <input
-                list="ciudades-bodega"
-                value={data.ciudad || ''}
-                onChange={(e) => set('ciudad', e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-              <datalist id="ciudades-bodega">
-                {ciudadesOrdenadas.map((c: any, idx: number) => (
-                  <option key={`${c.code}-${idx}`} value={c.name} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Dirección de bodega para mensajeria</label>
-              <input value={data.direccion || ''} onChange={(e) => set('direccion', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de Proveedor?</label>
-              <select value={data.supplierType || ''} onChange={(e) => set('supplierType', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                <option value="">—</option>
-                {TIPOS_PROVEEDOR.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Tiempo de Experiencia como Proveedor Dropshipping?</label>
-              <select value={data.supplierExperience || ''} onChange={(e) => set('supplierExperience', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
-                <option value="">—</option>
-                {EXPERIENCIAS.map((ex) => (
-                  <option key={ex.value} value={ex.value}>
-                    {ex.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">¿Estás vinculado alguna plataforma de dropshipping?</label>
-              <select
-                value={data.supplierRunsAds === true ? 'si' : data.supplierRunsAds === false ? 'no' : ''}
-                onChange={(e) => set('supplierRunsAds', e.target.value === 'si')}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="">—</option>
-                <option value="si">SI</option>
-                <option value="no">NO</option>
-              </select>
-            </div>
+          <div className="mt-4">
+            <PickupAddressCard profileId={data.id} />
 
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-gray-700">Seleccionar la o las categorías del tipo de producto que quiere promocionar</label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {categorias.map((cat) => (
-                  <label key={cat.id} className="flex items-center gap-1.5 text-xs text-gray-700">
-                    <input type="checkbox" checked={categoriasCheck.has(cat.id)} onChange={() => toggleCategoria(cat.id)} />
-                    {cat.title.slice(0, 10)}
-                  </label>
-                ))}
+            <div className="mb-3 rounded-2xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2">
+                <Package className="h-4.5 w-4.5 shrink-0" style={{ color: '#0288c2' }} />
+                <h5 className="m-0 text-sm font-bold text-gray-900">Paso 2 Agrega tus productos</h5>
+                {!!estadoProveedor && estadoProveedor.productCount >= MINIMO_PRODUCTOS_PROVEEDOR && (
+                  <span className="ml-1 flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Completado
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Llevas {estadoProveedor?.productCount ?? 0} producto{estadoProveedor?.productCount === 1 ? '' : 's'} subido{estadoProveedor?.productCount === 1 ? '' : 's'}.
+              </p>
+              <div className="mt-3">
+                <FormProductoModal
+                  key={inlineFormKey}
+                  inline
+                  productoId={null}
+                  ownerProfileId={data.id}
+                  esAdmin={false}
+                  onClose={() => {}}
+                  onGuardado={async () => {
+                    setInlineFormKey((k) => k + 1);
+                    setEstadoProveedor(await fetchEstadoProveedor(data.id));
+                  }}
+                />
               </div>
             </div>
 
-            <div className="sm:col-span-2 space-y-3">
-              {(
-                [
-                  ['pdfRutUrl', '1. Enviar Rut actualizado'],
-                  ['pdfCedulaUrl', '2. Enviar Copia de la Cedula Ampliada al 150%'],
-                  ['pdfCamaraComercioUrl', '3. Enviar Camara de Comercio Actualizada'],
-                ] as const
-              ).map(([campo, etiqueta]) => (
-                <div key={campo} className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-700">{etiqueta}</span>
-                  {data[campo] && (
-                    <a href={data[campo] as string} target="_blank" rel="noreferrer" className="rounded bg-[#0d6efd] px-2 py-1 text-xs text-white">
-                      Ver
-                    </a>
-                  )}
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-gray-300 px-2 py-1 text-xs">
-                    <Upload className="h-3.5 w-3.5" />
-                    {subiendoPdf === campo ? 'Subiendo…' : 'Subir PDF'}
-                    <input type="file" accept="application/pdf" hidden disabled={!!subiendoPdf} onChange={(e) => e.target.files?.[0] && onSubirPdf(e.target.files[0], campo)} />
-                  </label>
-                </div>
-              ))}
-            </div>
+            <Paso3Documentos profileId={data.id} />
 
-            <div className="sm:col-span-2 flex justify-end">
-              <button onClick={actualizarDatos} disabled={guardando} className="rounded-full bg-[#198754] px-5 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
-                {guardando ? 'Guardando…' : 'Actualizar Datos'}
-              </button>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Nombre de tu bodega</label>
+                <input value={data.nombreTienda || ''} onChange={(e) => set('nombreTienda', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Numero contacto de soporte</label>
+                <input value={data.telefono || ''} onChange={(e) => set('telefono', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Correo electrónico soporte</label>
+                <input value={data.contactEmail || ''} onChange={(e) => set('contactEmail', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Ciudad</label>
+                <input
+                  list="ciudades-bodega"
+                  value={data.ciudad || ''}
+                  onChange={(e) => set('ciudad', e.target.value)}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
+                <datalist id="ciudades-bodega">
+                  {ciudadesOrdenadas.map((c: any, idx: number) => (
+                    <option key={`${c.code}-${idx}`} value={c.name} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Dirección de bodega para mensajeria</label>
+                <input value={data.direccion || ''} onChange={(e) => set('direccion', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Tipo de Proveedor?</label>
+                <select value={data.supplierType || ''} onChange={(e) => set('supplierType', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">—</option>
+                  {TIPOS_PROVEEDOR.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">Tiempo de Experiencia como Proveedor Dropshipping?</label>
+                <select value={data.supplierExperience || ''} onChange={(e) => set('supplierExperience', e.target.value)} className="w-full rounded border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">—</option>
+                  {EXPERIENCIAS.map((ex) => (
+                    <option key={ex.value} value={ex.value}>
+                      {ex.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">¿Estás vinculado alguna plataforma de dropshipping?</label>
+                <select
+                  value={data.supplierRunsAds === true ? 'si' : data.supplierRunsAds === false ? 'no' : ''}
+                  onChange={(e) => set('supplierRunsAds', e.target.value === 'si')}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">—</option>
+                  <option value="si">SI</option>
+                  <option value="no">NO</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-700">Seleccionar la o las categorías del tipo de producto que quiere promocionar</label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {categorias.map((cat) => (
+                    <label key={cat.id} className="flex items-center gap-1.5 text-xs text-gray-700">
+                      <input type="checkbox" checked={categoriasCheck.has(cat.id)} onChange={() => toggleCategoria(cat.id)} />
+                      {cat.title.slice(0, 10)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 flex justify-end">
+                <button onClick={actualizarDatos} disabled={guardando} className="rounded-full bg-[#198754] px-5 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
+                  {guardando ? 'Guardando…' : 'Actualizar Datos'}
+                </button>
+              </div>
             </div>
           </div>
         )}
