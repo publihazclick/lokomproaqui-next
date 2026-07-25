@@ -436,19 +436,20 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     mostrar(eraCreacion ? 'Exitoso' : 'Actualizado');
     setErrores({});
     setIntentoGuardar(false);
-    // Pedido explicito del usuario 2026-07-25: al crear en el MODAL (no inline), no se cierra --
-    // se queda abierto y pasa a mostrar la vista de edicion completa (foto grande + grilla), igual
-    // a la captura de referencia. Antes esto llamaba a onGuardado(), que el padre usa para cerrar
-    // el modal siempre -- por eso el cambio "no se veia": el modal se cerraba antes de mostrar la
-    // vista nueva. El modo inline (Paso 2 de onboarding en Mi Cuenta) sigue cerrando/reseteando de
-    // una, porque ahi el flujo real es "agregar varios productos seguidos", no editar cada uno.
-    if (eraCreacion && !inline) {
-      // BUG REAL CORREGIDO: guardarProducto() inserta el producto nuevo con pending_review=true
-      // (estado 3, "Por Activar") para cualquier no-admin -- pero aca nunca se actualizaba
-      // form.estado, asi que se quedaba en el 0 por defecto de productoFormVacio() y el boton
-      // "Activar Producto" nunca aparecia justo despues de crear (recien reportado por el
-      // proveedor: "cuando el proveedor esta subiendo el producto desaparecio el boton").
-      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: esAdmin ? 0 : 3 }));
+    // Pedido explicito del usuario 2026-07-25: "Actualizar Cambios" (crear O editar) NO cierra el
+    // modal -- se queda abierto para que, si el producto esta pendiente, el boton "Activar
+    // Producto / Mostrar a la Comunidad" quede ahi mismo listo para clickear, sin tener que volver
+    // a abrir el producto. Antes esto llamaba a onGuardado() al editar, que el padre usa para
+    // cerrar el modal siempre. El modo inline (Paso 2 de onboarding en Mi Cuenta) sigue
+    // cerrando/reseteando de una, porque ahi el flujo real es "agregar varios productos seguidos",
+    // no editar cada uno.
+    if (!inline) {
+      // BUG REAL CORREGIDO: al crear, guardarProducto() inserta el producto nuevo con
+      // pending_review=true (estado 3, "Por Activar") para cualquier no-admin -- pero aca nunca se
+      // actualizaba form.estado, asi que se quedaba en el 0 por defecto de productoFormVacio() y el
+      // boton "Activar Producto" nunca aparecia justo despues de crear. Al editar (no creacion),
+      // el estado real no cambia con un simple guardado, se deja igual.
+      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: eraCreacion ? (esAdmin ? 0 : 3) : prev.estado }));
       return;
     }
     onGuardado();
