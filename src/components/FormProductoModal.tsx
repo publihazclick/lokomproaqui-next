@@ -129,6 +129,23 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     return texto === '' ? null : Number(texto);
   }
 
+  // Pedido explicito del usuario 2026-07-25 ("que de manera automatica al escribir cualquier
+  // numero de precios se agreguen los . solos... no dejes poner letras en ningun campo de
+  // precios"): los campos de precio dejan de ser type="number" (un <input type="number"> no puede
+  // mostrar separador de miles) y pasan a texto formateado en vivo. Se guarda SIEMPRE el numero
+  // real sin puntos (form.precioDistribuidor/precioVenta siguen siendo number|null, nada cambia
+  // para guardarProducto/CSV), solo la forma en que se ve y se escribe cambia.
+  function formatearPrecio(valor: number | null): string {
+    return valor === null ? '' : valor.toLocaleString('es-CO');
+  }
+
+  // Quita CUALQUIER caracter que no sea digito -- asi es imposible que una letra (o cualquier otro
+  // simbolo, pegado o escrito) termine formando parte del precio, sin necesidad de bloquear teclas.
+  function onCambiarPrecio(campo: 'precioDistribuidor' | 'precioVenta', texto: string) {
+    const digitos = texto.replace(/\D/g, '');
+    set(campo, digitos === '' ? null : Number(digitos));
+  }
+
   const esCreacion = !form.id;
 
   // Pedido explicito del usuario 2026-07-25: obligatorios todos los campos del flujo salvo "URL de
@@ -140,6 +157,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     if (!form.foto) errs.foto = 'Falta la foto del producto';
     if (!form.precioDistribuidor) errs.precioDistribuidor = 'Falta el precio a distribuidor';
     if (!form.precioVenta) errs.precioVenta = 'Falta el precio sugerido de venta';
+    // Pedido explicito del usuario 2026-07-25: no dejar que el precio a distribuidor quede por
+    // encima del precio de venta -- el vendedor perderia plata en cada pedido.
+    if (form.precioDistribuidor && form.precioVenta && form.precioDistribuidor > form.precioVenta) {
+      errs.precioVenta = 'El precio de venta debe ser mayor al precio a distribuidor';
+    }
     if (!form.categoriaId) errs.categoriaId = 'Falta la categoría';
     if (!esCreacion) {
       if (!form.nombre.trim()) errs.nombre = 'Falta el nombre del producto';
@@ -620,12 +642,24 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                  <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', numOrNull(e.target.value))} className={claseInput('precioDistribuidor')} />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatearPrecio(form.precioDistribuidor)}
+                    onChange={(e) => onCambiarPrecio('precioDistribuidor', e.target.value)}
+                    className={claseInput('precioDistribuidor')}
+                  />
                   <MensajeError campo="precioDistribuidor" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                  <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', numOrNull(e.target.value))} className={claseInput('precioVenta')} />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatearPrecio(form.precioVenta)}
+                    onChange={(e) => onCambiarPrecio('precioVenta', e.target.value)}
+                    className={claseInput('precioVenta')}
+                  />
                   <MensajeError campo="precioVenta" />
                 </div>
                 <div>
@@ -768,12 +802,24 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio a distribuidor</label>
-                <input type="number" value={form.precioDistribuidor ?? ''} onChange={(e) => set('precioDistribuidor', numOrNull(e.target.value))} className={claseInput('precioDistribuidor')} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatearPrecio(form.precioDistribuidor)}
+                  onChange={(e) => onCambiarPrecio('precioDistribuidor', e.target.value)}
+                  className={claseInput('precioDistribuidor')}
+                />
                 <MensajeError campo="precioDistribuidor" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">Precio sugerido de venta</label>
-                <input type="number" value={form.precioVenta ?? ''} onChange={(e) => set('precioVenta', numOrNull(e.target.value))} className={claseInput('precioVenta')} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatearPrecio(form.precioVenta)}
+                  onChange={(e) => onCambiarPrecio('precioVenta', e.target.value)}
+                  className={claseInput('precioVenta')}
+                />
                 <MensajeError campo="precioVenta" />
               </div>
 

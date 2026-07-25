@@ -222,8 +222,15 @@ export function validarFila(fila: FilaCargaMasiva, categorias: OpcionSimple[]): 
   if (!fila.categoriaNombre) errores.push('Falta la categoría');
   else if (!categoria) errores.push(`La categoría "${fila.categoriaNombre}" no existe (copia el nombre exacto de la lista)`);
 
-  if (numeroPositivo(fila.precioDistribuidor) === null) errores.push('Precio a distribuidor inválido');
-  if (numeroPositivo(fila.precioVenta) === null) errores.push('Precio de venta inválido');
+  const precioDistribuidor = numeroPositivo(fila.precioDistribuidor);
+  const precioVenta = numeroPositivo(fila.precioVenta);
+  if (precioDistribuidor === null) errores.push('Precio a distribuidor inválido');
+  if (precioVenta === null) errores.push('Precio de venta inválido');
+  // Pedido explicito del usuario 2026-07-25: no dejar que el precio a distribuidor quede por
+  // encima del precio de venta -- mismo criterio que el formulario uno por uno.
+  if (precioDistribuidor !== null && precioVenta !== null && precioDistribuidor > precioVenta) {
+    errores.push('El precio a distribuidor no puede ser mayor que el precio de venta');
+  }
   if (numeroPositivo(fila.alto) === null) errores.push('Alto empacado inválido');
   if (numeroPositivo(fila.ancho) === null) errores.push('Ancho empacado inválido');
   if (numeroPositivo(fila.largo) === null) errores.push('Largo empacado inválido');
