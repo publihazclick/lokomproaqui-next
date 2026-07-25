@@ -124,7 +124,10 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
           <img src={value} alt="" className="h-44 w-44 rounded-md border border-gray-200 bg-gray-50 object-contain" />
           <label className="inline-flex cursor-pointer items-center gap-2 rounded bg-[#0d6efd] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
             <Upload className="h-4 w-4" />
-            {subiendo ? 'Subiendo…' : 'Agregar Foto'}
+            {/* Pedido explicito del usuario 2026-07-25: si ya hay una foto (siempre el caso aca,
+                este bloque solo se renderiza cuando value existe), el boton dice "Cambiar" en vez
+                de "Agregar" -- no tiene sentido invitar a "agregar" una foto que ya esta puesta. */}
+            {subiendo ? 'Subiendo…' : 'Cambiar Foto Principal'}
             <input type="file" accept="image/*" hidden disabled={subiendo} onChange={(e) => e.target.files?.[0] && onFileSeleccionado(e.target.files[0])} />
           </label>
         </div>

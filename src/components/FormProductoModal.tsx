@@ -96,6 +96,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   // completa cada campo, sin tener que volver a apretar el boton.
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [intentoGuardar, setIntentoGuardar] = useState(false);
+  // Pedido explicito del usuario 2026-07-25: "Activar Producto / Mostrar a la Comunidad" arranca
+  // SIEMPRE inhabilitado (bien visible que lo esta) -- recien se habilita cuando se da click a
+  // "Actualizar Cambios" en esta misma sesion del modal, para forzar que el proveedor confirme sus
+  // datos actuales justo antes de publicar el producto.
+  const [cambiosGuardados, setCambiosGuardados] = useState(false);
 
   function set<K extends keyof ProductoForm>(campo: K, valor: ProductoForm[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -195,6 +200,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   }, []);
 
   useEffect(() => {
+    setCambiosGuardados(false);
     if (!productoId) {
       setCargando(false);
       return;
@@ -433,9 +439,25 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     const id = await guardarProducto(formAGuardar, ownerProfileId, esAdmin);
     setGuardando(false);
     if (!id) return mostrar('Error de servidor');
-    mostrar(eraCreacion ? 'Exitoso' : 'Actualizado');
+    // BUG REAL CORREGIDO: al crear, guardarProducto() inserta el producto nuevo con
+    // pending_review=true (estado 3, "Por Activar") para cualquier no-admin -- pero aca nunca se
+    // actualizaba form.estado, asi que se quedaba en el 0 por defecto de productoFormVacio() y el
+    // boton "Activar Producto" nunca aparecia justo despues de crear. Al editar (no creacion), el
+    // estado real no cambia con un simple guardado, se deja igual.
+    const estadoNuevo = eraCreacion ? (esAdmin ? 0 : 3) : form.estado;
+    // Pedido explicito del usuario 2026-07-25: si el producto queda pendiente de activar, el
+    // mensaje le dice exactamente cual es el siguiente paso (dar click a "Activar Producto") en
+    // vez de un generico "Actualizado" que no explica que falta.
+    mostrar(
+      estadoNuevo === 3
+        ? 'Este producto se ha guardado, ahora solo falta que des click al botón "Activar Producto / Mostrar a la Comunidad" para que tu producto esté público para todos los vendedores de LokomproAqui.'
+        : eraCreacion ? 'Exitoso' : 'Actualizado',
+    );
     setErrores({});
     setIntentoGuardar(false);
+    // Pedido explicito del usuario 2026-07-25: "Activar Producto" arranca siempre inhabilitado --
+    // se habilita justo aca, recien despues de un guardado exitoso en esta misma sesion del modal.
+    setCambiosGuardados(true);
     // Pedido explicito del usuario 2026-07-25: "Actualizar Cambios" (crear O editar) NO cierra el
     // modal -- se queda abierto para que, si el producto esta pendiente, el boton "Activar
     // Producto / Mostrar a la Comunidad" quede ahi mismo listo para clickear, sin tener que volver
@@ -444,12 +466,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     // cerrando/reseteando de una, porque ahi el flujo real es "agregar varios productos seguidos",
     // no editar cada uno.
     if (!inline) {
-      // BUG REAL CORREGIDO: al crear, guardarProducto() inserta el producto nuevo con
-      // pending_review=true (estado 3, "Por Activar") para cualquier no-admin -- pero aca nunca se
-      // actualizaba form.estado, asi que se quedaba en el 0 por defecto de productoFormVacio() y el
-      // boton "Activar Producto" nunca aparecia justo despues de crear. Al editar (no creacion),
-      // el estado real no cambia con un simple guardado, se deja igual.
-      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: eraCreacion ? (esAdmin ? 0 : 3) : prev.estado }));
+      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre, estado: estadoNuevo }));
       return;
     }
     onGuardado();
@@ -474,7 +491,9 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     const ok = id ? await activarProducto(form.id) : false;
     setActivando(false);
     if (!ok) return mostrar('Error de servidor');
-    mostrar('¡Producto Activado, ya tus vendedores pueden verlo!');
+    // Pedido explicito del usuario 2026-07-25: confirmar exactamente que a partir de este momento
+    // el producto ya es visible en la vista publica de los vendedores.
+    mostrar('El producto a partir de este momento se está mostrando en la vista pública de los vendedores de LokomproAqui.');
     onGuardado();
   }
 
@@ -948,7 +967,14 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
             </button>
           )}
           {form.estado === 3 && (
-            <button onClick={activar} disabled={activando} className="rounded bg-[#198754] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60">
+            <button
+              onClick={activar}
+              disabled={activando || !cambiosGuardados}
+              title={!cambiosGuardados ? 'Primero da click en "Actualizar Cambios"' : undefined}
+              className={`rounded px-3 py-1.5 text-sm font-medium ${
+                cambiosGuardados ? 'bg-[#198754] text-white disabled:opacity-60' : 'cursor-not-allowed bg-gray-200 text-gray-400'
+              }`}
+            >
               {activando ? 'Activando…' : 'Activar Producto / Mostrar a la Comunidad'}
             </button>
           )}
