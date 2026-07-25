@@ -503,7 +503,11 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
     // Pedido explicito del usuario 2026-07-25: confirmar exactamente que a partir de este momento
     // el producto ya es visible en la vista publica de los vendedores.
     mostrar('El producto a partir de este momento se está mostrando en la vista pública de los vendedores de LokomproAqui.');
-    onGuardado();
+    // BUG REAL CORREGIDO: onGuardado() (parent) cierra el modal de una -- llamarlo justo despues de
+    // mostrar() no dejaba ver el mensaje ni una fraccion de segundo, porque todo el modal (incluido
+    // el Toast) se desmontaba en el mismo tick. Se da un respiro para que el proveedor alcance a
+    // leer la confirmacion antes de que se cierre solo.
+    setTimeout(onGuardado, 2500);
   }
 
   return (
