@@ -181,12 +181,23 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
   async function guardar() {
     if (!form.categoriaId) return mostrar('Falta la categoría del producto');
     if (!esCreacion && !form.nombre.trim()) return mostrar('Falta el nombre del producto');
+    const eraCreacion = esCreacion;
     const formAGuardar = form.nombre.trim() ? form : { ...form, nombre: `Producto ${form.codigo}` };
     setGuardando(true);
     const id = await guardarProducto(formAGuardar, ownerProfileId, esAdmin);
     setGuardando(false);
     if (!id) return mostrar('Error de servidor');
-    mostrar(form.id ? 'Actualizado' : 'Exitoso');
+    mostrar(eraCreacion ? 'Exitoso' : 'Actualizado');
+    // Pedido explicito del usuario 2026-07-25: al crear en el MODAL (no inline), no se cierra --
+    // se queda abierto y pasa a mostrar la vista de edicion completa (foto grande + grilla), igual
+    // a la captura de referencia. Antes esto llamaba a onGuardado(), que el padre usa para cerrar
+    // el modal siempre -- por eso el cambio "no se veia": el modal se cerraba antes de mostrar la
+    // vista nueva. El modo inline (Paso 2 de onboarding en Mi Cuenta) sigue cerrando/reseteando de
+    // una, porque ahi el flujo real es "agregar varios productos seguidos", no editar cada uno.
+    if (eraCreacion && !inline) {
+      setForm((prev) => ({ ...prev, id, nombre: formAGuardar.nombre }));
+      return;
+    }
     onGuardado();
   }
 
@@ -467,7 +478,15 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 px-4 py-3">
           {!inline && (
-            <button onClick={onClose} className="rounded px-3 py-1.5 text-sm text-gray-600">
+            <button
+              onClick={
+                // Si se creo un producto nuevo durante esta sesion del modal (productoId era null
+                // pero form.id ya tiene valor), Cerrar debe refrescar la tabla de fondo -- no solo
+                // cerrar sin mas, o el producto recien creado no aparece hasta recargar la pagina.
+                !productoId && form.id ? onGuardado : onClose
+              }
+              className="rounded px-3 py-1.5 text-sm text-gray-600"
+            >
               Cerrar
             </button>
           )}
