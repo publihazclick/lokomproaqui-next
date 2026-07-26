@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
-import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
+import { fetchCategoriasConProductos, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchBannersActivos, clasesPosicionBoton, type BannerImagen } from '@/lib/adminConfig';
 import { formatCOP } from '@/lib/cartStore';
@@ -178,7 +178,7 @@ export default function ArticuloPage() {
         return;
       }
 
-      const [cats, listaBanners] = await Promise.all([fetchCategoriasConSub(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
+      const [cats, listaBanners] = await Promise.all([fetchCategoriasConProductos(), fetchBannersActivos(), cargarPagina(usuario, 0)]);
       setCategorias(cats);
       setBanners(listaBanners);
       setEstado('listo');

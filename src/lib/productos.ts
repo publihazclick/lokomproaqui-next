@@ -35,8 +35,10 @@ async function idsProveedoresNoAprobados(): Promise<string[]> {
 
 // `.not(col, 'in', '(a,b,c)')` es la sintaxis real de PostgREST/supabase-js para NOT IN -- devuelve
 // el texto listo para pasarle a `.not('owner_profile_id', 'in', ...)`, o null si no hay nada que
-// excluir (para no aplicar un `.not` innecesario).
-async function filtroNotInProveedoresNoAprobados(): Promise<string | null> {
+// excluir (para no aplicar un `.not` innecesario). Exportada para que otras pantallas (ej. el
+// listado de categorias del Inicio) apliquen el mismo criterio de "solo lo que un vendedor puede
+// ver de verdad", sin duplicar la consulta de proveedores no aprobados.
+export async function filtroNotInProveedoresNoAprobados(): Promise<string | null> {
   const excluidos = await idsProveedoresNoAprobados();
   return excluidos.length ? `(${excluidos.join(',')})` : null;
 }
