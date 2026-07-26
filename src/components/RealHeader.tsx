@@ -331,21 +331,26 @@ export function RealHeader() {
           sticky top-0 compitiendo por la misma posicion se superpondrian). */}
       <div className="sticky top-0 z-50">
         {pathname === '/info' && (
-          <div className="banner-mirror relative overflow-hidden px-3 py-2.5 text-center shadow-[0_2px_16px_rgba(0,0,0,0.25)] sm:py-3">
+          // Pedido explicito del usuario 2026-07-25: todo el anuncio (no solo el boton "Ver ahora")
+          // debe llevar al mismo destino del boton -- se envuelve el anuncio completo en el Link y
+          // el boton pasa a ser decorativo (span) para no anidar <a>.
+          <Link
+            href="/acelerador"
+            className="banner-mirror relative block overflow-hidden px-3 py-2.5 text-center shadow-[0_2px_16px_rgba(0,0,0,0.25)] sm:py-3"
+          >
             <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-2 sm:gap-3">
               <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-[#0177a8] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] sm:text-base">
                 <span className="animate-pulse text-base sm:text-lg">🔥</span>
                 Acelerador de Ventas
               </span>
-              <Link
-                href="/acelerador"
+              <span
                 className="whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold text-white transition hover:scale-110 sm:px-5 sm:py-2 sm:text-sm"
                 style={{ background: 'linear-gradient(135deg, #ff4d1c, #ff9800)', boxShadow: '0 4px 14px rgba(255,87,34,0.5)' }}
               >
                 Ver ahora →
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
         )}
 
         <header className="bg-[#02a0e3] shadow-md">
