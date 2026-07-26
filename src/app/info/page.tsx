@@ -168,7 +168,10 @@ export default async function InfoPage() {
         )}
 
         <section className={styles.banner}>
-          <div className={styles.frame42}>
+          {/* Pedido explicito del usuario 2026-07-25: todo el banner debe llevar al mismo destino
+              del boton ("Regístrate gratis" -> /singUp), no solo el boton -- se envuelve el frame
+              completo en el Link y el boton pasa a ser decorativo (span) para no anidar <a>. */}
+          <Link href="/singUp" className={styles.frame42} style={{ textDecoration: 'none', cursor: 'pointer' }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
             <img className={styles.imgprincipal1} src="/assets/imagenes/BANNER%201.png" alt="" />
             <div className={styles.frame41}>
@@ -183,12 +186,10 @@ export default async function InfoPage() {
                 Tu socio confiable en el mundo del dropshipping. ¡Maximiza tus ganancias sin preocuparte por el inventario! Con nosotros, encontrarás productos de alta calidad y una experiencia de compra excepcional.
               </div>
               <div className={styles.frame33} style={{ margin: 'auto' }}>
-                <Link href="/singUp" className={styles.registrateGratis} style={{ textDecoration: 'none' }}>
-                  Regístrate gratis
-                </Link>
+                <span className={styles.registrateGratis}>Regístrate gratis</span>
               </div>
             </div>
-          </div>
+          </Link>
         </section>
 
         <div className={styles.col12}>
