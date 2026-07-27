@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Port desde src/app/layout/login (Angular). Replica el mismo flujo real de
@@ -14,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 // El checkbox "Recordarme" del original no estaba conectado a ninguna logica real (UI muerta)
 // -- se omite en vez de portar algo que no hacia nada (ver feedback_lokomproaqui_unicornio).
 export default function LoginPage() {
+  const router = useRouter();
   const [revisandoSesion, setRevisandoSesion] = useState(true);
   const [identificador, setIdentificador] = useState('');
   const [clave, setClave] = useState('');
@@ -42,7 +44,7 @@ export default function LoginPage() {
   }, []);
 
   function redirigirSegunRol(rol: string | undefined) {
-    window.location.href = rol === 'mentor' ? '/mvid8x2qz1/panel' : '/articulo';
+    router.push(rol === 'mentor' ? '/mvid8x2qz1/panel' : '/articulo');
   }
 
   async function submit(e: React.FormEvent) {
@@ -91,7 +93,13 @@ export default function LoginPage() {
     );
   }
 
-  if (revisandoSesion) return null;
+  if (revisandoSesion) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0177a8] to-[#02a0e3]">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0177a8] to-[#02a0e3] px-4 py-12">
