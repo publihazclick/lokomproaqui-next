@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, conTimeout } from '@/lib/supabase';
 
 // Port desde src/app/layout/login (Angular). Replica el mismo flujo real de
 // UsuariosService.login(): acepta correo O celular (se resuelve el correo real via el RPC
@@ -29,21 +29,40 @@ export default function LoginPage() {
   const [mensajeRecuperar, setMensajeRecuperar] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
+    let cancelado = false;
+
+    (async () => {
+      try {
+        // getSession() a veces se queda colgado indefinidamente (nunca resuelve ni rechaza,
+        // no solo lento) -- confirmado en produccion: el visitante quedaba viendo solo el
+        // fondo azul para siempre porque revisandoSesion nunca bajaba a false. conTimeout
+        // (mismo patron ya probado en lib/supabase.ts para el resto del sitio) garantiza que
+        // despues de unos segundos se trate como "sin sesion" y se muestre el formulario.
+        const { data } = await conTimeout(
+          supabase.auth.getSession(),
+          { data: { session: null } } as Awaited<ReturnType<typeof supabase.auth.getSession>>,
+          4000,
+        );
+        if (cancelado) return;
         if (!data.session) {
           setRevisandoSesion(false);
           return;
         }
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('roles(name)')
-          .eq('id', data.session.user.id)
-          .single();
+        const { data: profile } = await conTimeout(
+          supabase.from('profiles').select('roles(name)').eq('id', data.session.user.id).single(),
+          { data: null } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout, forma real de PostgrestSingleResponse es demasiado especifica para reconstruirla a mano
+          4000,
+        );
+        if (cancelado) return;
         redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
-      })
-      .catch(() => setRevisandoSesion(false));
+      } catch {
+        if (!cancelado) setRevisandoSesion(false);
+      }
+    })();
+
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   function redirigirSegunRol(rol: string | undefined) {
@@ -59,25 +78,39 @@ export default function LoginPage() {
     try {
       let email = identificador.trim();
       if (!email.includes('@')) {
-        const { data: resolvedEmail } = await supabase.rpc('lookup_email_by_phone', { p_phone: email });
+        const { data: resolvedEmail } = await conTimeout(
+          supabase.rpc('lookup_email_by_phone', { p_phone: email }),
+          { data: null } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout
+          8000,
+        );
         if (!resolvedEmail) {
-          setError('No encontramos una cuenta con ese celular o correo');
+          setError('No encontramos una cuenta con ese celular o correo, o la conexión tardó demasiado');
           return;
         }
         email = resolvedEmail;
       }
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password: clave });
+      const { data, error: signInError } = await conTimeout(
+        supabase.auth.signInWithPassword({ email, password: clave }),
+        { data: { session: null, user: null, weakPassword: null }, error: { message: 'timeout', name: 'timeout', status: 0 } } as Awaited<
+          ReturnType<typeof supabase.auth.signInWithPassword>
+        >,
+        8000,
+      );
       if (signInError || !data.session) {
-        setError('Correo/celular o contraseña incorrectos');
+        setError(
+          signInError?.message === 'timeout'
+            ? 'La conexión tardó demasiado, intenta de nuevo'
+            : 'Correo/celular o contraseña incorrectos',
+        );
         return;
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('roles(name)')
-        .eq('id', data.user.id)
-        .single();
+      const { data: profile } = await conTimeout(
+        supabase.from('profiles').select('roles(name)').eq('id', data.user.id).single(),
+        { data: null } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout
+        8000,
+      );
       redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
     } catch {
       setError('Ocurrió un error al iniciar sesión, intenta de nuevo.');
