@@ -12,8 +12,10 @@ export interface ResumenGlobal {
 }
 
 export async function fetchResumenGlobal(): Promise<ResumenGlobal> {
-  const { count: totalOrders } = await supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['success', 'rejected']);
-  const { count: totalReturns } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'rejected');
+  const [{ count: totalOrders }, { count: totalReturns }] = await Promise.all([
+    supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['success', 'rejected']),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
+  ]);
   const total = totalOrders || 0;
   const returns = totalReturns || 0;
   return { totalOrders: total, totalReturns: returns, returnRate: total > 0 ? returns / total : 0 };

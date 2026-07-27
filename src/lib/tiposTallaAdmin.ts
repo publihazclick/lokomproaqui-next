@@ -52,9 +52,11 @@ export interface TipoTallaDetalle {
 }
 
 export async function fetchTipoTallaDetalle(id: number): Promise<TipoTallaDetalle | null> {
-  const { data, error } = await supabase.from('size_types').select('id, name, active, sort_order').eq('id', id).maybeSingle();
+  const [{ data, error }, { data: tallas }] = await Promise.all([
+    supabase.from('size_types').select('id, name, active, sort_order').eq('id', id).maybeSingle(),
+    supabase.from('sizes').select('id, name, sort_order').eq('size_type_id', id).eq('active', true).order('sort_order'),
+  ]);
   if (error || !data) return null;
-  const { data: tallas } = await supabase.from('sizes').select('id, name, sort_order').eq('size_type_id', id).eq('active', true).order('sort_order');
   return {
     id: data.id,
     nombre: data.name,

@@ -153,20 +153,20 @@ function formatFechaDDMMYYYY(iso: string): string {
 // Equivalente a ProductoService.get({ where: { id } }) para la pagina de detalle: un producto activo
 // + sus comentarios publicos aprobados (status 0), mismo orden mas reciente primero.
 export async function fetchProductoById(id: string | number): Promise<ProductoLegacy | null> {
+  // excluidos y comments no dependen entre si ni del resultado del producto -- corren en paralelo
+  // (antes iban en 3 pasos secuenciales: excluidos -> producto -> comentarios). Unico costo: si el
+  // producto termina inactivo/no existe, el fetch de comentarios se hizo igual y se descarta -- caso
+  // raro, y mucho mas barato que sumar un viaje de red completo en el camino normal.
+  const [excluidos, { data: comments }] = await Promise.all([
+    filtroNotInProveedoresNoAprobados(),
+    supabase.from('product_comments').select('name, created_at, description').eq('product_id', id).eq('status', 0).order('created_at', { ascending: false }),
+  ]);
   let q = supabase.from('products').select(PRODUCT_SELECT).eq('id', id).eq('active', true);
-  const excluidos = await filtroNotInProveedoresNoAprobados();
   if (excluidos) q = q.not('owner_profile_id', 'in', excluidos);
   const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
 
   const mapped = mapProductToLegacy(data);
-
-  const { data: comments } = await supabase
-    .from('product_comments')
-    .select('name, created_at, description')
-    .eq('product_id', id)
-    .eq('status', 0)
-    .order('created_at', { ascending: false });
 
   mapped.listComment = (comments || []).map((c: any) => ({
     nombre: c.name,

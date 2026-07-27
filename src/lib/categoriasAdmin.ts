@@ -48,9 +48,11 @@ export interface CategoriaAdminDetalle {
 }
 
 export async function fetchCategoriaAdminDetalle(id: number): Promise<CategoriaAdminDetalle | null> {
-  const { data, error } = await supabase.from('categories').select('id, name, description, image_url, sort_order, active').eq('id', id).maybeSingle();
+  const [{ data, error }, { data: hijas }] = await Promise.all([
+    supabase.from('categories').select('id, name, description, image_url, sort_order, active').eq('id', id).maybeSingle(),
+    supabase.from('categories').select('id, name').eq('parent_id', id).eq('active', true).order('sort_order'),
+  ]);
   if (error || !data) return null;
-  const { data: hijas } = await supabase.from('categories').select('id, name').eq('parent_id', id).eq('active', true).order('sort_order');
   return {
     id: data.id,
     nombre: data.name,
