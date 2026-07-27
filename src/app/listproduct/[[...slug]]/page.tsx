@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, agregarTodosLosProductosDeBodega, type ProductoLegacy } from '@/lib/productos';
@@ -148,8 +149,7 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
     <div className="mx-auto w-full max-w-[1140px] px-3 py-4">
       {dataStore && (
         <div className="mb-4 flex flex-col items-center gap-3 rounded-xl border border-gray-100 p-4 text-center shadow-sm sm:flex-row sm:text-left">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
-          <img src={dataStore.usu_imagen || '/assets/avatar.png'} alt="" className="h-24 w-24 shrink-0 rounded-full object-cover" />
+          <Image src={dataStore.usu_imagen || '/assets/avatar.png'} alt="" width={96} height={96} className="h-24 w-24 shrink-0 rounded-full object-cover" />
           <div className="flex-1">
             <h4 className="font-bold text-gray-900">{dataStore.usu_usuario}</h4>
             {dataStore.usu_telefono && <p className="text-sm text-gray-600">Celular: {dataStore.usu_telefono}</p>}
@@ -199,8 +199,15 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {listArticle.map((item) => (
           <div key={item.id} onClick={() => setProductoAbierto(item)} className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-            <img src={item.foto} alt={item.pro_nombre} className="h-40 w-full object-cover" />
+            <div className="relative h-40 w-full">
+              <Image
+                src={item.foto}
+                alt={item.pro_nombre}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                className="object-cover"
+              />
+            </div>
             <div className="p-2 text-center">
               <p className="truncate text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 10)}</p>
               <p className="text-xs font-medium text-gray-600">$ {formatCOP(item.pro_uni_venta || 0)}</p>

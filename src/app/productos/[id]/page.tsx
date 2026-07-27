@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { fetchProductoById, codigoCarrito, type ProductoLegacy } from '@/lib/productos';
 import { useCart, formatCOP } from '@/lib/cartStore';
@@ -122,12 +123,14 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
 
       <div className="mt-3 flex flex-wrap">
         <div className="w-full px-2 md:w-1/2">
-          <div className="overflow-hidden rounded">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de Supabase Storage/legacy assets */}
-            <img
+          <div className="relative h-[425px] w-full overflow-hidden rounded">
+            <Image
               src={foto || '/assets/noimagen.jpg'}
               alt={data.pro_nombre}
-              className="w-full max-h-[425px] object-contain transition-transform duration-300 hover:scale-105"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-contain transition-transform duration-300 hover:scale-105"
             />
           </div>
         </div>

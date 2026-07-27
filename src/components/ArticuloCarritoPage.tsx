@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, guardarPriceOverride, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
@@ -237,8 +238,13 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
 
       {bodega && (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-green-100 bg-green-50 p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
-          <img src={bodega.foto || '/assets/imagenes/todos.png'} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          <Image
+            src={bodega.foto || '/assets/imagenes/todos.png'}
+            alt=""
+            width={48}
+            height={48}
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-gray-800">{bodega.nombre}</p>
             <p className="truncate text-xs text-gray-500">{bodega.ciudad}</p>
@@ -276,8 +282,15 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {listProductos.map((item) => (
           <div key={item.id} className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-            <img src={item.foto} alt={item.pro_nombre} onClick={() => setProductoAbierto(item)} className="h-40 w-full cursor-pointer object-cover" />
+            <div className="relative h-40 w-full cursor-pointer" onClick={() => setProductoAbierto(item)}>
+              <Image
+                src={item.foto}
+                alt={item.pro_nombre}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                className="object-cover"
+              />
+            </div>
             <div className="p-2">
               <h4 className="truncate text-center text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>
 

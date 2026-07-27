@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { FrontHeader } from '@/components/FrontHeader';
 import { fetchProductoById, type ProductoLegacy } from '@/lib/productos';
 import { resolverTiendaPorTelefono, crearPedidoRapido, agregarAlCarritoFront, fijarVendedorCarritoFront, type TiendaFront } from '@/lib/front';
@@ -157,8 +158,16 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
       <div className="mx-auto w-full max-w-[1000px] px-3 py-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-            <img src={fotoActual} alt={producto.pro_nombre} className="w-full rounded-xl object-cover" />
+            <Image
+              src={fotoActual}
+              alt={producto.pro_nombre}
+              width={800}
+              height={800}
+              priority
+              sizes="(max-width: 640px) 100vw, 50vw"
+              style={{ width: '100%', height: 'auto' }}
+              className="rounded-xl object-cover"
+            />
           </div>
 
           <div>

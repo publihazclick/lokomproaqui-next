@@ -209,7 +209,7 @@ export async function fetchProductos(opts: {
 
   let overrides: any[] = [];
   if (opts.userId) {
-    const { data: po } = await supabase.from('price_overrides').select('*').eq('profile_id', opts.userId).eq('active', true);
+    const { data: po } = await supabase.from('price_overrides').select('product_id, price').eq('profile_id', opts.userId).eq('active', true);
     overrides = po || [];
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConProductos, type CategoriaConSub } from '@/lib/categorias';
@@ -65,8 +66,21 @@ function PromoBannerCarousel({ banners }: { banners: BannerImagen[] }) {
   if (banners.length === 0) return null;
   const actual = banners[idx % banners.length];
 
-  // eslint-disable-next-line @next/next/no-img-element -- Storage, medidas propias del admin
-  const imagen = <img src={actual.imageUrl} alt="" className="w-full rounded-lg object-cover" />;
+  // width/height son solo un hint para evitar layout shift -- style height:auto hace que el
+  // navegador respete la proporcion REAL de la imagen que subio el admin (sin forzar recorte),
+  // mismo comportamiento visual que el <img> plano de antes pero con optimizacion real de next/image.
+  const imagen = (
+    <Image
+      src={actual.imageUrl}
+      alt=""
+      width={1200}
+      height={500}
+      sizes="100vw"
+      priority
+      style={{ width: '100%', height: 'auto' }}
+      className="rounded-lg object-cover"
+    />
+  );
 
   return (
     <div className="relative">
@@ -109,8 +123,7 @@ function CategoriaStrip({ categorias }: { categorias: CategoriaConSub[] }) {
           className="flex shrink-0 flex-col items-center gap-1 text-center"
           style={{ width: 72 }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de categoria (Supabase/assets legacy) */}
-          <img src={cat.image} alt="" className="h-14 w-14 rounded-full border border-gray-200 object-cover" />
+          <Image src={cat.image} alt="" width={56} height={56} className="h-14 w-14 rounded-full border border-gray-200 object-cover" />
           <span className="text-[10px] leading-tight text-gray-700">{cat.title}</span>
         </a>
       ))}
@@ -121,8 +134,9 @@ function CategoriaStrip({ categorias }: { categorias: CategoriaConSub[] }) {
 function ProductoCardMini({ item, onClick }: { item: ProductoLegacy; onClick: () => void }) {
   return (
     <div className="w-44 shrink-0 rounded-xl border border-gray-100 p-2 shadow-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-      <img src={item.foto} alt={item.pro_nombre} onClick={onClick} className="h-32 w-full cursor-pointer rounded object-cover" />
+      <div className="relative h-32 w-full cursor-pointer" onClick={onClick}>
+        <Image src={item.foto} alt={item.pro_nombre} fill sizes="176px" className="rounded object-cover" />
+      </div>
       <p onClick={onClick} className="mt-1 cursor-pointer truncate text-xs font-medium text-gray-800">
         {item.pro_nombre}
       </p>
@@ -232,13 +246,15 @@ export default function ArticuloPage() {
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {listProductos.map((item) => (
           <div key={item.id} className="rounded-xl border border-gray-100 p-2 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-            <img
-              src={item.foto}
-              alt={item.pro_nombre}
-              onClick={() => setProductoAbierto(item)}
-              className="h-32 w-full cursor-pointer rounded object-cover"
-            />
+            <div className="relative h-32 w-full cursor-pointer" onClick={() => setProductoAbierto(item)}>
+              <Image
+                src={item.foto}
+                alt={item.pro_nombre}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                className="rounded object-cover"
+              />
+            </div>
             <h4 className="mt-1 truncate text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>
             <p className="text-[11px] text-gray-500">
               precio a distribuidor: <span className="font-medium text-gray-700">$ {formatCOP(item.pro_vendedor || 0)}</span>
