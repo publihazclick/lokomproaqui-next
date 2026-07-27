@@ -24,7 +24,7 @@ export interface ModuloConLecciones {
 
 export async function fetchModulosConLecciones(): Promise<ModuloConLecciones[]> {
   const [{ data: modules }, { data: lessons }] = await Promise.all([
-    supabase.from('acelerador_modules').select('*').order('sort_order'),
+    supabase.from('acelerador_modules').select('id, title').order('sort_order'),
     supabase.from('acelerador_lessons').select('id, module_id, title, description, sort_order, thumbnail_url, duration_seconds').order('sort_order'),
   ]);
   if (!modules) return [];

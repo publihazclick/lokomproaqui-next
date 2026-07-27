@@ -219,7 +219,9 @@ export function estadoGuiaLabel(estado: string): string {
 export async function fetchMisGuias(profileId: string): Promise<GuiaRow[]> {
   const { data, error } = await supabase
     .from('standalone_shipments')
-    .select('*')
+    .select(
+      'id, status, tracking_number, delivery_company_name, delivery_company_logo_url, receiver_name, receiver_phone, receiver_city, created_at, freight_cost, insurance_active, payment_type, tracking_status',
+    )
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false })
     .limit(200);

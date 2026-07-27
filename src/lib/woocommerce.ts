@@ -12,7 +12,7 @@ export interface WoocommerceConnection {
 }
 
 export async function fetchWoocommerceConnection(profileId: string): Promise<WoocommerceConnection | null> {
-  const { data, error } = await supabase.from('woocommerce_connections').select('*').eq('profile_id', profileId).maybeSingle();
+  const { data, error } = await supabase.from('woocommerce_connections').select('store_url, connected_at').eq('profile_id', profileId).maybeSingle();
   if (error || !data) return null;
   return data;
 }
@@ -55,7 +55,7 @@ export interface WoocommercePendingOrder {
 export async function fetchWoocommercePendingOrders(profileId: string): Promise<WoocommercePendingOrder[]> {
   const { data, error } = await supabase
     .from('woocommerce_pending_orders')
-    .select('*')
+    .select('id, woocommerce_order_id, woocommerce_order_number, financial_status, buyer_name, buyer_phone, buyer_address, buyer_city, buyer_neighborhood, items')
     .eq('profile_id', profileId)
     .eq('resolved', false)
     .order('created_at', { ascending: false });

@@ -29,7 +29,7 @@ function mapCuenta(b: any): CuentaBancaria {
 }
 
 export async function fetchCuentasBancarias(userId: string): Promise<CuentaBancaria[]> {
-  const { data, error } = await supabase.from('banks').select('*').eq('profile_id', userId);
+  const { data, error } = await supabase.from('banks').select('id, bank_name, account_number, account_type, id_number, account_holder_name').eq('profile_id', userId);
   if (error || !data) return [];
   return data.map(mapCuenta);
 }
@@ -72,7 +72,7 @@ function mapPago(p: any): PagoProveedor {
 }
 
 export async function fetchPagosProveedor(userId?: string, estado?: number): Promise<PagoProveedor[]> {
-  let q = supabase.from('supplier_payouts').select('*').order('created_at', { ascending: false });
+  let q = supabase.from('supplier_payouts').select('id, profile_id, bank_id, amount, paid_at, state, receipt_photo_url').order('created_at', { ascending: false });
   if (userId) q = q.eq('profile_id', userId);
   if (estado !== undefined) q = q.eq('state', estado);
   const { data, error } = await q;

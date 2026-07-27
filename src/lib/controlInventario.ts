@@ -28,7 +28,7 @@ export interface MovimientoInventario {
 }
 
 export async function fetchMovimientos(userId: string, esAdmin: boolean): Promise<MovimientoInventario[]> {
-  let q = supabase.from('supplier_stock_entries').select('*').order('entry_date', { ascending: false }).limit(200);
+  let q = supabase.from('supplier_stock_entries').select('id, entry_type, entry_date, description').order('entry_date', { ascending: false }).limit(200);
   if (!esAdmin) q = q.eq('profile_id', userId);
   const { data, error } = await q;
   if (error || !data) return [];

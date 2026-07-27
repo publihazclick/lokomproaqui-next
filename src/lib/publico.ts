@@ -26,7 +26,7 @@ export interface CatalogoPublico {
 }
 
 export async function fetchCatalogoPublico(id: number): Promise<CatalogoPublico | null> {
-  const { data, error } = await supabase.from('catalogs').select('*').eq('id', id).eq('status', 1).maybeSingle();
+  const { data, error } = await supabase.from('catalogs').select('id, title, price, wholesale_price').eq('id', id).eq('status', 1).maybeSingle();
   if (error || !data) return null;
   return { id: data.id, titulo: data.title, precio: data.price, precioMayor: data.wholesale_price };
 }
@@ -37,7 +37,7 @@ export interface ItemGaleria {
 }
 
 export async function fetchGaleriaCatalogo(catalogoId?: number): Promise<ItemGaleria[]> {
-  let q = supabase.from('catalog_items').select('*, products(image_url)');
+  let q = supabase.from('catalog_items').select('id, image_url, products(image_url)');
   if (catalogoId) q = q.eq('catalog_id', catalogoId);
   const { data, error } = await q;
   if (error || !data) return [];

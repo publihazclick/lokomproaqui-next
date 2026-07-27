@@ -18,7 +18,7 @@ function mapRecharge(r: any): RechargeAdminRow {
 }
 
 export async function fetchRechargeAdmin(search?: string): Promise<RechargeAdminRow[]> {
-  let q = supabase.from('recharge_products').select('*').eq('status', 1).order('id');
+  let q = supabase.from('recharge_products').select('id, title, description, image_url, status, price').eq('status', 1).order('id');
   if (search && search.trim()) q = q.ilike('title', `%${search.trim()}%`);
   const { data, error } = await q;
   if (error || !data) return [];

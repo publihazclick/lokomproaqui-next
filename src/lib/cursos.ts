@@ -11,8 +11,10 @@ export interface Curso {
   descripcion: string | null;
 }
 
+const CURSO_SELECT = 'id, title, sort_order, parent_id, video_url, image_url, description';
+
 export async function fetchCursos(): Promise<Curso[]> {
-  const { data, error } = await supabase.from('courses').select('*').order('sort_order');
+  const { data, error } = await supabase.from('courses').select(CURSO_SELECT).order('sort_order');
   if (error || !data) return [];
   return data.map((c: any) => ({ id: c.id, titulo: c.title, url: c.video_url, img: c.image_url, descripcion: c.description }));
 }
@@ -41,7 +43,7 @@ function mapCursoAdmin(c: any): CursoAdminRow {
 }
 
 export async function fetchCategoriasCursos(): Promise<CategoriaCursos[]> {
-  const { data, error } = await supabase.from('courses').select('*').order('sort_order');
+  const { data, error } = await supabase.from('courses').select(CURSO_SELECT).order('sort_order');
   if (error || !data) return [];
   const todos = data.map(mapCursoAdmin);
   return todos.filter((c) => !c.padre).map((cat) => ({ ...cat, videos: todos.filter((v) => v.padre === cat.id) }));

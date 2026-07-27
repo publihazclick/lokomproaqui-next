@@ -50,7 +50,7 @@ const WHATSAPP_MENTORIA_NUMERO_DEFAULT = '3202241463';
 const WHATSAPP_MENTORIA_MENSAJE_DEFAULT = 'Hola Harley, estoy interesad@ en tomar la mentoría con ustedes, ya estoy generando el pago en la plataforma.';
 
 export async function fetchSiteConfig(): Promise<SiteConfigForm> {
-  const { data } = await supabase.from('site_config').select('*').limit(1).single();
+  const { data } = await supabase.from('site_config').select('info_text').limit(1).single();
   const info = (data && data.info_text) || {};
   return {
     clInformacion: info.clInformacion || '',
@@ -191,15 +191,17 @@ function mapBanner(b: any): BannerImagen {
   };
 }
 
+const BANNER_SELECT = 'id, image_url, link_url, sort_order, active, button_color, button_position';
+
 export async function fetchBannersAdmin(): Promise<BannerImagen[]> {
-  const { data, error } = await supabase.from('site_banners').select('*').order('sort_order', { ascending: true });
+  const { data, error } = await supabase.from('site_banners').select(BANNER_SELECT).order('sort_order', { ascending: true });
   if (error || !data) return [];
   return data.map(mapBanner);
 }
 
 // Consumido por /articulo (usuario final): solo banners activos, en orden.
 export async function fetchBannersActivos(): Promise<BannerImagen[]> {
-  const { data, error } = await supabase.from('site_banners').select('*').eq('active', true).order('sort_order', { ascending: true });
+  const { data, error } = await supabase.from('site_banners').select(BANNER_SELECT).eq('active', true).order('sort_order', { ascending: true });
   if (error || !data) return [];
   return data.map(mapBanner);
 }

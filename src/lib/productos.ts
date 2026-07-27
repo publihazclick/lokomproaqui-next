@@ -163,7 +163,7 @@ export async function fetchProductoById(id: string | number): Promise<ProductoLe
 
   const { data: comments } = await supabase
     .from('product_comments')
-    .select('*')
+    .select('name, created_at, description')
     .eq('product_id', id)
     .eq('status', 0)
     .order('created_at', { ascending: false });

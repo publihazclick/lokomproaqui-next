@@ -632,7 +632,7 @@ export async function fetchVentaDetalle(orderId: number, incluirVendedor: boolea
   const selectOrders = incluirVendedor ? '*, profiles!orders_seller_id_fkey(full_name, phone, city)' : '*';
   const [{ data: orderRaw, error }, { data: items }] = await Promise.all([
     supabase.from('orders').select(selectOrders).eq('id', orderId).maybeSingle(),
-    supabase.from('order_items').select('*').eq('order_id', orderId),
+    supabase.from('order_items').select('id, product_id, title, quantity, size, color, total_cost').eq('order_id', orderId),
   ]);
   const order = orderRaw as any;
   if (error || !order) return null;

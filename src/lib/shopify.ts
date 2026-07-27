@@ -12,7 +12,7 @@ export interface ShopifyConnection {
 }
 
 export async function fetchShopifyConnection(profileId: string): Promise<ShopifyConnection | null> {
-  const { data, error } = await supabase.from('shopify_connections').select('*').eq('profile_id', profileId).maybeSingle();
+  const { data, error } = await supabase.from('shopify_connections').select('shop_domain, connected_at').eq('profile_id', profileId).maybeSingle();
   if (error || !data) return null;
   return data;
 }
@@ -55,7 +55,7 @@ export interface ShopifyPendingOrder {
 export async function fetchShopifyPendingOrders(profileId: string): Promise<ShopifyPendingOrder[]> {
   const { data, error } = await supabase
     .from('shopify_pending_orders')
-    .select('*')
+    .select('id, shopify_order_id, shopify_order_number, financial_status, buyer_name, buyer_phone, buyer_address, buyer_city, buyer_neighborhood, items')
     .eq('profile_id', profileId)
     .eq('resolved', false)
     .order('created_at', { ascending: false });

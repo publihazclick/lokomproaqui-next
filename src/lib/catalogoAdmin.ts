@@ -24,7 +24,7 @@ function mapCatalogo(c: any): CatalogoRow {
 }
 
 export async function fetchCatalogos(search?: string): Promise<CatalogoRow[]> {
-  let q = supabase.from('catalogs').select('*').order('id', { ascending: false });
+  let q = supabase.from('catalogs').select('id, title, status, price, wholesale_price').order('id', { ascending: false });
   if (search && search.trim()) q = q.or(`title.ilike.%${search.trim()}%`);
   const { data, error } = await q;
   if (error || !data) return [];
