@@ -164,7 +164,7 @@ export function FrontProductoDetalle({ productoId, telefono }: { productoId: str
               width={800}
               height={800}
               priority
-              sizes="(max-width: 640px) 100vw, 50vw"
+              unoptimized
               style={{ width: '100%', height: 'auto' }}
               className="rounded-xl object-cover"
             />

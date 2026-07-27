@@ -39,7 +39,7 @@ export default function FrontCarritoPage() {
             <div className="mt-4 space-y-3">
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-                  <Image src={item.foto} alt={item.nombre} width={64} height={64} className="h-16 w-16 rounded object-cover" />
+                  <Image src={item.foto} alt={item.nombre} width={64} height={64} unoptimized className="h-16 w-16 rounded object-cover" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800">{item.nombre}</p>
                     <p className="text-xs text-gray-500">

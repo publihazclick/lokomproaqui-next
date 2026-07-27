@@ -123,7 +123,11 @@ function CategoriaStrip({ categorias }: { categorias: CategoriaConSub[] }) {
           className="flex shrink-0 flex-col items-center gap-1 text-center"
           style={{ width: 72 }}
         >
-          <Image src={cat.image} alt="" width={56} height={56} className="h-14 w-14 rounded-full border border-gray-200 object-cover" />
+          {/* unoptimized: categories.image_url vive en un proyecto Supabase externo (no el de
+              LokomproAqui) -- medido en produccion, el pipeline de optimizacion de Vercel agrega
+              1-3s de latencia inconsistente incluso en cache HIT contra ese origen. Se sirve
+              directo para evitar esa demora, a costa de no re-comprimir/redimensionar. */}
+          <Image src={cat.image} alt="" width={56} height={56} unoptimized className="h-14 w-14 rounded-full border border-gray-200 object-cover" />
           <span className="text-[10px] leading-tight text-gray-700">{cat.title}</span>
         </a>
       ))}
@@ -135,7 +139,8 @@ function ProductoCardMini({ item, onClick }: { item: ProductoLegacy; onClick: ()
   return (
     <div className="w-44 shrink-0 rounded-xl border border-gray-100 p-2 shadow-sm">
       <div className="relative h-32 w-full cursor-pointer" onClick={onClick}>
-        <Image src={item.foto} alt={item.pro_nombre} fill sizes="176px" className="rounded object-cover" />
+        {/* unoptimized: products.image_url vive en un proyecto Supabase externo, ver comentario en CategoriaStrip arriba */}
+        <Image src={item.foto} alt={item.pro_nombre} fill unoptimized className="rounded object-cover" />
       </div>
       <p onClick={onClick} className="mt-1 cursor-pointer truncate text-xs font-medium text-gray-800">
         {item.pro_nombre}
@@ -247,13 +252,7 @@ export default function ArticuloPage() {
         {listProductos.map((item) => (
           <div key={item.id} className="rounded-xl border border-gray-100 p-2 shadow-sm">
             <div className="relative h-32 w-full cursor-pointer" onClick={() => setProductoAbierto(item)}>
-              <Image
-                src={item.foto}
-                alt={item.pro_nombre}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                className="rounded object-cover"
-              />
+              <Image src={item.foto} alt={item.pro_nombre} fill unoptimized className="rounded object-cover" />
             </div>
             <h4 className="mt-1 truncate text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>
             <p className="text-[11px] text-gray-500">

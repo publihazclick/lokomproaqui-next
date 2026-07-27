@@ -275,7 +275,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
         <div className="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-2">
           <div>
             <div className="relative h-[45vh] w-full">
-              <Image src={urlFoto || '/assets/noimagen.jpg'} alt={producto.pro_nombre} fill sizes="(max-width: 640px) 100vw, 50vw" className="rounded object-contain" />
+              <Image src={urlFoto || '/assets/noimagen.jpg'} alt={producto.pro_nombre} fill unoptimized className="rounded object-contain" />
             </div>
             {galeria.length > 1 && (
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -286,6 +286,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
                     alt=""
                     width={64}
                     height={64}
+                    unoptimized
                     onClick={() => setUrlFoto(g.foto)}
                     className={`h-16 w-16 shrink-0 cursor-pointer rounded border object-cover ${urlFoto === g.foto ? 'border-[#0d6efd]' : 'border-gray-200'}`}
                   />
@@ -370,7 +371,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
             </div>
 
             <div className="mt-4 flex items-center gap-3 border-t border-gray-100 pt-3">
-              <Image src={urlFoto || '/assets/noimagen.jpg'} alt="" width={56} height={56} className="h-14 w-14 shrink-0 rounded object-cover" />
+              <Image src={urlFoto || '/assets/noimagen.jpg'} alt="" width={56} height={56} unoptimized className="h-14 w-14 shrink-0 rounded object-cover" />
               <div className="min-w-0">
                 <h4 className="truncate text-sm font-bold text-gray-900">{producto.pro_nombre}</h4>
                 {hayVariante1 && <p className="text-xs text-gray-500">{producto.variante1Label}: {nameColores}</p>}

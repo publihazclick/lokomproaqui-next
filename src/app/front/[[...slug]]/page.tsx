@@ -136,13 +136,7 @@ export default function FrontProductosPage({ params }: { params: Promise<{ slug?
           {productos.map((p) => (
             <Link key={p.id} href={`/front/productosView/${p.id}/${tienda!.telefono}`} className="rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
               <div className="relative h-28 w-full">
-                <Image
-                  src={p.foto}
-                  alt={p.pro_nombre}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                  className="rounded object-cover"
-                />
+                <Image src={p.foto} alt={p.pro_nombre} fill unoptimized className="rounded object-cover" />
               </div>
               <p className="mt-1 truncate text-xs font-medium text-gray-800">{p.pro_nombre.slice(0, 20)}</p>
               <p className="text-xs text-gray-500">$ {formatCOP(p.pro_uni_venta)}</p>

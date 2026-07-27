@@ -226,7 +226,7 @@ export default function ControlInventarioPage() {
                   return (
                     <div key={p.id} className={`rounded-lg border p-2 text-center ${yaElegido ? 'border-[#0d6efd] bg-blue-50' : 'border-gray-200'}`}>
                       <div className="relative h-20 w-full">
-                        <Image src={p.foto} alt={p.pro_nombre} fill sizes="150px" className="rounded object-cover" />
+                        <Image src={p.foto} alt={p.pro_nombre} fill unoptimized className="rounded object-cover" />
                       </div>
                       <p className="mt-1 truncate text-xs font-medium">{p.pro_codigo}</p>
                       <button
@@ -250,7 +250,7 @@ export default function ControlInventarioPage() {
                   {seleccionados.map((s) => (
                     <div key={s.productId} className="rounded-lg border border-gray-200 p-2 text-center">
                       <div className="relative h-20 w-full">
-                        <Image src={s.producto.foto} alt={s.producto.pro_nombre} fill sizes="150px" className="rounded object-cover" />
+                        <Image src={s.producto.foto} alt={s.producto.pro_nombre} fill unoptimized className="rounded object-cover" />
                       </div>
                       <p className="mt-1 truncate text-xs font-medium">{s.producto.pro_codigo}</p>
                       <label className="mt-1 block text-[11px] text-gray-500">Cantidad</label>

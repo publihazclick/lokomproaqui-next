@@ -221,7 +221,7 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
                     </div>
                   </td>
                   <td className="py-2 pr-3">
-                    <Image src={p.foto || '/assets/noimagen.jpg'} alt="" width={48} height={48} className="h-12 w-12 rounded object-cover" />
+                    <Image src={p.foto || '/assets/noimagen.jpg'} alt="" width={48} height={48} unoptimized className="h-12 w-12 rounded object-cover" />
                   </td>
                   <td className="py-2 pr-3">{p.nombre}</td>
                   <td className="py-2 pr-3">{p.codigo}</td>

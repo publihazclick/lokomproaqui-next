@@ -951,7 +951,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                             ve arriba de la tarjeta, para saber que es lo que se esta montando. */}
                         {color.foto && (
                           <div className="relative mx-auto mb-3 aspect-square w-28">
-                            <Image src={color.foto} alt="" fill sizes="112px" className="rounded-md border border-gray-200 object-cover" />
+                            <Image src={color.foto} alt="" fill unoptimized className="rounded-md border border-gray-200 object-cover" />
                           </div>
                         )}
 
@@ -1041,7 +1041,7 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                           <div className="mt-2 grid grid-cols-4 gap-1.5">
                             {color.galeria.map((url, i) => (
                               <div key={`${url}-${i}`} className="group relative aspect-square w-full">
-                                <Image src={url} alt="" fill sizes="80px" className="rounded object-cover" />
+                                <Image src={url} alt="" fill unoptimized className="rounded object-cover" />
                                 <button
                                   type="button"
                                   onClick={() => quitarFotoGaleria(color.key, i)}

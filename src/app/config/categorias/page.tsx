@@ -119,7 +119,7 @@ export default function CategoriasPage() {
                       </div>
                     </td>
                     <td className="py-2 pr-3">
-                      <Image src={c.imagen || '/assets/categoria.jpeg'} alt="" width={40} height={40} className="h-10 w-10 rounded object-cover" />
+                      <Image src={c.imagen || '/assets/categoria.jpeg'} alt="" width={40} height={40} unoptimized className="h-10 w-10 rounded object-cover" />
                     </td>
                     <td className="py-2 pr-3 font-medium">{c.nombre}</td>
                     <td className="py-2 pr-3 text-gray-600">{c.descripcion}</td>

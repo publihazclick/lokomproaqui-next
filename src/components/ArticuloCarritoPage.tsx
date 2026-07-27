@@ -283,13 +283,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
         {listProductos.map((item) => (
           <div key={item.id} className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
             <div className="relative h-40 w-full cursor-pointer" onClick={() => setProductoAbierto(item)}>
-              <Image
-                src={item.foto}
-                alt={item.pro_nombre}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                className="object-cover"
-              />
+              <Image src={item.foto} alt={item.pro_nombre} fill unoptimized className="object-cover" />
             </div>
             <div className="p-2">
               <h4 className="truncate text-center text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 20)}</h4>

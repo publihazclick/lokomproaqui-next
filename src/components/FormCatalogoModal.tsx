@@ -169,7 +169,7 @@ export function FormCatalogoModal({ catalogo, onClose, onGuardado }: { catalogo:
             {items.map((item) => (
               <div key={item.id} className="relative rounded border border-gray-100 p-1">
                 <div className="relative h-16 w-full">
-                  <Image src={item.foto || '/assets/noimagen.jpg'} alt="" fill sizes="120px" className="rounded object-cover" />
+                  <Image src={item.foto || '/assets/noimagen.jpg'} alt="" fill unoptimized className="rounded object-cover" />
                 </div>
                 {item.nombre && <p className="mt-1 truncate text-[10px] text-gray-600">{item.nombre}</p>}
                 <button onClick={() => quitarItem(item)} className="absolute -right-1 -top-1 rounded-full bg-red-600 p-0.5 text-white">
@@ -197,7 +197,7 @@ export function FormCatalogoModal({ catalogo, onClose, onGuardado }: { catalogo:
                 className={`rounded border p-1 text-left ${yaAgregado ? 'border-green-500 bg-green-50' : 'border-gray-100'}`}
               >
                 <div className="relative h-16 w-full">
-                  <Image src={prod.foto || '/assets/noimagen.jpg'} alt="" fill sizes="120px" className="rounded object-cover" />
+                  <Image src={prod.foto || '/assets/noimagen.jpg'} alt="" fill unoptimized className="rounded object-cover" />
                 </div>
                 <p className="mt-1 truncate text-[10px] text-gray-700">{prod.nombre}</p>
                 <p className="text-[10px] text-gray-500">$ {formatCOP(prod.precio)}</p>

@@ -129,7 +129,7 @@ export default function ProductoViewPage({ params }: { params: Promise<{ id: str
               alt={data.pro_nombre}
               fill
               priority
-              sizes="(max-width: 768px) 100vw, 50vw"
+              unoptimized
               className="object-contain transition-transform duration-300 hover:scale-105"
             />
           </div>

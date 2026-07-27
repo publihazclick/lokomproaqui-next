@@ -200,13 +200,7 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
         {listArticle.map((item) => (
           <div key={item.id} onClick={() => setProductoAbierto(item)} className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
             <div className="relative h-40 w-full">
-              <Image
-                src={item.foto}
-                alt={item.pro_nombre}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                className="object-cover"
-              />
+              <Image src={item.foto} alt={item.pro_nombre} fill unoptimized className="object-cover" />
             </div>
             <div className="p-2 text-center">
               <p className="truncate text-sm font-semibold text-gray-800">{item.pro_nombre.slice(0, 10)}</p>

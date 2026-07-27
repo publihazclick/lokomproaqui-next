@@ -140,7 +140,7 @@ export default function StoreProductActivatedPage({ params }: { params: Promise<
             {productos.map((p) => (
               <Link key={p.id} href={`/config/verProductoProveedor/${p.id}`} className="rounded-xl border border-gray-100 p-2 shadow-sm">
                 <div className="relative h-28 w-full">
-                  <Image src={p.foto} alt={p.pro_nombre} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-cover" />
+                  <Image src={p.foto} alt={p.pro_nombre} fill unoptimized className="rounded object-cover" />
                 </div>
                 <p className="mt-1 truncate text-xs font-medium text-gray-800">{p.pro_nombre.slice(0, 20)}</p>
                 <p className="text-xs text-gray-500">$ {formatCOP(p.pro_vendedor || p.pro_uni_venta || 0)}</p>

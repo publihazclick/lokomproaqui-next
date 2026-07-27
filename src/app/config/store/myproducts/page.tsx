@@ -75,7 +75,7 @@ export default function MyProductsPage() {
             <div key={item.priceOverrideId} className="rounded-xl border border-gray-100 p-2 shadow-sm">
               <button onClick={() => setProductoAbierto(item)} className="block w-full text-left">
                 <div className="relative h-28 w-full">
-                  <Image src={item.producto.foto} alt={item.producto.pro_nombre} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-cover" />
+                  <Image src={item.producto.foto} alt={item.producto.pro_nombre} fill unoptimized className="rounded object-cover" />
                 </div>
                 <p className="mt-1 truncate text-xs font-medium text-gray-800">{item.producto.pro_nombre.slice(0, 20)}</p>
                 <p className="text-xs text-gray-500">$ {formatCOP(item.precio)}</p>

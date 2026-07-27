@@ -81,7 +81,7 @@ export default function PublicoCatalogoPage({ params }: { params: Promise<{ slug
         {galeria.map((item) => (
           <div key={item.id} className="rounded-xl border border-gray-100 p-2 shadow-sm">
             <div className="relative h-40 w-full">
-              <Image src={item.foto} alt="" fill sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" className="rounded object-cover" />
+              <Image src={item.foto} alt="" fill unoptimized className="rounded object-cover" />
             </div>
             <button onClick={() => descargarUna(item)} className="mt-2 w-full rounded bg-[#0d6efd] px-2 py-1.5 text-xs font-medium text-white">
               Descargar
