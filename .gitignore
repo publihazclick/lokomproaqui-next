@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+debugshot.js
+mk_session.js
+shot.js
+sweep.js
+qa-*.json
