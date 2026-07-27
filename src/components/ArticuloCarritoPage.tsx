@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, guardarPriceOverride, type ProductoLegacy } from '@/lib/productos';
-import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
+import { fetchCategoriasConProductos, type CategoriaConSub } from '@/lib/categorias';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchTiendaProveedorPorNumero, type TiendaProveedor } from '@/lib/bodega';
 import { formatCOP, useCart } from '@/lib/cartStore';
@@ -45,7 +46,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
   const coinShop = modo === 'pedidos';
   const titleButton = coinShop ? 'Hacer Compra' : 'Realizar Venta';
 
-  const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
   const [listProductos, setListProductos] = useState<ProductoLegacy[]>([]);
@@ -53,6 +54,10 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
   const [page, setPage] = useState(0);
   const [notEmptyPost, setNotEmptyPost] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
+  // Distinto de `estado`: solo la grilla de productos se pone en espera al cambiar de categoria/
+  // busqueda/bodega -- el resto de la pantalla (buscador, chips de categoria) ya quedo montada
+  // desde el primer efecto y no debe volver a desaparecer ni recargarse.
+  const [cargandoProductos, setCargandoProductos] = useState(true);
   const [productoAbierto, setProductoAbierto] = useState<ProductoLegacy | null>(null);
 
   const [searchInput, setSearchInput] = useState('');
@@ -94,6 +99,11 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     [],
   );
 
+  // Efecto UNICO al montar: revisa sesion, trae el perfil del usuario y las categorias -- nada de
+  // esto depende de que categoria este seleccionada, y antes se repetia COMPLETO (sesion + perfil +
+  // categorias) en cada click de categoria, antes de recien ahi pedir los productos. Esa era la
+  // lentitud real reportada ("selecciona una categoria y tarda demasiado en mostrar los
+  // productos") -- 3 viajes de red desperdiciados por cada click. Ahora esto corre una sola vez.
   useEffect(() => {
     let activo = true;
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -102,25 +112,36 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
         return;
       }
       const uid = sessionData.session.user.id;
-      const usuario = await fetchDataUserCompleto(uid);
+      const [usuario, cats] = await Promise.all([fetchDataUserCompleto(uid), fetchCategoriasConProductos()]);
       if (!activo) return;
       setDataUser(usuario);
-      setEstado('cargando');
-
-      const cats = await fetchCategoriasConSub();
-      if (!activo) return;
       setCategorias(cats);
-
-      setPage(0);
-      await cargarPagina(usuario, categoriaId, 0, true, search, bodega?.id);
-      if (!activo) return;
       setEstado('listo');
     });
     return () => {
       activo = false;
     };
+  }, []);
+
+  // Efecto que SI depende de la categoria: corre la primera vez que dataUser ya esta listo, y de
+  // nuevo cada vez que el usuario hace click en un chip de categoria diferente -- unicamente pide
+  // los productos, sin repetir sesion/perfil/categorias de arriba. `cargandoProductos` (no
+  // `estado`) es lo unico que se pone en espera aca, para que el buscador y los chips de categoria
+  // se queden montados y no "parpadeen" en cada cambio.
+  useEffect(() => {
+    if (!dataUser) return;
+    let activo = true;
+    (async () => {
+      setCargandoProductos(true);
+      setPage(0);
+      await cargarPagina(dataUser, categoriaId, 0, true, search, bodega?.id);
+      if (activo) setCargandoProductos(false);
+    })();
+    return () => {
+      activo = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoriaId]);
+  }, [dataUser, categoriaId]);
 
   async function handlePageNext() {
     if (!dataUser || cargandoMas) return;
@@ -138,7 +159,9 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
   async function buscarProductos() {
     setPage(0);
     setSearch(searchInput);
+    setCargandoProductos(true);
     await cargarPagina(dataUser, categoriaId, 0, true, searchInput, bodega?.id);
+    setCargandoProductos(false);
   }
 
   async function handleSearchInputChange(valor: string) {
@@ -148,7 +171,9 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     if (valor.trim() === '' && search !== '') {
       setSearch('');
       setPage(0);
+      setCargandoProductos(true);
       await cargarPagina(dataUser, categoriaId, 0, true, '', bodega?.id);
+      setCargandoProductos(false);
     }
   }
 
@@ -175,7 +200,9 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     setBodegaError('');
     setBodega(encontrada);
     setPage(0);
+    setCargandoProductos(true);
     await cargarPagina(dataUser, categoriaId, 0, true, search, encontrada.id);
+    setCargandoProductos(false);
   }
 
   async function salirDeBodega() {
@@ -183,7 +210,9 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     setBodegaNumeroInput('');
     setBodegaError('');
     setPage(0);
+    setCargandoProductos(true);
     await cargarPagina(dataUser, categoriaId, 0, true, search, undefined);
+    setCargandoProductos(false);
   }
 
   async function guardarPrecioEditado(item: ProductoLegacy, valor: number) {
@@ -197,7 +226,7 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`);
   }
 
-  if (estado === 'revisando' || estado === 'cargando') return null;
+  if (estado === 'revisando') return null;
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-3 py-4">
@@ -279,7 +308,13 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
           ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {cargandoProductos && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-[#02a0e3]" />
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 ${cargandoProductos ? 'hidden' : ''}`}>
         {listProductos.map((item) => (
           <div key={item.id} className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
             <div className="relative h-40 w-full cursor-pointer" onClick={() => setProductoAbierto(item)}>
@@ -324,9 +359,9 @@ export function ArticuloCarritoPage({ modo, categoriaId }: ArticuloCarritoPagePr
         ))}
       </div>
 
-      {listProductos.length === 0 && <p className="py-10 text-center text-gray-500">No Hay Datos</p>}
+      {!cargandoProductos && listProductos.length === 0 && <p className="py-10 text-center text-gray-500">No Hay Datos</p>}
 
-      {notEmptyPost && listProductos.length > 0 && (
+      {!cargandoProductos && notEmptyPost && listProductos.length > 0 && (
         <div className="mt-5 text-center">
           <button onClick={handlePageNext} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : `Ver más (${listProductos.length} de ${count})`}

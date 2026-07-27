@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchProductos, agregarTodosLosProductosDeBodega, type ProductoLegacy } from '@/lib/productos';
 import { fetchCategoriasConSub, type CategoriaConSub } from '@/lib/categorias';
@@ -27,10 +27,6 @@ import { ViewProductosModal } from '@/components/ViewProductosModal';
 // paginacion redundantes para la misma accion ("VER MÁS PRODUCTOS" + un mat-paginator con selector
 // de tamaño de pagina) -- se deja solo el link "Ver más productos", que logra lo mismo.
 
-interface Categoria extends CategoriaConSub {
-  check?: boolean;
-}
-
 export default function ListProductPage({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = use(params);
   const router = useRouter();
@@ -38,15 +34,18 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
   const categoriaId = slug?.[0] === 'categoria' ? slug[1] : undefined;
   const idStore = slug?.[0] && slug[0] !== 'categoria' ? slug[0] : undefined;
 
-  const [estado, setEstado] = useState<'revisando' | 'cargando' | 'listo'>('revisando');
+  const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [dataStore, setDataStore] = useState<PerfilTienda | null>(null);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaConSub[]>([]);
   const [listArticle, setListArticle] = useState<ProductoLegacy[]>([]);
   const [counts, setCounts] = useState(0);
   const [page, setPage] = useState(0);
   const [notEmptyPost, setNotEmptyPost] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
+  // Igual que en ArticuloCarritoPage.tsx: solo la grilla de productos se pone en espera al cambiar
+  // de bodega/categoria, el buscador y los chips de categoria se quedan montados.
+  const [cargandoProductos, setCargandoProductos] = useState(true);
   const [filtroTxt, setFiltroTxt] = useState('');
   const [productoAbierto, setProductoAbierto] = useState<ProductoLegacy | null>(null);
   const [agregandoTodos, setAgregandoTodos] = useState(false);
@@ -75,6 +74,9 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
     [],
   );
 
+  // Efecto UNICO al montar: sesion + perfil del usuario + categorias -- no depende de idStore ni
+  // categoriaId. Antes se repetia COMPLETO en cada cambio de bodega/categoria (mismo bug ya
+  // corregido en ArticuloCarritoPage.tsx: 3 viajes de red desperdiciados por cada click).
   useEffect(() => {
     let activo = true;
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -83,32 +85,39 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
         return;
       }
       const uid = sessionData.session.user.id;
-      const usuario = await fetchDataUserCompleto(uid);
+      const [usuario, cats] = await Promise.all([fetchDataUserCompleto(uid), fetchCategoriasConSub()]);
       if (!activo) return;
       setDataUser(usuario);
-      setEstado('cargando');
-
-      let tienda: PerfilTienda | null = null;
-      if (idStore) tienda = await fetchPerfilPorReferralCode(idStore);
-      if (!activo) return;
-      setDataStore(tienda);
-
-      const cats = await fetchCategoriasConSub();
-      if (!activo) return;
-      setCategorias(cats.map((c) => ({ ...c, check: categoriaId != null && String(c.id) === String(categoriaId) })));
-
-      setPage(0);
-      await cargarArticulos({ userId: uid, ownerProfileId: tienda?.id, categoriaId, page: 0, reemplazar: true });
-      if (!activo) return;
+      setCategorias(cats);
       setEstado('listo');
     });
     return () => {
       activo = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idStore, categoriaId]);
+  }, []);
 
-  function handleCategorySearch(item: Categoria) {
+  // Corre la primera vez que dataUser ya esta listo, y de nuevo cada vez que cambia la bodega o la
+  // categoria -- solo pide la tienda (si aplica) y los productos, sin repetir sesion/perfil/
+  // categorias de arriba. `cargandoProductos` (no `estado`) es lo unico que se pone en espera.
+  useEffect(() => {
+    if (!dataUser) return;
+    let activo = true;
+    (async () => {
+      setCargandoProductos(true);
+      const tienda = idStore ? await fetchPerfilPorReferralCode(idStore) : null;
+      if (!activo) return;
+      setDataStore(tienda);
+      setPage(0);
+      await cargarArticulos({ userId: dataUser.id, ownerProfileId: tienda?.id, categoriaId, page: 0, reemplazar: true });
+      if (activo) setCargandoProductos(false);
+    })();
+    return () => {
+      activo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUser, idStore, categoriaId]);
+
+  function handleCategorySearch(item: CategoriaConSub) {
     router.push(`/listproduct/categoria/${item.id}`);
   }
 
@@ -122,7 +131,9 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
     setPage(0);
     setListArticle([]);
     setNotEmptyPost(true);
+    setCargandoProductos(true);
     await cargarArticulos({ userId: dataUser.id, ownerProfileId: dataStore?.id, categoriaId, search: filtroTxt, page: 0, reemplazar: true });
+    setCargandoProductos(false);
   }
 
   async function handlePageNext() {
@@ -143,7 +154,7 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
     if (ok) window.alert('Se agregaron todos los productos de esta bodega!!!');
   }
 
-  if (estado === 'revisando' || estado === 'cargando') return null;
+  if (estado === 'revisando') return null;
 
   return (
     <div className="mx-auto w-full max-w-[1140px] px-3 py-4">
@@ -188,7 +199,7 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
             key={cat.id}
             onClick={() => handleCategorySearch(cat)}
             className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${
-              cat.check ? 'border-[#02a0e3] bg-[#02a0e3] text-white' : 'border-gray-200 bg-white text-gray-700'
+              categoriaId != null && String(cat.id) === String(categoriaId) ? 'border-[#02a0e3] bg-[#02a0e3] text-white' : 'border-gray-200 bg-white text-gray-700'
             }`}
           >
             {cat.title}
@@ -196,7 +207,13 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {cargandoProductos && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-[#02a0e3]" />
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${cargandoProductos ? 'hidden' : ''}`}>
         {listArticle.map((item) => (
           <div key={item.id} onClick={() => setProductoAbierto(item)} className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
             <div className="relative h-40 w-full">
@@ -210,9 +227,9 @@ export default function ListProductPage({ params }: { params: Promise<{ slug?: s
         ))}
       </div>
 
-      {listArticle.length === 0 && <p className="py-10 text-center text-gray-500">No hay productos para mostrar aquí.</p>}
+      {!cargandoProductos && listArticle.length === 0 && <p className="py-10 text-center text-gray-500">No hay productos para mostrar aquí.</p>}
 
-      {notEmptyPost && listArticle.length > 0 && (
+      {!cargandoProductos && notEmptyPost && listArticle.length > 0 && (
         <div className="mt-5 text-center">
           <button onClick={handlePageNext} disabled={cargandoMas} className="text-sm font-medium text-[#0d6efd] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : 'VER MÁS PRODUCTOS'}
