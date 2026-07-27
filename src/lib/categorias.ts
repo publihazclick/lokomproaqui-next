@@ -12,6 +12,11 @@ export interface CategoriaConSub {
   subCategoria: { id: number; title: string }[];
 }
 
+// CORREGIDO 2026-07-27: esto hacia 1 consulta por CADA categoria raiz para traer sus
+// subcategorias (17 categorias reales en produccion = 17 consultas secuenciales, ~300ms cada
+// una = 5+ segundos solo en esto) -- medido en vivo con Playwright, era el grueso de la demora
+// real reportada por el usuario en /pedidos y /listproduct. Ahora es una sola consulta con
+// `.in('parent_id', topIds)`, agrupada en memoria -- mismo resultado, sin el N+1.
 export async function fetchCategoriasConSub(): Promise<CategoriaConSub[]> {
   const { data: top } = await supabase
     .from('categories')
@@ -21,22 +26,24 @@ export async function fetchCategoriasConSub(): Promise<CategoriaConSub[]> {
     .order('sort_order')
     .limit(1000);
 
-  const result: CategoriaConSub[] = [];
-  for (const row of top || []) {
-    const { data: subs } = await supabase
-      .from('categories')
-      .select('id, name')
-      .eq('parent_id', row.id)
-      .eq('active', true)
-      .order('sort_order')
-      .limit(1000);
-    result.push({
-      id: row.id,
-      title: row.name,
-      image: row.image_url || '/assets/imagenes/todos.png',
-      subCategoria: (subs || []).map((s) => ({ id: s.id, title: s.name })),
-    });
+  const topIds = (top || []).map((row) => row.id);
+  const { data: subs } = topIds.length
+    ? await supabase.from('categories').select('id, name, parent_id').in('parent_id', topIds).eq('active', true).order('sort_order').limit(2000)
+    : { data: [] as { id: number; name: string; parent_id: number }[] };
+
+  const subsPorPadre = new Map<number, { id: number; title: string }[]>();
+  for (const s of subs || []) {
+    const lista = subsPorPadre.get(s.parent_id) || [];
+    lista.push({ id: s.id, title: s.name });
+    subsPorPadre.set(s.parent_id, lista);
   }
+
+  const result: CategoriaConSub[] = (top || []).map((row) => ({
+    id: row.id,
+    title: row.name,
+    image: row.image_url || '/assets/imagenes/todos.png',
+    subCategoria: subsPorPadre.get(row.id) || [],
+  }));
 
   result.unshift({ id: 0, title: 'TODOS', image: '/assets/imagenes/todos.png', subCategoria: [] });
   return result;
@@ -51,10 +58,11 @@ export async function fetchCategoriasConSub(): Promise<CategoriaConSub[]> {
 // catalogo real -- ver filtroNotInProveedoresNoAprobados en productos.ts). "TODOS" se conserva
 // siempre.
 export async function fetchCategoriasConProductos(): Promise<CategoriaConSub[]> {
-  const todas = await fetchCategoriasConSub();
+  // El arbol de categorias y el filtro de proveedores no aprobados son independientes -- corren
+  // en paralelo (antes era otro paso secuencial mas encima del N+1 ya corregido arriba).
+  const [todas, excluidos] = await Promise.all([fetchCategoriasConSub(), filtroNotInProveedoresNoAprobados()]);
 
   let q = supabase.from('products').select('category_id').eq('active', true);
-  const excluidos = await filtroNotInProveedoresNoAprobados();
   if (excluidos) q = q.not('owner_profile_id', 'in', excluidos);
   const { data } = await q;
 
