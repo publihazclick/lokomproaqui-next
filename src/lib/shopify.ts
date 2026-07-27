@@ -17,6 +17,19 @@ export async function fetchShopifyConnection(profileId: string): Promise<Shopify
   return data;
 }
 
+// Pedido explicito del usuario 2026-07-27: el boton "Compartir link" debe copiar el link REAL del
+// producto en la Shopify del vendedor (no el link interno de LokomproAqui) cuando ya lo empujo alla
+// -- ver sincronizarProductoShopify(). Null si el producto todavia no esta en su Shopify (aunque
+// tenga la tienda conectada), para que el que llama pueda avisarle que lo agregue primero.
+export async function fetchShopifyProductLink(profileId: string, productId: number): Promise<string | null> {
+  const [{ data: conn }, { data: override }] = await Promise.all([
+    supabase.from('shopify_connections').select('shop_domain').eq('profile_id', profileId).maybeSingle(),
+    supabase.from('price_overrides').select('shopify_handle').eq('profile_id', profileId).eq('product_id', productId).maybeSingle(),
+  ]);
+  if (!conn || !override?.shopify_handle) return null;
+  return `https://${conn.shop_domain}/products/${override.shopify_handle}`;
+}
+
 export async function conectarShopify(data: { profile_id: string; shop_domain: string; access_token: string; api_secret: string }): Promise<{ success: boolean; message?: string }> {
   const { data: resp, error } = await supabase.functions.invoke('shopify-connect', { body: { action: 'connect', ...data } });
   if (error || !resp || resp.error) return { success: false, message: (resp && resp.error) || 'No se pudo conectar la tienda' };

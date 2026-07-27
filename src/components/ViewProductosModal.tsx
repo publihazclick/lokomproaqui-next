@@ -17,7 +17,7 @@ import { useCart, formatCOP } from '@/lib/cartStore';
 import { useToast, Toast } from '@/components/Toast';
 import { type DataUserCompleto } from '@/lib/usuarios';
 import { DropshippingCheckoutModal } from '@/components/DropshippingCheckoutModal';
-import { fetchShopifyConnection, sincronizarProductoShopify, eliminarProductoDeShopify } from '@/lib/shopify';
+import { fetchShopifyConnection, fetchShopifyProductLink, sincronizarProductoShopify, eliminarProductoDeShopify } from '@/lib/shopify';
 
 // Port 1:1 desde src/app/components/view-productos (Angular) -- el dialogo real de "ver
 // producto/agregar al carrito" que abren tanto PedidosComponent (`/articulo`) como
@@ -190,7 +190,24 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     mostrar('Producto agregado al carro');
   }
 
+  // Pedido explicito del usuario 2026-07-27: si el vendedor tiene Shopify conectado, "Compartir
+  // link" comparte el link REAL del producto en su Shopify (no el link interno de LokomproAqui). Si
+  // todavia no lo ha agregado a su Shopify, se le avisa que lo agregue primero (no copia nada) --
+  // decision explicita del usuario, no un fallback silencioso. Vendedores sin Shopify conectado
+  // mantienen el link interno de siempre, sin ningun cambio de comportamiento.
   async function shareUrl() {
+    if (shopifyConectado && dataUser?.id) {
+      const linkShopify = await fetchShopifyProductLink(dataUser.id, producto.id);
+      if (!linkShopify) {
+        mostrar('Agrega este producto a tu tienda Shopify primero (botón "Agregar a mi Tienda")');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(linkShopify);
+      } catch {}
+      mostrar('Link de Shopify copiado');
+      return;
+    }
     const url = `${window.location.origin}/front/catalogo/${producto.id}/${dataUser?.telefono || ''}`;
     try {
       await navigator.clipboard.writeText(url);
