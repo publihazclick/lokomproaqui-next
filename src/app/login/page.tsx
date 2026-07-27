@@ -29,18 +29,21 @@ export default function LoginPage() {
   const [mensajeRecuperar, setMensajeRecuperar] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
-        setRevisandoSesion(false);
-        return;
-      }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('roles(name)')
-        .eq('id', data.session.user.id)
-        .single();
-      redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
-    });
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!data.session) {
+          setRevisandoSesion(false);
+          return;
+        }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('roles(name)')
+          .eq('id', data.session.user.id)
+          .single();
+        redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
+      })
+      .catch(() => setRevisandoSesion(false));
   }, []);
 
   function redirigirSegunRol(rol: string | undefined) {
@@ -53,30 +56,34 @@ export default function LoginPage() {
     setEnviando(true);
     setError(null);
 
-    let email = identificador.trim();
-    if (!email.includes('@')) {
-      const { data: resolvedEmail } = await supabase.rpc('lookup_email_by_phone', { p_phone: email });
-      if (!resolvedEmail) {
-        setError('No encontramos una cuenta con ese celular o correo');
-        setEnviando(false);
+    try {
+      let email = identificador.trim();
+      if (!email.includes('@')) {
+        const { data: resolvedEmail } = await supabase.rpc('lookup_email_by_phone', { p_phone: email });
+        if (!resolvedEmail) {
+          setError('No encontramos una cuenta con ese celular o correo');
+          return;
+        }
+        email = resolvedEmail;
+      }
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password: clave });
+      if (signInError || !data.session) {
+        setError('Correo/celular o contraseña incorrectos');
         return;
       }
-      email = resolvedEmail;
-    }
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password: clave });
-    if (signInError || !data.session) {
-      setError('Correo/celular o contraseña incorrectos');
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('roles(name)')
+        .eq('id', data.user.id)
+        .single();
+      redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
+    } catch {
+      setError('Ocurrió un error al iniciar sesión, intenta de nuevo.');
+    } finally {
       setEnviando(false);
-      return;
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles(name)')
-      .eq('id', data.user.id)
-      .single();
-    redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
   }
 
   async function enviarRecuperacion(e: React.FormEvent) {
