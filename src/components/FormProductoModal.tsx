@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import {
   fetchCategoriasPrincipales,
@@ -949,8 +950,9 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                         {/* Pedido explicito del usuario 2026-07-25: la foto principal ya subida se
                             ve arriba de la tarjeta, para saber que es lo que se esta montando. */}
                         {color.foto && (
-                          // eslint-disable-next-line @next/next/no-img-element -- foto de color (Supabase Storage)
-                          <img src={color.foto} alt="" className="mx-auto mb-3 aspect-square w-28 rounded-md border border-gray-200 object-cover" />
+                          <div className="relative mx-auto mb-3 aspect-square w-28">
+                            <Image src={color.foto} alt="" fill sizes="112px" className="rounded-md border border-gray-200 object-cover" />
+                          </div>
                         )}
 
                         <label className="mb-1 block text-xs font-medium text-gray-700">{form.variante1Label || 'Color'}</label>
@@ -1038,9 +1040,8 @@ export function FormProductoModal({ productoId, ownerProfileId, esAdmin, onClose
                         {color.galeria.length > 0 && (
                           <div className="mt-2 grid grid-cols-4 gap-1.5">
                             {color.galeria.map((url, i) => (
-                              <div key={`${url}-${i}`} className="group relative">
-                                {/* eslint-disable-next-line @next/next/no-img-element -- foto de galeria (Supabase Storage) */}
-                                <img src={url} alt="" className="aspect-square w-full rounded object-cover" />
+                              <div key={`${url}-${i}`} className="group relative aspect-square w-full">
+                                <Image src={url} alt="" fill sizes="80px" className="rounded object-cover" />
                                 <button
                                   type="button"
                                   onClick={() => quitarFotoGaleria(color.key, i)}

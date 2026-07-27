@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Trash2, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
@@ -224,8 +225,9 @@ export default function ControlInventarioPage() {
                   const yaElegido = seleccionados.some((s) => s.productId === p.id);
                   return (
                     <div key={p.id} className={`rounded-lg border p-2 text-center ${yaElegido ? 'border-[#0d6efd] bg-blue-50' : 'border-gray-200'}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-                      <img src={p.foto} alt={p.pro_nombre} className="h-20 w-full rounded object-cover" />
+                      <div className="relative h-20 w-full">
+                        <Image src={p.foto} alt={p.pro_nombre} fill sizes="150px" className="rounded object-cover" />
+                      </div>
                       <p className="mt-1 truncate text-xs font-medium">{p.pro_codigo}</p>
                       <button
                         onClick={() => (yaElegido ? quitarProducto(p.id) : agregarProducto(p))}
@@ -247,8 +249,9 @@ export default function ControlInventarioPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {seleccionados.map((s) => (
                     <div key={s.productId} className="rounded-lg border border-gray-200 p-2 text-center">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-                      <img src={s.producto.foto} alt={s.producto.pro_nombre} className="h-20 w-full rounded object-cover" />
+                      <div className="relative h-20 w-full">
+                        <Image src={s.producto.foto} alt={s.producto.pro_nombre} fill sizes="150px" className="rounded object-cover" />
+                      </div>
                       <p className="mt-1 truncate text-xs font-medium">{s.producto.pro_codigo}</p>
                       <label className="mt-1 block text-[11px] text-gray-500">Cantidad</label>
                       <input

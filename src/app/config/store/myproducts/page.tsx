@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
@@ -73,8 +74,9 @@ export default function MyProductsPage() {
           {productos.map((item) => (
             <div key={item.priceOverrideId} className="rounded-xl border border-gray-100 p-2 shadow-sm">
               <button onClick={() => setProductoAbierto(item)} className="block w-full text-left">
-                {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-                <img src={item.producto.foto} alt={item.producto.pro_nombre} className="h-28 w-full rounded object-cover" />
+                <div className="relative h-28 w-full">
+                  <Image src={item.producto.foto} alt={item.producto.pro_nombre} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-cover" />
+                </div>
                 <p className="mt-1 truncate text-xs font-medium text-gray-800">{item.producto.pro_nombre.slice(0, 20)}</p>
                 <p className="text-xs text-gray-500">$ {formatCOP(item.precio)}</p>
               </button>

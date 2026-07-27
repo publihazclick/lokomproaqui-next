@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Trash2 } from 'lucide-react';
 import { FrontHeader } from '@/components/FrontHeader';
 import { leerCarritoFront, quitarDelCarritoFront, leerVendedorCarritoFront, type ItemCarritoFront } from '@/lib/front';
@@ -38,8 +39,7 @@ export default function FrontCarritoPage() {
             <div className="mt-4 space-y-3">
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto en el carrito */}
-                  <img src={item.foto} alt={item.nombre} className="h-16 w-16 rounded object-cover" />
+                  <Image src={item.foto} alt={item.nombre} width={64} height={64} className="h-16 w-16 rounded object-cover" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800">{item.nombre}</p>
                     <p className="text-xs text-gray-500">

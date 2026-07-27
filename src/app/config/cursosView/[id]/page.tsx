@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { fetchCursos, type Curso } from '@/lib/cursos';
 
@@ -62,8 +63,7 @@ export default function CursosViewPage({ params }: { params: Promise<{ id: strin
                 onClick={() => setSeleccionado(item)}
                 className={`flex cursor-pointer items-center gap-3 p-3 hover:bg-gray-50 ${seleccionado?.id === item.id ? 'bg-blue-50' : ''}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de curso (Supabase Storage) */}
-                <img src={item.img || '/assets/noimagen.jpg'} alt="" className="h-14 w-24 rounded object-cover" />
+                <Image src={item.img || '/assets/noimagen.jpg'} alt="" width={96} height={56} className="h-14 w-24 rounded object-cover" />
                 <h5 className="text-sm font-medium text-gray-800">{item.titulo}</h5>
               </li>
             ))}

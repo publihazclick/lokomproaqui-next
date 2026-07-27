@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { MessageCircle, PlayCircle, MapPin, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -99,10 +100,11 @@ export default function TestimonioPage() {
               key={item.id}
               className="flex gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- avatar de Supabase Storage */}
-              <img
+              <Image
                 src={item.profiles?.avatar_url ?? '/assets/noimagen.jpg'}
                 alt=""
+                width={64}
+                height={64}
                 className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-[#02a0e3]/20"
               />
               <div className="min-w-0">

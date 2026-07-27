@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 
@@ -69,12 +70,13 @@ export default async function InfoSupplierPage() {
               key={item.id}
               className="group overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="aspect-square overflow-hidden rounded-xl bg-gray-50">
-                {/* eslint-disable-next-line @next/next/no-img-element -- avatar de usuario en Supabase Storage, no de /public */}
-                <img
+              <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-50">
+                <Image
                   src={item.avatar_url ?? '/assets/producto.jpg'}
                   alt=""
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 640px) 50vw, 25vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
             </div>

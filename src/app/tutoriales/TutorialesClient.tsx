@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './tutoriales.module.css';
 import type { CategoriaConVideos, CursoVideo } from './types';
@@ -172,8 +173,7 @@ export function TutorialesClient({ categorias }: { categorias: CategoriaConVideo
                 onClick={() => setVideoAbierto(video)}
               >
                 <div className={styles.tutCardMiniatura}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- miniatura externa de YouTube, no de /public */}
-                  <img src={thumbnail(video)} alt={video.title} loading="lazy" />
+                  <Image src={thumbnail(video)} alt={video.title} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
                   <span className={styles.tutCardPlay}>
                     <span className={styles.tutCardPlayTriangulo} />
                   </span>

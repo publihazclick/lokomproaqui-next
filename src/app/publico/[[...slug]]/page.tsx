@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { fetchCatalogoPublico, fetchGaleriaCatalogo, descargarImagen, detectarRango, type CatalogoPublico, type ItemGaleria } from '@/lib/publico';
 import { formatCOP } from '@/lib/cartStore';
 
@@ -79,8 +80,9 @@ export default function PublicoCatalogoPage({ params }: { params: Promise<{ slug
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {galeria.map((item) => (
           <div key={item.id} className="rounded-xl border border-gray-100 p-2 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-            <img src={item.foto} alt="" className="h-40 w-full rounded object-cover" />
+            <div className="relative h-40 w-full">
+              <Image src={item.foto} alt="" fill sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" className="rounded object-cover" />
+            </div>
             <button onClick={() => descargarUna(item)} className="mt-2 w-full rounded bg-[#0d6efd] px-2 py-1.5 text-xs font-medium text-white">
               Descargar
             </button>

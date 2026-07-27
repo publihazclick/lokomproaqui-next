@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchPerfilProveedorPorReferralCode, agregarTodosLosProductos, type PerfilProveedor } from '@/lib/verProveedor';
@@ -100,8 +101,7 @@ export default function StoreProductActivatedPage({ params }: { params: Promise<
     <div className="mx-auto w-full max-w-[1140px] px-3 py-6">
       <div className="flex flex-col gap-6 sm:flex-row">
         <div className="w-full text-center sm:w-56">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
-          <img src={perfil?.foto || '/assets/noimagen.jpg'} alt="" className="mx-auto h-40 w-40 rounded-full object-cover shadow" />
+          <Image src={perfil?.foto || '/assets/noimagen.jpg'} alt="" width={160} height={160} className="mx-auto h-40 w-40 rounded-full object-cover shadow" />
           <h5 className="mt-3 font-semibold text-gray-800">{perfil?.nombre}</h5>
           <p className="text-sm font-medium text-amber-600">{count} Producto(s)</p>
           <p className="mt-1 text-sm text-gray-500">Ciudad {perfil?.ciudad}</p>
@@ -139,8 +139,9 @@ export default function StoreProductActivatedPage({ params }: { params: Promise<
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {productos.map((p) => (
               <Link key={p.id} href={`/config/verProductoProveedor/${p.id}`} className="rounded-xl border border-gray-100 p-2 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-                <img src={p.foto} alt={p.pro_nombre} className="h-28 w-full rounded object-cover" />
+                <div className="relative h-28 w-full">
+                  <Image src={p.foto} alt={p.pro_nombre} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-cover" />
+                </div>
                 <p className="mt-1 truncate text-xs font-medium text-gray-800">{p.pro_nombre.slice(0, 20)}</p>
                 <p className="text-xs text-gray-500">$ {formatCOP(p.pro_vendedor || p.pro_uni_venta || 0)}</p>
               </Link>

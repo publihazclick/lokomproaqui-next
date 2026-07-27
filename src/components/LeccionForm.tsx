@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -335,8 +336,9 @@ export function LeccionForm({
             </p>
             {thumbnailUrl && (
               <div className="mb-2 flex items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element -- miniatura en Supabase Storage */}
-                <img src={thumbnailUrl} alt="" className="aspect-video w-28 rounded bg-black object-contain" />
+                <div className="relative aspect-video w-28 bg-black">
+                  <Image src={thumbnailUrl} alt="" fill sizes="112px" className="rounded object-contain" />
+                </div>
                 <button type="button" onClick={() => setThumbnailUrl(null)} className="text-xs font-semibold text-gray-500 underline">
                   cambiar imagen
                 </button>

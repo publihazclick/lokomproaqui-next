@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 // Version del anuncio del curso Acelerador de Ventas EXCLUSIVA de /info -- a diferencia de
 // CursoAdVideo.tsx (usado en /acelerador, formato 16:9 horizontal con clases Tailwind), esta
@@ -35,8 +36,14 @@ export function InfoCursoAdVideo({
           <iframe src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1`} allow="autoplay" allowFullScreen />
         ) : (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- miniatura externa de YouTube */}
-            <img className={thumbClass} src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`} alt={label} onClick={() => setReproduciendo(true)} />
+            <Image
+              className={thumbClass}
+              src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+              alt={label}
+              fill
+              sizes="(max-width: 640px) 90vw, 320px"
+              onClick={() => setReproduciendo(true)}
+            />
             <button type="button" className={playClass} onClick={() => setReproduciendo(true)} aria-label={label}>
               <span className={playTriangleClass} />
             </button>

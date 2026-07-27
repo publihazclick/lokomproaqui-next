@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import { crearRecharge, actualizarRecharge, type RechargeAdminRow } from '@/lib/rechargeAdmin';
 import { subirArchivoPublico } from '@/lib/perfil';
@@ -68,10 +69,7 @@ export function FormRechargeModal({ paquete, onClose, onGuardado }: { paquete: R
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">Foto</label>
             <input type="file" accept="image/*" disabled={subiendo} onChange={(e) => e.target.files?.[0] && subirFoto(e.target.files[0])} className="w-full text-xs" />
-            {foto && (
-              // eslint-disable-next-line @next/next/no-img-element -- previsualizacion de la foto del paquete
-              <img src={foto} alt="" className="mt-2 h-20 w-20 rounded object-cover" />
-            )}
+            {foto && <Image src={foto} alt="" width={80} height={80} className="mt-2 h-20 w-20 rounded object-cover" />}
           </div>
         </div>
 

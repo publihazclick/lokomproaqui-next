@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
 // Port de ImprimirTarjetaComponent (Angular, "/imprimirTarjeta") -- tarjeta VIP imprimible con los
@@ -79,10 +80,11 @@ export default function ImprimirTarjetaPage() {
 
         {/* Avatar solapado sobre la banda, estilo credencial/badge de evento */}
         <div className="relative -mt-12 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil (Supabase Storage) */}
-          <img
+          <Image
             src={datos.foto || '/assets/noimagen.jpg'}
             alt=""
+            width={96}
+            height={96}
             className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg"
           />
         </div>

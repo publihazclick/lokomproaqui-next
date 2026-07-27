@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
@@ -285,8 +286,7 @@ export default function ConfiguracionPage() {
             {/* Vista previa en vivo: mismo componente de posicionamiento (clasesPosicionBoton) que
                 usa /articulo, para que el admin vea exactamente como va a quedar antes de guardar. */}
             <div className="relative h-24 w-44 shrink-0 overflow-hidden rounded">
-              {/* eslint-disable-next-line @next/next/no-img-element -- Storage, tamaño variable */}
-              <img src={banner.imageUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={banner.imageUrl} alt="" fill sizes="176px" className="object-cover" />
               {banner.linkUrl && (
                 <span
                   className={`${clasesPosicionBoton(banner.buttonPosition)} rounded-full px-2.5 py-1 text-[11px] font-bold text-white shadow`}

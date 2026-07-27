@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
@@ -169,8 +170,16 @@ export default async function InfoPage() {
 
         <section className={styles.banner}>
           <div className={styles.frame42}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-            <img className={styles.imgprincipal1} src="/assets/imagenes/BANNER%201.png" alt="" />
+            <Image
+              className={styles.imgprincipal1}
+              src="/assets/imagenes/BANNER%201.png"
+              alt=""
+              width={1200}
+              height={800}
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
+              style={{ maxWidth: '100%', height: 'auto' }}
+            />
             <div className={styles.frame41}>
               <div>
                 <span>
@@ -236,8 +245,14 @@ export default async function InfoPage() {
             <div className={styles.caja}>
               <div className={styles.contenidoCaja}>
                 <div className={styles.imagen}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-                  <img src="/assets/imagenes/porquelokomproaqui.png" alt="Imagen 1" />
+                  <Image
+                    src="/assets/imagenes/porquelokomproaqui.png"
+                    alt="Imagen 1"
+                    width={800}
+                    height={600}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                  />
                 </div>
               </div>
             </div>
@@ -269,8 +284,15 @@ export default async function InfoPage() {
                 Registrarme →
               </Link>
               <br />
-              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-              <img src="/assets/imagenes/REGISTROPROVEEDOR.png" alt="" className={`${styles.registroBoxImg} ${styles.registroBoxImgProveedor}`} />
+              <Image
+                src="/assets/imagenes/REGISTROPROVEEDOR.png"
+                alt=""
+                width={500}
+                height={400}
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className={`${styles.registroBoxImg} ${styles.registroBoxImgProveedor}`}
+                style={{ height: 'auto' }}
+              />
             </div>
           </div>
           <div className={styles.colSm4}>
@@ -281,8 +303,14 @@ export default async function InfoPage() {
                 Registrarme →
               </Link>
               <br />
-              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-              <img src="/assets/imagenes/REGISTROVENDEDOR.png" alt="" className={styles.registroBoxImg} />
+              <Image
+                src="/assets/imagenes/REGISTROVENDEDOR.png"
+                alt=""
+                width={500}
+                height={400}
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className={styles.registroBoxImg}
+              />
             </div>
           </div>
           <div className={styles.colSm4}>
@@ -293,8 +321,14 @@ export default async function InfoPage() {
                 Registrarme →
               </a>
               <br />
-              {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-              <img src="/assets/imagenes/CONTACTARASESOR.png" alt="" className={styles.registroBoxImg} />
+              <Image
+                src="/assets/imagenes/CONTACTARASESOR.png"
+                alt=""
+                width={500}
+                height={400}
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className={styles.registroBoxImg}
+              />
             </div>
           </div>
         </div>
@@ -323,8 +357,14 @@ export default async function InfoPage() {
               <div style={{ textAlign: 'center' }}>
                 <div className={styles.row}>
                   <div className={styles.col12}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-                    <img src="/assets/imagenes/transportadora.png" alt="" style={{ width: '100%' }} />
+                    <Image
+                      src="/assets/imagenes/transportadora.png"
+                      alt=""
+                      width={1000}
+                      height={300}
+                      sizes="100vw"
+                      style={{ width: '100%', height: 'auto' }}
+                    />
                   </div>
                 </div>
               </div>

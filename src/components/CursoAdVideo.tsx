@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Play } from 'lucide-react';
 
 // Miniatura propia (sin el "chrome" de YouTube) con boton de play a medida -- el iframe real
@@ -20,11 +21,12 @@ export function CursoAdVideo({ youtubeId, label }: { youtubeId: string; label: s
         />
       ) : (
         <button type="button" className="group block h-full w-full" onClick={() => setReproduciendo(true)} aria-label={label}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- miniatura externa de YouTube */}
-          <img
+          <Image
             src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
             alt={label}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-110">

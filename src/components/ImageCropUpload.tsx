@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Cropper, { type Area } from 'react-easy-crop';
 import { Upload, Check, X } from 'lucide-react';
 import { recortarImagen } from '@/lib/cropImage';
@@ -112,16 +113,16 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
     return (
       <div className="flex flex-wrap items-start gap-8">
         <div className="w-36 shrink-0 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-          <img src={value} alt="" className="aspect-square w-full rounded-md border border-gray-200 object-cover" />
+          <div className="relative aspect-square w-full">
+            <Image src={value} alt="" fill sizes="144px" className="rounded-md border border-gray-200 object-cover" />
+          </div>
           <p className="mt-1.5 truncate text-xs font-medium text-gray-700">{nombreProducto || 'Sin nombre'}</p>
           <button type="button" onClick={onEliminar} className="text-xs font-medium text-[#0d6efd] hover:underline">
             Eliminar
           </button>
         </div>
         <div className="flex flex-col items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-          <img src={value} alt="" className="h-44 w-44 rounded-md border border-gray-200 bg-gray-50 object-contain" />
+          <Image src={value} alt="" width={176} height={176} className="h-44 w-44 rounded-md border border-gray-200 bg-gray-50 object-contain" />
           <label className="inline-flex cursor-pointer items-center gap-2 rounded bg-[#0d6efd] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
             <Upload className="h-4 w-4" />
             {/* Pedido explicito del usuario 2026-07-25: si ya hay una foto (siempre el caso aca,
@@ -141,8 +142,7 @@ export function ImageCropUpload({ value, onUploaded, label, subiendo, setSubiend
   if (value) {
     return (
       <label className="relative flex h-56 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400">
-        {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-        <img src={value} alt="" className="h-full w-full object-contain" />
+        <Image src={value} alt="" fill sizes="(max-width: 640px) 90vw, 400px" className="object-contain" />
         <span className="absolute bottom-2 right-2 rounded border border-gray-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-gray-700">
           {subiendo ? 'Subiendo…' : 'Cambiar foto'}
         </span>

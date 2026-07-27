@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { X, Upload, Trash2 } from 'lucide-react';
 import {
   fetchCategoriaAdminDetalle,
@@ -106,8 +107,7 @@ export function FormCategoriaModal({ categoriaId, onClose, onGuardado }: FormCat
           <div className="space-y-3 px-4 py-4">
             {imagen && (
               <div className="mx-auto w-40">
-                {/* eslint-disable-next-line @next/next/no-img-element -- foto de categoria (Supabase Storage) */}
-                <img src={imagen} alt="" className="w-full rounded" />
+                <Image src={imagen} alt="" width={160} height={160} className="w-full rounded" />
               </div>
             )}
             <div>

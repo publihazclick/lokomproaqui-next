@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   Menu, X, ShoppingCart, User, Home, LayoutGrid, Store, ClipboardCheck, History,
@@ -522,8 +523,13 @@ export function RealHeader() {
               <ul className="flex flex-col gap-3">
                 {cart.map((item: CartItem, idx: number) => (
                   <li key={String(item.id)} className="flex items-center gap-3 rounded-xl border border-gray-100 p-2.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto, Supabase Storage */}
-                    <img src={(item.foto as string) || '/assets/producto.jpg'} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                    <Image
+                      src={(item.foto as string) || '/assets/producto.jpg'}
+                      alt=""
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-800">{item.titulo}</p>
                       <p className="text-xs text-gray-500">Cantidad: {item.cantidad ?? 1}</p>

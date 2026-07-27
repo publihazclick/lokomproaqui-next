@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { X, Trash2 } from 'lucide-react';
 import {
   crearCatalogo,
@@ -167,8 +168,9 @@ export function FormCatalogoModal({ catalogo, onClose, onGuardado }: { catalogo:
           <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
             {items.map((item) => (
               <div key={item.id} className="relative rounded border border-gray-100 p-1">
-                {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de producto/foto del catalogo */}
-                <img src={item.foto || '/assets/noimagen.jpg'} alt="" className="h-16 w-full rounded object-cover" />
+                <div className="relative h-16 w-full">
+                  <Image src={item.foto || '/assets/noimagen.jpg'} alt="" fill sizes="120px" className="rounded object-cover" />
+                </div>
                 {item.nombre && <p className="mt-1 truncate text-[10px] text-gray-600">{item.nombre}</p>}
                 <button onClick={() => quitarItem(item)} className="absolute -right-1 -top-1 rounded-full bg-red-600 p-0.5 text-white">
                   <Trash2 className="h-3 w-3" />
@@ -194,8 +196,9 @@ export function FormCatalogoModal({ catalogo, onClose, onGuardado }: { catalogo:
                 onClick={() => toggleProducto(prod, yaAgregado)}
                 className={`rounded border p-1 text-left ${yaAgregado ? 'border-green-500 bg-green-50' : 'border-gray-100'}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- miniatura de producto en el picker */}
-                <img src={prod.foto || '/assets/noimagen.jpg'} alt="" className="h-16 w-full rounded object-cover" />
+                <div className="relative h-16 w-full">
+                  <Image src={prod.foto || '/assets/noimagen.jpg'} alt="" fill sizes="120px" className="rounded object-cover" />
+                </div>
                 <p className="mt-1 truncate text-[10px] text-gray-700">{prod.nombre}</p>
                 <p className="text-[10px] text-gray-500">$ {formatCOP(prod.precio)}</p>
               </button>

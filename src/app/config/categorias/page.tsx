@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Eye, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
@@ -118,8 +119,7 @@ export default function CategoriasPage() {
                       </div>
                     </td>
                     <td className="py-2 pr-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- foto de categoria (Supabase Storage) */}
-                      <img src={c.imagen || '/assets/categoria.jpeg'} alt="" className="h-10 w-10 rounded object-cover" />
+                      <Image src={c.imagen || '/assets/categoria.jpeg'} alt="" width={40} height={40} className="h-10 w-10 rounded object-cover" />
                     </td>
                     <td className="py-2 pr-3 font-medium">{c.nombre}</td>
                     <td className="py-2 pr-3 text-gray-600">{c.descripcion}</td>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { Upload, Package, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -264,8 +265,7 @@ export default function PerfilPage() {
             <h4 className="text-sm font-bold">ASO-VIRTUAL-CONNECTED</h4>
             <p className="text-[11px] font-bold text-gray-500">Asociacion de Tiendas Virtuales conectadas</p>
             <div className="mt-3 flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- avatar de Supabase Storage */}
-              <img src={data.avatarUrl || '/assets/noimagen.jpg'} alt="" className="h-20 w-20 rounded object-cover" />
+              <Image src={data.avatarUrl || '/assets/noimagen.jpg'} alt="" width={80} height={80} className="h-20 w-20 rounded object-cover" />
               <div className="flex-1 text-left text-xs">
                 <p>ID: {data.id.slice(0, 8)}</p>
                 <p>

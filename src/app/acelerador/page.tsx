@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { PlayCircle, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -120,8 +121,9 @@ function AceleradorPageInterna() {
                       className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 text-left shadow-sm transition hover:shadow-lg"
                     >
                       {l.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                        <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-black object-contain" />
+                        <div className="relative aspect-video w-full bg-black">
+                          <Image src={l.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 100vw, 50vw" className="object-contain" />
+                        </div>
                       ) : (
                         <div className="flex aspect-video w-full items-center justify-center bg-black">
                           <PlayCircle className="h-14 w-14 text-gray-600" />
@@ -175,8 +177,9 @@ function AceleradorPageInterna() {
                     className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg"
                   >
                     {l.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- miniatura subida por el mentor, Supabase Storage
-                      <img src={l.thumbnailUrl} alt="" className="aspect-video w-full bg-black object-contain" />
+                      <div className="relative aspect-video w-full bg-black">
+                        <Image src={l.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 100vw, 50vw" className="object-contain" />
+                      </div>
                     ) : (
                       <div className="flex aspect-video w-full items-center justify-center bg-black">
                         <PlayCircle className="h-14 w-14 text-gray-600" />

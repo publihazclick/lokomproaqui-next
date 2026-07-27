@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Eye, Trash2, Copy, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchProductosAdmin, eliminarProducto, eliminarProductos, duplicarProducto, activarProducto, type ProductoAdminRow, type ModoListaProductos } from '@/lib/productosAdmin';
 import { useToast, Toast } from '@/components/Toast';
@@ -220,8 +221,7 @@ export function TableProductosPanel({ modo, userId, esAdmin, onEditar, onCrear }
                     </div>
                   </td>
                   <td className="py-2 pr-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- foto de producto (Supabase Storage) */}
-                    <img src={p.foto || '/assets/noimagen.jpg'} alt="" className="h-12 w-12 rounded object-cover" />
+                    <Image src={p.foto || '/assets/noimagen.jpg'} alt="" width={48} height={48} className="h-12 w-12 rounded object-cover" />
                   </td>
                   <td className="py-2 pr-3">{p.nombre}</td>
                   <td className="py-2 pr-3">{p.codigo}</td>
