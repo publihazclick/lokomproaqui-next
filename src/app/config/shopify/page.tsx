@@ -100,7 +100,7 @@ export default function ShopifyConnectPage() {
                   </li>
                   <li>Crea una aplicacion personalizada (dale cualquier nombre, por ejemplo &quot;LokomproAqui&quot;).</li>
                   <li>
-                    En permisos de la API Admin, activa <b>lectura y escritura</b> de <b>Pedidos (orders)</b> y <b>lectura</b> de <b>Productos (products)</b>.
+                    En permisos de la API Admin, activa <b>lectura y escritura</b> de <b>Pedidos (orders)</b> y <b>lectura y escritura</b> de <b>Productos (products)</b>.
                   </li>
                   <li>Instala la aplicacion en tu tienda.</li>
                   <li>
@@ -109,8 +109,8 @@ export default function ShopifyConnectPage() {
                   </li>
                 </ol>
                 <p className="mt-2 text-xs italic text-gray-500">
-                  Importante: en cada producto de tu tienda de Shopify, en el campo &quot;SKU&quot; de la variante, pon el mismo codigo que tiene el producto en LokomproAqui, para que los pedidos se
-                  relacionen solos.
+                  Importante: cuando agregues un producto a tu tienda desde LokomproAqui (botón &quot;Agregar a mi Tienda&quot;), se crea automaticamente en tu Shopify con el mismo SKU, para que
+                  los pedidos se relacionen solos.
                 </p>
               </div>
               <div className="space-y-3">
