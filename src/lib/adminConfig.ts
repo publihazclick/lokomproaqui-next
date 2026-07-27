@@ -44,10 +44,45 @@ export interface SiteConfigForm {
   // editables desde el admin cada vez que quiera cambiarlos (ver botonWhatsappMentoria() abajo).
   whatsappMentoriaNumero: string;
   whatsappMentoriaMensaje: string;
+  // Pedido explicito del usuario 2026-07-27: el admin edita aca el asunto/contenido del correo de
+  // bienvenida automatico (edge function send-welcome-email), en vez de tener que pedir un cambio
+  // de codigo cada vez. El HTML se guarda tal cual el admin lo escriba (misma edge function genera
+  // la version texto plano a partir del HTML). Los defaults reproducen el texto original hardcodeado
+  // para que el admin vea el contenido real la primera vez que entra, no un campo vacio.
+  emailAsuntoVendedor: string;
+  emailHtmlVendedor: string;
+  emailAsuntoProveedor: string;
+  emailHtmlProveedor: string;
 }
 
 const WHATSAPP_MENTORIA_NUMERO_DEFAULT = '3202241463';
 const WHATSAPP_MENTORIA_MENSAJE_DEFAULT = 'Hola Harley, estoy interesad@ en tomar la mentoría con ustedes, ya estoy generando el pago en la plataforma.';
+
+const EMAIL_ASUNTO_VENDEDOR_DEFAULT = '¡Bienvenido a LokomproAqui! Ya puedes empezar a vender';
+const EMAIL_HTML_VENDEDOR_DEFAULT = `<p>Hola {{nombre}},</p>
+<p>Tu cuenta de <strong>vendedor</strong> en LokomproAqui ya está activa.</p>
+<p>Ahora puedes:</p>
+<ul>
+  <li>Explorar el catálogo de productos de nuestros proveedores</li>
+  <li>Elegir los productos que quieres vender y armar tu tienda</li>
+  <li>Empezar a recibir pedidos y ganar comisiones por cada venta</li>
+</ul>
+<p>Entra a tu catálogo aquí: <a href="https://lokomproaqui.com/articulo">https://lokomproaqui.com/articulo</a></p>
+<p>Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.</p>
+<p style="color: #6b7280; font-size: 12px; margin-top: 24px;">LokomproAqui · lokomproaqui.com</p>`;
+
+const EMAIL_ASUNTO_PROVEEDOR_DEFAULT = '¡Bienvenido a LokomproAqui! Activa tu bodega en 3 pasos';
+const EMAIL_HTML_PROVEEDOR_DEFAULT = `<p>Hola {{nombre}},</p>
+<p>Tu cuenta de <strong>proveedor</strong> (bodega) en LokomproAqui ya está creada.</p>
+<p>Para que miles de vendedores puedan encontrar y vender tus productos, te falta:</p>
+<ol>
+  <li>Subir mínimo <strong>3 productos</strong> a tu catálogo</li>
+  <li>Enviar tu bodega a revisión</li>
+  <li>Esperar la aprobación de nuestro equipo (usualmente rápida)</li>
+</ol>
+<p>Sube tus productos aquí: <a href="https://lokomproaqui.com/config/productos">https://lokomproaqui.com/config/productos</a></p>
+<p>Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.</p>
+<p style="color: #6b7280; font-size: 12px; margin-top: 24px;">LokomproAqui · lokomproaqui.com</p>`;
 
 export async function fetchSiteConfig(): Promise<SiteConfigForm> {
   const { data } = await supabase.from('site_config').select('info_text').limit(1).single();
@@ -67,6 +102,10 @@ export async function fetchSiteConfig(): Promise<SiteConfigForm> {
     urlTercero: info.urlTercero || '',
     whatsappMentoriaNumero: info.whatsappMentoriaNumero || WHATSAPP_MENTORIA_NUMERO_DEFAULT,
     whatsappMentoriaMensaje: info.whatsappMentoriaMensaje || WHATSAPP_MENTORIA_MENSAJE_DEFAULT,
+    emailAsuntoVendedor: info.emailAsuntoVendedor || EMAIL_ASUNTO_VENDEDOR_DEFAULT,
+    emailHtmlVendedor: info.emailHtmlVendedor || EMAIL_HTML_VENDEDOR_DEFAULT,
+    emailAsuntoProveedor: info.emailAsuntoProveedor || EMAIL_ASUNTO_PROVEEDOR_DEFAULT,
+    emailHtmlProveedor: info.emailHtmlProveedor || EMAIL_HTML_PROVEEDOR_DEFAULT,
   };
 }
 
@@ -96,6 +135,24 @@ export async function notificarRegistroWhatsapp(datos: { nombre: string; telefon
   const mensaje = `Nuevo registro en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nRol: ${datos.rol}`;
   const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
+}
+
+// Correo de bienvenida automatico al registrarse, con contenido distinto para vendedor/proveedor
+// (edge function `send-welcome-email`, envia via Resend). Fire-and-forget igual que
+// notificarRegistroWhatsapp -- nunca bloquea el redirect post-registro. Si RESEND_API_KEY/
+// RESEND_FROM todavia no estan configurados en el proyecto Supabase, la funcion responde
+// ok:false sin lanzar error (mismo diseño auto-activable que whatsapp-send-confirmation).
+export async function notificarRegistroEmail(datos: { email: string; nombre: string; rol: 'vendedor' | 'proveedor' }): Promise<void> {
+  await supabase.functions.invoke('send-welcome-email', { body: datos }).catch(() => {});
+}
+
+// Boton "Enviar prueba" de /config/configuracion (pedido explicito del usuario 2026-07-27): dispara
+// el mismo correo real que recibiria un usuario nuevo, con la plantilla YA GUARDADA en site_config
+// (por eso conviene guardar antes de probar), para que el admin vea el resultado real sin tener que
+// registrar una cuenta de prueba cada vez.
+export async function enviarPruebaCorreoBienvenida(email: string, rol: 'vendedor' | 'proveedor'): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke('send-welcome-email', { body: { email, nombre: 'Prueba', rol } });
+  return !error && !!(data as { ok?: boolean } | null)?.ok;
 }
 
 // Pedido explicito del usuario 2026-07-19: mismo patron que notificarRegistroWhatsapp, pero para

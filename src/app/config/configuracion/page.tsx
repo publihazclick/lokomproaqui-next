@@ -14,6 +14,7 @@ import {
   actualizarBannerImagen,
   eliminarBannerImagen,
   clasesPosicionBoton,
+  enviarPruebaCorreoBienvenida,
   POSICIONES_BOTON,
   type SiteConfigForm,
   type BannerImagen,
@@ -38,6 +39,8 @@ export default function ConfiguracionPage() {
   const [banners, setBanners] = useState<BannerImagen[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [emailPrueba, setEmailPrueba] = useState('');
+  const [enviandoPrueba, setEnviandoPrueba] = useState<'vendedor' | 'proveedor' | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragIdx = useRef<number | null>(null);
 
@@ -70,6 +73,21 @@ export default function ConfiguracionPage() {
     setGuardando(false);
     mostrar(ok ? 'Actualizado...' : 'Erro al actualizar');
     if (ok) setData(await fetchSiteConfig());
+  }
+
+  // Manda la plantilla YA GUARDADA (no lo que haya sin guardar en el textarea) -- se avisa al admin
+  // si tiene cambios sin guardar antes de disparar la prueba, para que no se confunda si el correo
+  // de prueba no refleja lo que acaba de escribir.
+  async function enviarPrueba(rol: 'vendedor' | 'proveedor') {
+    const correo = emailPrueba.trim();
+    if (!correo) {
+      mostrar('Escribe un correo para la prueba');
+      return;
+    }
+    setEnviandoPrueba(rol);
+    const ok = await enviarPruebaCorreoBienvenida(correo, rol);
+    setEnviandoPrueba(null);
+    mostrar(ok ? 'Correo de prueba enviado' : 'No se pudo enviar (revisa que Resend este configurado)');
   }
 
   // Pedido explicito del usuario 2026-07-22: subir varias imagenes de una sola vez (antes solo
@@ -341,6 +359,79 @@ export default function ConfiguracionPage() {
         ))}
         {banners.length === 0 && <p className="py-6 text-center text-sm text-gray-400">No hay banners todavía.</p>}
       </div>
+
+      <hr className="my-8" />
+
+      <h4 className="font-semibold text-gray-800">Correo de bienvenida automático</h4>
+      <p className="mt-1 text-xs text-gray-400">
+        Se envía solo cuando alguien se registra (vendedor o proveedor). Usa <code>{'{{nombre}}'}</code> donde quieras que aparezca el nombre de la persona. El
+        contenido es HTML (soporta <code>&lt;p&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;a href=&quot;...&quot;&gt;</code>, <code>&lt;ul&gt;</code>, etc).
+      </p>
+
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
+          <h5 className="mb-2 text-sm font-semibold text-gray-700">Vendedor</h5>
+          <label className="mb-1 block text-xs font-medium text-gray-700">Asunto</label>
+          <input
+            value={data.emailAsuntoVendedor}
+            onChange={(e) => setCampo('emailAsuntoVendedor', e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido (HTML)</label>
+          <textarea
+            value={data.emailHtmlVendedor}
+            onChange={(e) => setCampo('emailHtmlVendedor', e.target.value)}
+            rows={10}
+            className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => enviarPrueba('vendedor')}
+              disabled={enviandoPrueba === 'vendedor'}
+              className="rounded bg-gray-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            >
+              {enviandoPrueba === 'vendedor' ? 'Enviando…' : 'Enviar prueba (guardado)'}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h5 className="mb-2 text-sm font-semibold text-gray-700">Proveedor</h5>
+          <label className="mb-1 block text-xs font-medium text-gray-700">Asunto</label>
+          <input
+            value={data.emailAsuntoProveedor}
+            onChange={(e) => setCampo('emailAsuntoProveedor', e.target.value)}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido (HTML)</label>
+          <textarea
+            value={data.emailHtmlProveedor}
+            onChange={(e) => setCampo('emailHtmlProveedor', e.target.value)}
+            rows={10}
+            className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => enviarPrueba('proveedor')}
+              disabled={enviandoPrueba === 'proveedor'}
+              className="rounded bg-gray-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            >
+              {enviandoPrueba === 'proveedor' ? 'Enviando…' : 'Enviar prueba (guardado)'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <label className="mb-1 block text-xs font-medium text-gray-700">Correo para las pruebas de arriba</label>
+        <input
+          value={emailPrueba}
+          onChange={(e) => setEmailPrueba(e.target.value)}
+          placeholder="tu-correo@ejemplo.com"
+          className="w-full max-w-xs rounded border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+      <p className="mt-2 text-xs text-gray-400">Recuerda pulsar &quot;Guardar&quot; arriba antes de probar: la prueba envía la plantilla ya guardada, no lo que tengas sin guardar.</p>
 
       <Toast mensaje={mensaje} />
     </div>

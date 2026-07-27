@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { departamento } from '@/lib/departamentos';
-import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
+import { notificarRegistroWhatsapp, notificarRegistroEmail } from '@/lib/adminConfig';
 
 // Port desde src/app/components/registro (Angular): registro de PROVEEDOR unicamente (ver
 // memoria lokomproaqui-nextjs-migration -- la variante "vendedor" de este formulario en
@@ -154,6 +154,7 @@ export default function RegistroPage() {
     // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el redirect
     // normal de abajo, las dos cosas pasan juntas.
     notificarRegistroWhatsapp({ nombre: titular, telefono, rol: 'proveedor' });
+    notificarRegistroEmail({ email: email.trim(), nombre: titular, rol: 'proveedor' });
 
     // Mismo redirect que el RegistroComponent original (distinto del de /singUp): proveedor -> /config/perfil.
     window.location.href = '/config/perfil';

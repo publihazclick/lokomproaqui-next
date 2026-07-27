@@ -6,7 +6,7 @@ import { Eye, EyeOff, Lock, Mail, User, Users, Phone, Store, Truck } from 'lucid
 import { supabase } from '@/lib/supabase';
 import { Indicativo } from '@/lib/indicativo';
 import { departamento } from '@/lib/departamentos';
-import { notificarRegistroWhatsapp } from '@/lib/adminConfig';
+import { notificarRegistroWhatsapp, notificarRegistroEmail } from '@/lib/adminConfig';
 
 // Port desde src/app/layout/sign-up (Angular), ruta [[...slug]] para cubrir tanto /singUp como
 // /singUp/:type/:cel (mismo componente en Angular). Es el registro que de verdad usa casi todo
@@ -208,6 +208,7 @@ export default function SignUpPage({ params }: { params: Promise<{ slug?: string
     // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el redirect
     // normal de abajo, las dos cosas pasan juntas.
     notificarRegistroWhatsapp({ nombre: `${nombre} ${apellido}`.trim(), telefono, rol: rolReal || rol });
+    notificarRegistroEmail({ email: email.trim(), nombre: `${nombre} ${apellido}`.trim(), rol: (rolReal || rol) === 'proveedor' ? 'proveedor' : 'vendedor' });
 
     // Pedido explicito del usuario 2026-07-20: un proveedor recien registrado debe ver de inmediato
     // el mensaje de "sube minimo 3 productos y envialos a revision" -- ese banner vive en
