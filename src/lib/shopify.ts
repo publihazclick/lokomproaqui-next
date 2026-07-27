@@ -28,6 +28,26 @@ export async function desconectarShopify(profileId: string): Promise<boolean> {
   return !error && !(resp && resp.error);
 }
 
+// Pedido explicito del usuario 2026-07-27: el boton "Agregar a mi Tienda"/"Actualizar Precio" de
+// ViewProductosModal, ademas de guardar el price_override interno de siempre, crea/actualiza el
+// mismo producto en la Shopify real del vendedor (si la tiene conectada). Se llama DESPUES de
+// guardarPriceOverride -- si el vendedor no tiene Shopify conectado, la edge function responde
+// {ok:true, skipped:'no_shopify'} sin hacer nada, nunca bloquea el flujo normal de la tienda interna.
+export async function sincronizarProductoShopify(profileId: string, productId: number, price: number): Promise<{ ok: boolean; skipped?: string; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('shopify-push-product', { body: { action: 'upsert', profile_id: profileId, product_id: productId, price } });
+  if (error) return { ok: false, error: 'no_se_pudo_conectar' };
+  return (data as { ok: boolean; skipped?: string; error?: string }) || { ok: false };
+}
+
+// "Quitar de mi Tienda": pedido explicito del usuario 2026-07-27, ELIMINA de verdad el producto de
+// la Shopify del vendedor (no solo lo oculta) -- decision consciente, distinto del soft-delete que
+// ya hace quitarPriceOverride sobre price_overrides.
+export async function eliminarProductoDeShopify(profileId: string, productId: number): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('shopify-push-product', { body: { action: 'delete', profile_id: profileId, product_id: productId } });
+  if (error) return { ok: false, error: 'no_se_pudo_conectar' };
+  return (data as { ok: boolean; error?: string }) || { ok: false };
+}
+
 export interface ShopifyPendingItem {
   title: string;
   sku: string | null;

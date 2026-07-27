@@ -17,6 +17,7 @@ import { useCart, formatCOP } from '@/lib/cartStore';
 import { useToast, Toast } from '@/components/Toast';
 import { type DataUserCompleto } from '@/lib/usuarios';
 import { DropshippingCheckoutModal } from '@/components/DropshippingCheckoutModal';
+import { fetchShopifyConnection, sincronizarProductoShopify, eliminarProductoDeShopify } from '@/lib/shopify';
 
 // Port 1:1 desde src/app/components/view-productos (Angular) -- el dialogo real de "ver
 // producto/agregar al carrito" que abren tanto PedidosComponent (`/articulo`) como
@@ -82,6 +83,9 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
   const [idPrice, setIdPrice] = useState<number | ''>('');
   const [guardando, setGuardando] = useState(false);
   const [checkoutAbierto, setCheckoutAbierto] = useState<'dropshipping' | 'muestra' | null>(null);
+  // Pedido explicito del usuario 2026-07-27: "Agregar a mi Tienda" tambien crea el producto en la
+  // Shopify real del vendedor, si la tiene conectada -- se resuelve una sola vez al abrir el modal.
+  const [shopifyConectado, setShopifyConectado] = useState(false);
 
   useEffect(() => {
     if (!dataUser?.id) return;
@@ -91,6 +95,7 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       setIdPrice(res.price);
       if (initialView === 'store') setDisabledView('createPrice');
     });
+    fetchShopifyConnection(dataUser.id).then((conn) => setShopifyConectado(!!conn));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [producto.id, dataUser?.id]);
 
@@ -204,23 +209,49 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     if (!dataUser?.id) return;
     setGuardando(true);
     const ok = await guardarPriceOverride(producto.id, dataUser.id, valor);
-    setGuardando(false);
-    if (ok) {
+    if (!ok) {
+      setGuardando(false);
+      return;
+    }
+    if (!shopifyConectado) {
+      setGuardando(false);
       mostrar('Este Producto Esta Agregado a tu Cuentas!!!');
       onClose();
+      return;
     }
+    const resultado = await sincronizarProductoShopify(dataUser.id, producto.id, valor);
+    setGuardando(false);
+    mostrar(
+      resultado.ok
+        ? 'Este Producto Esta Agregado a tu Cuentas y a tu tienda Shopify!!!'
+        : 'Agregado a tu Cuentas, pero no se pudo sincronizar con Shopify (revisa la conexion en Config)',
+    );
+    onClose();
   }
 
   async function handleDroppArticle() {
-    if (!idMyProduct) return;
+    if (!idMyProduct || !dataUser?.id) return;
     if (!window.confirm('Deseas Eliminar Dato')) return;
     setGuardando(true);
     const ok = await quitarPriceOverride(idMyProduct);
-    setGuardando(false);
-    if (ok) {
+    if (!ok) {
+      setGuardando(false);
+      return;
+    }
+    if (!shopifyConectado) {
+      setGuardando(false);
       mostrar('Este Producto Esta Eliminado de tu Tienda!!!');
       onClose();
+      return;
     }
+    const resultado = await eliminarProductoDeShopify(dataUser.id, producto.id);
+    setGuardando(false);
+    mostrar(
+      resultado.ok
+        ? 'Este Producto Esta Eliminado de tu Tienda y de tu Shopify!!!'
+        : 'Eliminado de tu Tienda, pero no se pudo eliminar de Shopify (revisa la conexion en Config)',
+    );
+    onClose();
   }
 
   // Equivalente a ViewProductosComponent.abrirDropshipping, salvo el piso operativo de saldo
