@@ -348,7 +348,12 @@ export function RealHeader() {
         )}
 
         <header className="bg-[#02a0e3] shadow-md">
-        <div className="mx-auto flex h-20 max-w-[1200px] items-center gap-2 px-3 sm:h-32 sm:px-4">
+        {/* Pedido explicito del usuario 2026-07-28: en vista de computador el logo (lado derecho para
+            visitante) se veia muy hacia el centro por el max-w-[1200px] centrado -- en pantallas
+            anchas quedaba con espacio muerto simetrico a ambos lados. sm:max-w-none quita ese tope
+            solo en desktop (en mobile el viewport ya es mas angosto que 1200px, nunca llegaba a
+            aplicar el limite) para que el logo se pegue mas al borde derecho real de la pantalla. */}
+        <div className="mx-auto flex h-20 max-w-[1200px] items-center gap-2 px-3 sm:h-32 sm:max-w-none sm:px-6">
           <button type="button" onClick={() => setMenuAbierto(true)} className="rounded p-2 text-white hover:bg-white/10" aria-label="Abrir menú">
             <Menu className="h-6 w-6" />
           </button>
