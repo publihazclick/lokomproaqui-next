@@ -96,10 +96,9 @@ const MENUS: MenuItem[] = [
   { Icon: Video, nombre: 'Gestionar Academia', href: '/config/cursos', mostrar: (r) => r === 'administrador' },
 ];
 
-const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar' | 'compartir'; mostrar: (r: Rol) => boolean }[] = [
+const MENUS_PIE: { Icon: typeof Home; nombre: string; accion: 'login' | 'registrar' | 'salir' | 'recargar'; mostrar: (r: Rol) => boolean }[] = [
   { Icon: User, nombre: 'Iniciar Sesión', accion: 'login', mostrar: (r) => r === 'visitante' },
   { Icon: UserPlus, nombre: 'Regístrate', accion: 'registrar', mostrar: (r) => r === 'visitante' },
-  { Icon: LogOut, nombre: 'Compartir mi tienda', accion: 'compartir', mostrar: (r) => r === 'administrador' || r === 'vendedor' },
   { Icon: Wallet, nombre: 'Recargar Saldo', accion: 'recargar', mostrar: (r) => r === 'administrador' || r === 'vendedor' || r === 'proveedor' },
   { Icon: LogOut, nombre: 'Salir', accion: 'salir', mostrar: (r) => r !== 'visitante' },
 ];
@@ -110,7 +109,6 @@ export function RealHeader() {
 
   const [rol, setRol] = useState<Rol>('visitante');
   const [userId, setUserId] = useState<string | null>(null);
-  const [telefono, setTelefono] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -166,7 +164,6 @@ export function RealHeader() {
       const rolReal = (rolCrudo === 'admin' ? 'administrador' : rolCrudo) as Rol;
       setRol(rolReal);
       setUserId(userId);
-      setTelefono(profile.phone);
       setEsLiderGeneral(!!(profile as any).es_lider_general);
       setBalance(wallet?.balance ?? 0);
       setSesionResuelta(true);
@@ -312,10 +309,6 @@ export function RealHeader() {
     if (accion === 'registrar') window.location.href = '/singUp/vendedor/3213692393';
     if (accion === 'salir') salir();
     if (accion === 'recargar') window.location.href = '/config/recharge';
-    if (accion === 'compartir') {
-      const url = `${window.location.origin}/front/index/${telefono || ''}`;
-      navigator.clipboard.writeText(url).then(() => alert(`Copiado: ${url}`));
-    }
   }
 
   const total = cart.reduce((acc, item) => acc + (item.loVendio || 0), 0);
