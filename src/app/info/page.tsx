@@ -69,7 +69,9 @@ export default async function InfoPage() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font -- Poppins, mismo font-family que el original Angular */}
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet" />
 
-      <section className="bg-gradient-to-br from-[#0177a8] via-[#02a0e3] to-[#38bdf8] px-6 pb-24 pt-20 text-center text-white">
+      {/* Mismo color plano #02a0e3 de la cabecera (RealHeader) -- pedido explicito del usuario
+          2026-07-28: el degradado se veia disparejo justo debajo del header, que es un color solido. */}
+      <section className="bg-[#02a0e3] px-6 pb-24 pt-20 text-center text-white">
         <h1 className="text-4xl font-bold leading-tight">Vende Online Sin Inventario</h1>
         <p className="mt-4 text-lg opacity-90">Nosotros guardamos, empacamos y enviamos. Tú solo publicas y ganas desde un 40% en adelante.</p>
         <Link
