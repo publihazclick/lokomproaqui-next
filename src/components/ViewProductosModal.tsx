@@ -208,7 +208,11 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
       mostrar('Link de Shopify copiado');
       return;
     }
-    const url = `${window.location.origin}/front/catalogo/${producto.id}/${dataUser?.telefono || ''}`;
+    // Pedido explicito del usuario 2026-07-28: el link copiado ahora apunta a la landing de alta
+    // conversion (/p/[id]/[telefono], ver ProductLandingClient.tsx) en vez de la vista de catalogo
+    // normal -- pensada para recibir trafico de campañas pagas. El telefono sigue siendo el mismo
+    // identificador de tienda/comision de siempre, solo cambia el destino del link.
+    const url = `${window.location.origin}/p/${producto.id}/${dataUser?.telefono || ''}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {}

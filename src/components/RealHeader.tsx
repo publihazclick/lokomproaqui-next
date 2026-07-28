@@ -28,7 +28,9 @@ import { fetchEstadoProveedor, type EstadoProveedor } from '@/lib/proveedorEstad
 // Mismas rutas donde Angular oculta el header (header.component.html: routName !== 'login' &&
 // !== 'singUp'), mas /mvid8x2qz1, /introduccion y /imprimirTarjeta, que viven en app-routing.module.ts
 // a nivel raiz (nunca bajo TiendaComponent, por lo tanto sin el header compartido).
-const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta', '/front', '/publico'];
+// '/p' (landing de producto de alta conversion, pedido explicito del usuario 2026-07-28): cero
+// distracciones entre el anuncio pago y la compra, mismo criterio ya aplicado a /front y /publico.
+const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta', '/front', '/publico', '/p'];
 
 type Rol = 'visitante' | 'vendedor' | 'proveedor' | 'lider' | 'subAdministrador' | 'administrador' | 'mentor';
 

@@ -178,6 +178,24 @@ export async function fetchProductoById(id: string | number): Promise<ProductoLe
   return mapped;
 }
 
+// Para la landing de producto (/p/[id]/[telefono], pedido explicito del usuario 2026-07-28):
+// necesita la galeria de fotos a NIVEL PRODUCTO (`products.gallery`, jsonb), que ProductoLegacy no
+// expone -- mapProductToLegacy solo reconstruye fotos POR VARIANTE (`galeriaList` dentro de
+// listColor), pensadas para el selector de color, y caen a una sola foto (`image_url`) cuando la
+// variante no tiene fotos propias. Para muchos productos reales (ej. un mismo calzado fotografiado
+// desde varios angulos, sin variantes de color) esas fotos extra solo existen en `products.gallery`
+// -- sin esta funcion la landing mostraria una sola imagen aunque el proveedor haya subido varias.
+// Se llama junto a fetchProductoById (no lo reemplaza) porque son 2 necesidades distintas del mismo
+// producto -- se acepta el segundo viaje de red por mantener ProductoLegacy sin tocar para el resto
+// de pantallas que ya lo consumen.
+export async function fetchGaleriaProducto(id: string | number): Promise<string[]> {
+  const { data } = await supabase.from('products').select('gallery, image_url').eq('id', id).maybeSingle<{ gallery: { foto: string }[] | null; image_url: string | null }>();
+  if (!data) return [];
+  const gallery = data.gallery || [];
+  if (gallery.length) return gallery.map((g) => g.foto).filter(Boolean);
+  return data.image_url ? [data.image_url] : [];
+}
+
 // Equivalente a ProductoService.get({ where: { pro_categoria, user, idPrice }, page, limit }) para
 // listados/catalogo (PedidosComponent, ListArticleStoreComponent): productos activos paginados,
 // con precio propio (price_overrides) del usuario logueado si ya reselleo alguno.
