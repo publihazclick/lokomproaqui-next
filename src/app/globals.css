@@ -127,3 +127,44 @@ body {
 .toast-entrar {
   animation: toast-entrar-anim 0.25s ease-out;
 }
+
+/* Landing de producto de alta conversion (/p/[id]/[telefono], ProductLandingClient.tsx) --
+   entrada suave de cada bloque (hero, badges, CTA) escalonada con --landing-delay en linea, en vez
+   de que todo aparezca de golpe con el resto de la pagina. */
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-fade-up {
+  opacity: 0;
+  animation: landing-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--landing-delay, 0s);
+}
+
+/* Resplandor detras de la foto principal del producto -- separa la tarjeta del degradado del
+   fondo sin depender de un borde duro. */
+.landing-glow {
+  box-shadow: 0 25px 60px -15px rgba(1, 119, 168, 0.45), 0 8px 20px -8px rgba(0, 0, 0, 0.15);
+}
+
+/* Brillo lento del precio, sutil (no compite con .shine-sweep, mas rapido y pensado para botones). */
+@keyframes landing-price-shine {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+.landing-price {
+  animation: landing-price-shine 2.4s ease-in-out infinite;
+}
