@@ -10,10 +10,12 @@ import { fechaMedium } from '@/lib/format';
 // Port 1:1 (diseno) de ReferidosComponent (Angular, "Referidos"). Verificado el mismo estandar de
 // fidelidad que Ventas Posibles/Ventas/Cobros (cero margen de error, tutoriales grabados con esta
 // interfaz). Header real de Angular: ['Nombre','lider','E-mail','Telefonos','Nivel','Fecha
-// Registro','Activo'] -- se replica exacto, incluida la columna "E-mail" (siempre vacia, el email
-// vive en auth.users y nunca fue accesible desde este componente en Angular tampoco) y la columna
-// "Activo" (el codigo original tiene `pro_estado == 0 ? 'Activo' : 'Activo'` -- ambas ramas del
-// ternario devuelven lo mismo, texto plano SIEMPRE "Activo", nunca "Inactivo" ni con color).
+// Registro','Activo'] -- se replica exacto. La columna "E-mail" estaba siempre vacia en el original
+// (el correo vive en auth.users, nunca fue accesible desde el cliente) -- pedido explicito del
+// usuario 2026-07-27, ya se llena de verdad via el RPC fetch_referidos_emails (ver lib/referidos.ts).
+// La columna "Activo" (el codigo original tiene `pro_estado == 0 ? 'Activo' : 'Activo'` -- ambas
+// ramas del ternario devuelven lo mismo, texto plano SIEMPRE "Activo", nunca "Inactivo" ni con
+// color) se mantiene tal cual, fuera de alcance de este pedido.
 //
 // Se mantiene (no se revierte) el arreglo real de seguridad ya hecho en una sesion anterior: en
 // Angular, buscar() reemplaza el query completo y pierde el filtro por referente -- cualquier
@@ -239,7 +241,7 @@ export default function ReferidosPage() {
                 <tr key={row.id} className="border-b border-gray-100">
                   <td className="py-3 pr-3 align-top">{row.nombre}</td>
                   <td className="py-3 pr-3 align-top">{row.liderNombre}</td>
-                  <td className="py-3 pr-3 align-top"></td>
+                  <td className="py-3 pr-3 align-top">{row.email}</td>
                   <td className="py-3 pr-3 align-top">{row.telefono}</td>
                   <td className="py-3 pr-3 align-top">{row.nivelVendedor}</td>
                   <td className="py-3 pr-3 align-top">{fechaMedium(row.fechaRegistro)}</td>

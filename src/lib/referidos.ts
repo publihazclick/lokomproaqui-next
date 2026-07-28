@@ -25,14 +25,16 @@ import { supabase } from './supabase';
 //   (0 = inactivo, resultado real de UsuariosService.delete()).
 // - "Email": la version Angular ya mostraba esto siempre vacio para cualquier perfil que no fuera
 //   el propio (mapProfileToLegacyUser(perfil, null) para cualquier consulta de OTRO usuario, el
-//   correo vive en auth.users, no accesible desde el cliente sin service_role). Se omite la
-//   columna en vez de mostrar un campo que nunca tuvo dato real.
+//   correo vive en auth.users, no accesible desde el cliente sin service_role). Pedido explicito
+//   del usuario 2026-07-27: ya se llena de verdad via el RPC fetch_referidos_emails (migracion 085,
+//   security definer, mismo patron batched que fetch_entregas_mes).
 
 export interface ReferidoRow {
   id: string;
   nombre: string;
   liderNombre: string | null;
   telefono: string | null;
+  email: string | null;
   ciudad: string | null;
   nivelVendedor: string | null;
   fechaRegistro: string;
@@ -57,6 +59,15 @@ async function fetchEntregasMesPorId(ids: string[]): Promise<Record<string, numb
   const { data } = await supabase.rpc('fetch_entregas_mes', { p_profile_ids: ids });
   const mapa: Record<string, number> = {};
   for (const row of (data as any[]) || []) mapa[row.profile_id] = Number(row.entregas_mes) || 0;
+  return mapa;
+}
+
+// Batched igual que fetchEntregasMesPorId -- ver fetch_referidos_emails, migracion 085.
+async function fetchEmailsPorId(ids: string[]): Promise<Record<string, string | null>> {
+  if (!ids.length) return {};
+  const { data } = await supabase.rpc('fetch_referidos_emails', { p_profile_ids: ids });
+  const mapa: Record<string, string | null> = {};
+  for (const row of (data as any[]) || []) mapa[row.profile_id] = row.email || null;
   return mapa;
 }
 
@@ -107,12 +118,14 @@ export async function fetchReferidosNivel(
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
 
-  const entregasPorId = await fetchEntregasMesPorId(data.map((p: any) => p.id));
+  const ids = data.map((p: any) => p.id);
+  const [entregasPorId, emailsPorId] = await Promise.all([fetchEntregasMesPorId(ids), fetchEmailsPorId(ids)]);
   const mapped: ReferidoRow[] = data.map((p: any) => ({
     id: p.id,
     nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
     liderNombre: p.referrer ? p.referrer.full_name : null,
     telefono: p.phone,
+    email: emailsPorId[p.id] || null,
     ciudad: p.city,
     nivelVendedor: p.seller_tiers ? p.seller_tiers.name : null,
     fechaRegistro: p.created_at,
@@ -152,12 +165,14 @@ export async function fetchTodosLosVendedores(
   const { data, error, count } = await q;
   if (error || !data) return { data: [], count: 0 };
 
-  const entregasPorId = await fetchEntregasMesPorId(data.map((p: any) => p.id));
+  const ids = data.map((p: any) => p.id);
+  const [entregasPorId, emailsPorId] = await Promise.all([fetchEntregasMesPorId(ids), fetchEmailsPorId(ids)]);
   const mapped: ReferidoRow[] = data.map((p: any) => ({
     id: p.id,
     nombre: [p.full_name, p.last_name].filter(Boolean).join(' ') || '(sin nombre)',
     liderNombre: p.referrer ? p.referrer.full_name : null,
     telefono: p.phone,
+    email: emailsPorId[p.id] || null,
     ciudad: p.city,
     nivelVendedor: p.seller_tiers ? p.seller_tiers.name : null,
     fechaRegistro: p.created_at,
