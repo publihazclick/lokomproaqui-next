@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X, RefreshCw } from 'lucide-react';
+import { conTimeout } from '@/lib/supabase';
 import {
   fetchVentaDetalle,
   cambiarEstadoVenta,
@@ -85,6 +86,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
   const { mensaje, mostrar } = useToast();
   const [venta, setVenta] = useState<VentaDetalle | null>(null);
   const [cargando, setCargando] = useState(true);
+  // Bug real corregido 2026-07-28: fetchVentaDetalle no tenia timeout ni catch -- si la consulta a
+  // Supabase se colgaba o el fetch rechazaba (blip de red, mismo problema intermitente ya
+  // documentado en otras paginas del proyecto), el .then() nunca corria y el modal se quedaba en
+  // "Cargando..." para siempre (el usuario lo reportaba como "el ojo no abre la informacion").
+  // conTimeout (mismo helper ya usado en /info) le pone un limite real de 6s -- si se cumple, se
+  // marca error en vez de colgar, y el boton "Reintentar" vuelve a intentar sin cerrar el modal.
+  const [errorCarga, setErrorCarga] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [actualizandoTracking, setActualizandoTracking] = useState(false);
 
@@ -118,9 +126,18 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
   const [seguroObligatorio, setSeguroObligatorio] = useState(false);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bump para reintentar sin cerrar el modal (ver boton "Reintentar" mas abajo) -- el efecto de
+  // carga esta en su dependencia para volver a correr.
+  const [reintentoToken, setReintentoToken] = useState(0);
 
   useEffect(() => {
-    fetchVentaDetalle(orderId, !viewerEsProveedor).then(async (res) => {
+    const TIMEOUT = Symbol('timeout');
+    conTimeout(fetchVentaDetalle(orderId, !viewerEsProveedor), TIMEOUT as unknown as VentaDetalle | null, 6000).then(async (res) => {
+      if ((res as unknown) === TIMEOUT) {
+        setCargando(false);
+        setErrorCarga(true);
+        return;
+      }
       setVenta(res);
       setCargando(false);
       if (!res) return;
@@ -157,7 +174,15 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, reintentoToken]);
+
+  // Handler normal de evento (no corre dentro de un efecto) -- puede resetear estado sin
+  // problema de lint, y el bump de reintentoToken hace que el efecto de arriba vuelva a correr.
+  function reintentar() {
+    setCargando(true);
+    setErrorCarga(false);
+    setReintentoToken((t) => t + 1);
+  }
 
   async function cambiarEstado(nuevoEstado: number) {
     setCambiandoEstado(true);
@@ -296,8 +321,17 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
           </button>
         </div>
 
-        {cargando || !venta ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-500">{cargando ? 'Cargando…' : 'No se encontró la venta.'}</p>
+        {cargando ? (
+          <p className="px-4 py-10 text-center text-sm text-gray-500">Cargando…</p>
+        ) : errorCarga ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+            <p className="text-sm text-red-600">No pudimos cargar el pedido. Verifica tu conexión e intenta de nuevo.</p>
+            <button type="button" onClick={reintentar} className="rounded-lg bg-[#0066FF] px-4 py-2 text-sm font-bold text-white">
+              Reintentar
+            </button>
+          </div>
+        ) : !venta ? (
+          <p className="px-4 py-10 text-center text-sm text-gray-500">No se encontró la venta.</p>
         ) : (
           <div className="space-y-4 px-4 py-4">
             {esAdmin && (
