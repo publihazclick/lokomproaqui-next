@@ -364,8 +364,9 @@ export default function ConfiguracionPage() {
 
       <h4 className="font-semibold text-gray-800">Correo de bienvenida automático</h4>
       <p className="mt-1 text-xs text-gray-400">
-        Se envía solo cuando alguien se registra (vendedor o proveedor). Usa <code>{'{{nombre}}'}</code> donde quieras que aparezca el nombre de la persona. El
-        contenido es HTML (soporta <code>&lt;p&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;a href=&quot;...&quot;&gt;</code>, <code>&lt;ul&gt;</code>, etc).
+        Se envía solo cuando alguien se registra (vendedor o proveedor). Escribe el texto normal, con saltos de línea como quieras que se vean — no necesitas
+        usar ninguna etiqueta. Usa <code>{'{{nombre}}'}</code> donde quieras que aparezca el nombre de la persona, y pega los links tal cual (empezando por{' '}
+        <code>http://</code> o <code>https://</code>) para que salgan clicables solos.
       </p>
 
       <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -377,12 +378,12 @@ export default function ConfiguracionPage() {
             onChange={(e) => setCampo('emailAsuntoVendedor', e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           />
-          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido (HTML)</label>
+          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido</label>
           <textarea
             value={data.emailHtmlVendedor}
             onChange={(e) => setCampo('emailHtmlVendedor', e.target.value)}
             rows={10}
-            className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-xs"
           />
           <div className="mt-2 flex gap-2">
             <button
@@ -403,12 +404,12 @@ export default function ConfiguracionPage() {
             onChange={(e) => setCampo('emailAsuntoProveedor', e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           />
-          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido (HTML)</label>
+          <label className="mt-2 mb-1 block text-xs font-medium text-gray-700">Contenido</label>
           <textarea
             value={data.emailHtmlProveedor}
             onChange={(e) => setCampo('emailHtmlProveedor', e.target.value)}
             rows={10}
-            className="w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-xs"
           />
           <div className="mt-2 flex gap-2">
             <button

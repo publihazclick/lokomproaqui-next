@@ -46,9 +46,10 @@ export interface SiteConfigForm {
   whatsappMentoriaMensaje: string;
   // Pedido explicito del usuario 2026-07-27: el admin edita aca el asunto/contenido del correo de
   // bienvenida automatico (edge function send-welcome-email), en vez de tener que pedir un cambio
-  // de codigo cada vez. El HTML se guarda tal cual el admin lo escriba (misma edge function genera
-  // la version texto plano a partir del HTML). Los defaults reproducen el texto original hardcodeado
-  // para que el admin vea el contenido real la primera vez que entra, no un campo vacio.
+  // de codigo cada vez. Segunda vuelta (mismo dia): el campo es TEXTO PLANO normal (saltos de linea
+  // reales, links pegados tal cual) -- la edge function es quien convierte a HTML bien formado antes
+  // de enviar, el admin nunca escribe una etiqueta. El nombre de la clave sigue siendo "emailHtml..."
+  // por continuidad con el schema ya guardado en site_config, aunque ya no contiene HTML.
   emailAsuntoVendedor: string;
   emailHtmlVendedor: string;
   emailAsuntoProveedor: string;
@@ -59,30 +60,36 @@ const WHATSAPP_MENTORIA_NUMERO_DEFAULT = '3202241463';
 const WHATSAPP_MENTORIA_MENSAJE_DEFAULT = 'Hola Harley, estoy interesad@ en tomar la mentoría con ustedes, ya estoy generando el pago en la plataforma.';
 
 const EMAIL_ASUNTO_VENDEDOR_DEFAULT = '¡Bienvenido a LokomproAqui! Ya puedes empezar a vender';
-const EMAIL_HTML_VENDEDOR_DEFAULT = `<p>Hola {{nombre}},</p>
-<p>Tu cuenta de <strong>vendedor</strong> en LokomproAqui ya está activa.</p>
-<p>Ahora puedes:</p>
-<ul>
-  <li>Explorar el catálogo de productos de nuestros proveedores</li>
-  <li>Elegir los productos que quieres vender y armar tu tienda</li>
-  <li>Empezar a recibir pedidos y ganar comisiones por cada venta</li>
-</ul>
-<p>Entra a tu catálogo aquí: <a href="https://lokomproaqui.com/articulo">https://lokomproaqui.com/articulo</a></p>
-<p>Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.</p>
-<p style="color: #6b7280; font-size: 12px; margin-top: 24px;">LokomproAqui · lokomproaqui.com</p>`;
+const EMAIL_HTML_VENDEDOR_DEFAULT = `Hola {{nombre}},
+
+Tu cuenta de vendedor en LokomproAqui ya está activa.
+
+Ahora puedes:
+- Explorar el catálogo de productos de nuestros proveedores
+- Elegir los productos que quieres vender y armar tu tienda
+- Empezar a recibir pedidos y ganar comisiones por cada venta
+
+Entra a tu catálogo aquí: https://lokomproaqui.com/articulo
+
+Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.
+
+LokomproAqui · lokomproaqui.com`;
 
 const EMAIL_ASUNTO_PROVEEDOR_DEFAULT = '¡Bienvenido a LokomproAqui! Activa tu bodega en 3 pasos';
-const EMAIL_HTML_PROVEEDOR_DEFAULT = `<p>Hola {{nombre}},</p>
-<p>Tu cuenta de <strong>proveedor</strong> (bodega) en LokomproAqui ya está creada.</p>
-<p>Para que miles de vendedores puedan encontrar y vender tus productos, te falta:</p>
-<ol>
-  <li>Subir mínimo <strong>3 productos</strong> a tu catálogo</li>
-  <li>Enviar tu bodega a revisión</li>
-  <li>Esperar la aprobación de nuestro equipo (usualmente rápida)</li>
-</ol>
-<p>Sube tus productos aquí: <a href="https://lokomproaqui.com/config/productos">https://lokomproaqui.com/config/productos</a></p>
-<p>Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.</p>
-<p style="color: #6b7280; font-size: 12px; margin-top: 24px;">LokomproAqui · lokomproaqui.com</p>`;
+const EMAIL_HTML_PROVEEDOR_DEFAULT = `Hola {{nombre}},
+
+Tu cuenta de proveedor (bodega) en LokomproAqui ya está creada.
+
+Para que miles de vendedores puedan encontrar y vender tus productos, te falta:
+1. Subir mínimo 3 productos a tu catálogo
+2. Enviar tu bodega a revisión
+3. Esperar la aprobación de nuestro equipo (usualmente rápida)
+
+Sube tus productos aquí: https://lokomproaqui.com/config/productos
+
+Si tienes dudas, escríbenos por WhatsApp desde el sitio y con gusto te ayudamos.
+
+LokomproAqui · lokomproaqui.com`;
 
 export async function fetchSiteConfig(): Promise<SiteConfigForm> {
   const { data } = await supabase.from('site_config').select('info_text').limit(1).single();
