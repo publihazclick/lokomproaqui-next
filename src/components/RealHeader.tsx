@@ -368,7 +368,7 @@ export function RealHeader() {
           {sesionResuelta && rol !== 'visitante' && (
             <Link href="/articulo" className="min-w-0 shrink">
               {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio, nunca la foto que el vendedor sube en su perfil */}
-              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
             </Link>
           )}
 
@@ -383,7 +383,7 @@ export function RealHeader() {
                 </Link>
                 <Link href="/info" className="min-w-0 shrink">
                   {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio */}
-                  <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[70px] w-auto max-w-full sm:h-[116px]" />
+                  <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
                 </Link>
               </>
             ) : (
