@@ -381,6 +381,10 @@ export function RealHeader() {
                 <Link href="/login" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
                   Iniciar Sesión
                 </Link>
+                {/* Mismo destino que el item "Registrate" del menu (MENUS_PIE, accion 'registrar'). */}
+                <Link href="/singUp/vendedor/3213692393" className="hidden whitespace-nowrap text-base font-semibold text-white hover:underline sm:inline">
+                  Regístrate
+                </Link>
                 <Link href="/info" className="min-w-0 shrink">
                   {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio */}
                   <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
