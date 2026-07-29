@@ -657,15 +657,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                     {error && <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
 
                     {venta.estado === 0 && (
-                      <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-                        <button
-                          type="button"
-                          onClick={autorizarDespachoVendedor}
-                          disabled={!ciudadSeleccionada || !fleteSeleccionado || autorizando || saldoInsuficiente || confirmacionPendiente}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
-                        >
-                          {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
-                        </button>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
                         <button
                           type="button"
                           onClick={rechazarPedido}
@@ -674,6 +666,19 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                         >
                           ❌ Rechazar pedido
                         </button>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50">
+                            Cerrar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={autorizarDespachoVendedor}
+                            disabled={!ciudadSeleccionada || !fleteSeleccionado || autorizando || saldoInsuficiente || confirmacionPendiente}
+                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                          >
+                            {autorizando ? 'Generando guía…' : '✅ Enviar Orden de Despacho'}
+                          </button>
+                        </div>
                         {!ciudadSeleccionada && <p className="w-full text-xs text-gray-400">Confirma la ciudad destino para poder continuar.</p>}
                         {ciudadSeleccionada && !fleteSeleccionado && !cotizando && cotizaciones.length > 0 && (
                           <p className="w-full text-xs text-gray-400">Elige una transportadora para poder continuar.</p>
