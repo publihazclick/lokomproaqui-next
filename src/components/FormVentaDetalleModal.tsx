@@ -431,9 +431,13 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                 <p>
                   <span className="text-gray-500">Nombre:</span> {venta.nombreCliente || '—'}
                 </p>
-                <p>
-                  <span className="text-gray-500">Teléfono:</span> {venta.telefonoCliente || '—'}
-                </p>
+                {/* Mismo aislamiento que el telefono del vendedor: el proveedor no ve el celular
+                    del cliente final (fetchVentaDetalle ya lo devuelve null en ese caso). */}
+                {!viewerEsProveedor && (
+                  <p>
+                    <span className="text-gray-500">Teléfono:</span> {venta.telefonoCliente || '—'}
+                  </p>
+                )}
                 <p>
                   <span className="text-gray-500">Ciudad:</span> {venta.ciudad || '—'}
                 </p>

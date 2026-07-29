@@ -643,7 +643,12 @@ export async function fetchVentaDetalle(orderId: number, incluirVendedor: boolea
     tipoPedido: order.order_type,
     sellerId: order.seller_id,
     nombreCliente: order.buyer_name,
-    telefonoCliente: order.buyer_phone,
+    // Pedido explicito del usuario 2026-07-29: el proveedor tampoco debe ver el celular del cliente
+    // final en el modal de detalle (mismo criterio de aislamiento ya aplicado al telefono del
+    // vendedor) -- se reusa incluirVendedor=false como señal de "vista restringida del proveedor"
+    // en vez de agregar un flag nuevo, y se saca del dato mismo (no solo de la UI) para que tampoco
+    // quede visible inspeccionando la respuesta de red.
+    telefonoCliente: incluirVendedor ? order.buyer_phone : null,
     direccionCliente: order.buyer_address,
     ciudad: order.buyer_city,
     barrio: order.buyer_neighborhood,
