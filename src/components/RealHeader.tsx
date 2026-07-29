@@ -30,7 +30,9 @@ import { fetchEstadoProveedor, type EstadoProveedor } from '@/lib/proveedorEstad
 // a nivel raiz (nunca bajo TiendaComponent, por lo tanto sin el header compartido).
 // '/p' (landing de producto de alta conversion, pedido explicito del usuario 2026-07-28): cero
 // distracciones entre el anuncio pago y la compra, mismo criterio ya aplicado a /front y /publico.
-const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta', '/front', '/publico', '/p'];
+// '/config/misDespacho/imprimir' (comprobantes de envio, pedido explicito del usuario 2026-07-29):
+// pagina pensada para imprimirse, sin menu ni chrome del sitio de por medio.
+const RUTAS_SIN_HEADER = ['/login', '/singUp', '/mvid8x2qz1', '/introduccion', '/imprimirTarjeta', '/front', '/publico', '/p', '/config/misDespacho/imprimir'];
 
 type Rol = 'visitante' | 'vendedor' | 'proveedor' | 'lider' | 'subAdministrador' | 'administrador' | 'mentor';
 

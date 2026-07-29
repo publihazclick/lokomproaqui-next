@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, MessageCircle } from 'lucide-react';
+import { Eye, RefreshCw, MessageCircle, Printer } from 'lucide-react';
 import type { ItemDespacho } from '@/lib/misDespacho';
 import { VENTA_ESTADO_LABEL } from '@/lib/ventas';
 
@@ -36,6 +36,16 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [filtros, setFiltros] = useState(FILTROS_VACIOS);
+  const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
+
+  function toggleSeleccion(id: number) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // El "Actualizar" (boton, evento normal) reusa esta funcion y si necesita resetear cargando a
   // true de forma sincrona; el efecto de montaje de abajo NO la reusa a proposito (llamar una
@@ -78,6 +88,20 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
       return true;
     });
   }, [items, filtros]);
+
+  // Comprobante propio de LokomproAqui, no la etiqueta oficial de la transportadora -- ver
+  // comentario completo en app/config/misDespacho/imprimir/page.tsx (Mipaquete no expone ningun
+  // endpoint para descargar esa etiqueta). Un solo pedido puede tener varias filas aca (una por
+  // producto/order_item) -- se deduplica por ventaId para no abrir el mismo comprobante repetido.
+  function imprimirGuia(ventaId: number) {
+    window.open(`/config/misDespacho/imprimir?ids=${ventaId}`, '_blank');
+  }
+
+  function imprimirSeleccionados() {
+    const ids = Array.from(new Set(itemsFiltrados.filter((it) => seleccionados.has(it.id)).map((it) => it.ventaId)));
+    if (!ids.length) return;
+    window.open(`/config/misDespacho/imprimir?ids=${ids.join(',')}`, '_blank');
+  }
 
   if (cargando) return <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>;
 
@@ -126,15 +150,25 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
             Total: <span className="text-[#0d6efd]">$ {total.toLocaleString('es-CO')} COP</span>
           </p>
         )}
-        <button onClick={recargar} className="ml-auto flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">
-          <RefreshCw className="h-3.5 w-3.5" /> Actualizar
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={imprimirSeleccionados}
+            disabled={seleccionados.size === 0}
+            className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
+          >
+            <Printer className="h-3.5 w-3.5" /> Imprimir guías seleccionadas
+          </button>
+          <button onClick={recargar} className="flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">
+            <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+          </button>
+        </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
+              <th className="py-2 pr-3">Seleccionar</th>
               <th className="py-2 pr-3">Acciones</th>
               <th className="py-2 pr-3">Transportadora</th>
               <th className="py-2 pr-3">Productos</th>
@@ -146,6 +180,9 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
           <tbody>
             {itemsFiltrados.map((it) => (
               <tr key={it.id} className="border-b border-gray-100" style={{ background: COLOR_FILA[it.ventaEstado] }}>
+                <td className="py-2 pr-3">
+                  <input type="checkbox" checked={seleccionados.has(it.id)} onChange={() => toggleSeleccion(it.id)} />
+                </td>
                 <td className="py-2 pr-3">
                   <button onClick={() => onVerVenta(it.ventaId)} className="flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs text-white">
                     <Eye className="h-3 w-3" /> Ver
@@ -162,6 +199,11 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
                     </span>
                   ) : (
                     <span className="text-xs text-gray-400">Sin transportadora</span>
+                  )}
+                  {it.numeroGuia && (
+                    <button onClick={() => imprimirGuia(it.ventaId)} className="mt-1.5 flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-200">
+                      <Printer className="h-3 w-3" /> Imprimir guía
+                    </button>
                   )}
                 </td>
                 <td className="py-2 pr-3 text-xs">
