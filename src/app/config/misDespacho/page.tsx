@@ -9,6 +9,7 @@ import {
   fetchReacaudoTotalPagado,
   fetchGuiasDespachadas,
   fetchGuiasPorImprimir,
+  fetchGuiasEnPreparacion,
   fetchGuiasPagadas,
   fetchGuiasEnDevolucion,
 } from '@/lib/misDespacho';
@@ -21,12 +22,13 @@ import { FormVentaDetalleModal } from '@/components/FormVentaDetalleModal';
 // ya confirmado roto al portar /config/ventas) se reemplaza por el mismo dialogo real de detalle
 // que ya abre /config/ventas (genera guía real via Mipaquete).
 
-// "En preparación" se elimino como pestaña separada (2026-07-29): con status='preparing' ya
-// significando "guia generada, lista para imprimir/despachar" (ver fetchGuiasPorImprimir en
-// misDespacho.ts), mostraba exactamente los mismos pedidos que "Por imprimir" -- 2 pestañas
-// identicas confundian mas de lo que ayudaban.
+// "En preparación" vuelve como pestaña separada (2026-07-29, pedido explicito del usuario): ahora
+// SI tiene un significado distinto de "Por imprimir" -- guide_printed_at (migracion 086) distingue
+// guias generadas todavia sin imprimir de guias que el proveedor ya imprimio y estan esperando que
+// la transportadora las recoja.
 const TABS = [
   { key: 'porImprimir', label: 'GUÍAS POR IMPRIMIR' },
+  { key: 'preparacion', label: 'GUÍAS EN PREPARACIÓN' },
   { key: 'despachadas', label: 'GUÍAS DESPACHADAS' },
   { key: 'pagadas', label: 'GUÍAS PAGADAS AL PROVEEDOR' },
   { key: 'devolucion', label: 'GUÍAS EN DEVOLUCIÓN' },
@@ -63,6 +65,7 @@ export default function MisDespachoPage() {
   function cargarTab() {
     if (!dataUser) return Promise.resolve({ data: [], total: 0 });
     if (tab === 'porImprimir') return fetchGuiasPorImprimir(dataUser.id);
+    if (tab === 'preparacion') return fetchGuiasEnPreparacion(dataUser.id);
     if (tab === 'despachadas') return fetchGuiasDespachadas(dataUser.id);
     if (tab === 'pagadas') return fetchGuiasPagadas(dataUser.id);
     return fetchGuiasEnDevolucion(dataUser.id);

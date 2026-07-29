@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { Printer } from 'lucide-react';
 import { fetchVentaDetalle, type VentaDetalle } from '@/lib/ventas';
+import { marcarGuiaImpresa } from '@/lib/misDespacho';
 import { formatCOP } from '@/lib/cartStore';
 
 // Comprobante de envío propio de LokomproAqui (pedido explicito del usuario 2026-07-29): la API de
@@ -27,10 +28,9 @@ export default function ImprimirGuiasPage({ searchParams }: { searchParams: Prom
       .split(',')
       .map((s) => Number(s.trim()))
       .filter((n) => Number.isFinite(n));
-    if (!orderIds.length) {
-      setEstado('listo');
-      return;
-    }
+    // Promise.all([]) resuelve via microtask igual que cualquier otra -- evita el caso especial de
+    // "orderIds vacio" con un setState sincrono directo en el cuerpo del efecto (dispara el lint
+    // react-hooks/set-state-in-effect, mismo caso ya resuelto en FormVentaDetalleModal).
     Promise.all(orderIds.map((id) => fetchVentaDetalle(id, false))).then((res) => {
       setVentas(res.filter((v): v is VentaDetalle => !!v));
       setEstado('listo');
@@ -40,11 +40,21 @@ export default function ImprimirGuiasPage({ searchParams }: { searchParams: Prom
   if (estado === 'cargando') return <p className="py-16 text-center text-sm text-gray-500">Cargando…</p>;
   if (!ventas.length) return <p className="py-16 text-center text-sm text-gray-500">No hay pedidos para imprimir.</p>;
 
+  // Marca guide_printed_at antes de abrir el dialogo de impresion del navegador -- desde aca es
+  // que "Guías por imprimir" pasa a "Guías en preparación" (ver misDespacho.ts). No se puede saber
+  // con certeza si el usuario de verdad completo la impresion (puede cancelar el dialogo), pero es
+  // la señal mas cercana disponible -- mismo criterio que usar "clic en el boton" en vez de intentar
+  // detectar el cierre real de una ventana de impresion del sistema operativo.
+  function imprimirYMarcar() {
+    marcarGuiaImpresa(ventas.map((v) => v.id));
+    window.print();
+  }
+
   return (
     <div className="mx-auto w-full max-w-[800px] px-4 py-6">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <h1 className="text-lg font-bold text-gray-800">Comprobantes de envío ({ventas.length})</h1>
-        <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-4 py-2 text-sm font-bold text-white">
+        <button onClick={imprimirYMarcar} className="flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-4 py-2 text-sm font-bold text-white">
           <Printer className="h-4 w-4" /> Imprimir
         </button>
       </div>

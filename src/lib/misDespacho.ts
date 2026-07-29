@@ -33,6 +33,7 @@ export interface ItemDespacho {
   telefonoCliente: string | null;
   nombreCliente: string | null;
   vendedorNombre: string | null;
+  guiaImpresa: boolean;
 }
 
 // Pedido explicito del usuario 2026-07-29 (captura de referencia del panel viejo "Mis Despachos"):
@@ -44,13 +45,17 @@ export interface ItemDespacho {
 // con un boton de WhatsApp -- se corrige sacandolo del select por completo (no solo ocultandolo en
 // la UI), para que tampoco quede visible inspeccionando la respuesta de red con las herramientas
 // de desarrollador.
-async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSinGuia = false): Promise<{ data: ItemDespacho[]; total: number }> {
+// impresaFiltro: undefined = sin filtrar por impresion, true = solo guias YA impresas, false =
+// solo guias TODAVIA sin imprimir -- separa "Por imprimir" de "En preparacion" (pedido explicito
+// del usuario 2026-07-29, ver guide_printed_at, migracion 086).
+async function fetchItemsPorEstado(profileId: string, statuses: string[], impresaFiltro?: boolean): Promise<{ data: ItemDespacho[]; total: number }> {
   let q = supabase
     .from('order_items')
     .select('*, products!inner(name, code, owner_profile_id), orders!inner(*, profiles!orders_seller_id_fkey(full_name))')
     .eq('products.owner_profile_id', profileId);
   if (statuses.length) q = q.in('orders.status', statuses);
-  if (soloSinGuia) q = q.is('orders.tracking_number', null);
+  if (impresaFiltro === true) q = q.not('orders.guide_printed_at', 'is', null);
+  if (impresaFiltro === false) q = q.is('orders.guide_printed_at', null);
 
   const { data, error } = await q;
   if (error || !data) return { data: [], total: 0 };
@@ -72,9 +77,17 @@ async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSi
     telefonoCliente: item.orders.buyer_phone,
     nombreCliente: item.orders.buyer_name,
     vendedorNombre: item.orders.profiles ? item.orders.profiles.full_name : null,
+    guiaImpresa: !!item.orders.guide_printed_at,
   }));
   const total = rows.reduce((sum, r) => sum + r.precioVendedor, 0);
   return { data: rows, total };
+}
+
+// Se llama desde la pagina de comprobantes (/config/misDespacho/imprimir) cuando el proveedor hace
+// clic en "Imprimir" -- mueve el pedido de "Guías por imprimir" a "Guías en preparación".
+export async function marcarGuiaImpresa(orderIds: number[]): Promise<void> {
+  if (!orderIds.length) return;
+  await supabase.from('orders').update({ guide_printed_at: new Date().toISOString() }).in('id', orderIds).is('guide_printed_at', null);
 }
 
 // "Reacaudo pendiente para pagar": saldo de billetera tipo 'supplier' -- nunca tuvo filas propias,
@@ -88,21 +101,25 @@ export const fetchGuiasDespachadas = (profileId: string) => fetchItemsPorEstado(
 // Bug real corregido 2026-07-29 (pedido explicito del usuario): esto filtraba status='success' +
 // sin numero de guia -- una combinacion que NUNCA puede pasar de verdad en el flujo actual (un
 // pedido "success"/entregado siempre tiene guia, la genera el vendedor al autorizar ANTES de que
-// el pedido pueda avanzar). Por eso los pedidos recien autorizados (status='preparing', guia ya
-// generada) nunca aparecian aca -- caian en "En preparacion" en su lugar, sin que el proveedor
-// tuviera una pestaña clara de "esto ya esta listo, hay que imprimir/despachar". Ahora es la
-// pestaña de pedidos recien autorizados por el vendedor.
-export const fetchGuiasPorImprimir = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing']);
+// el pedido pueda avanzar). Ahora es la pestaña de pedidos recien autorizados por el vendedor,
+// TODAVIA sin imprimir -- una vez el proveedor imprime el comprobante (guide_printed_at, migracion
+// 086) el pedido pasa a "Guías en preparación" (mismo status 'preparing', pero ya impreso).
+export const fetchGuiasPorImprimir = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing'], false);
+export const fetchGuiasEnPreparacion = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing'], true);
 export const fetchGuiasPagadas = (profileId: string) => fetchItemsPorEstado(profileId, ['success']);
 export const fetchGuiasEnDevolucion = (profileId: string) => fetchItemsPorEstado(profileId, ['rejected']);
 
 // "Reacaudo pendiente" (2da estadistica de la captura de referencia): valor de los pedidos que
-// todavia estan en camino (ya despachados o en preparacion, sin resolver todavia) -- distinto de
-// "para pagar" (saldo YA en la billetera) porque este es dinero que el mensajero todavia va a
-// recaudar contra entrega, no algo que ya se le acredito al proveedor.
+// todavia estan en camino (por imprimir, en preparacion o ya despachados, sin resolver todavia) --
+// distinto de "para pagar" (saldo YA en la billetera) porque este es dinero que el mensajero
+// todavia va a recaudar contra entrega, no algo que ya se le acredito al proveedor.
 export async function fetchReacaudoEnCamino(profileId: string): Promise<number> {
-  const [porImprimir, despachadas] = await Promise.all([fetchGuiasPorImprimir(profileId), fetchGuiasDespachadas(profileId)]);
-  return porImprimir.total + despachadas.total;
+  const [porImprimir, enPreparacion, despachadas] = await Promise.all([
+    fetchGuiasPorImprimir(profileId),
+    fetchGuiasEnPreparacion(profileId),
+    fetchGuiasDespachadas(profileId),
+  ]);
+  return porImprimir.total + enPreparacion.total + despachadas.total;
 }
 
 // "Reacaudo total pagado" (3ra estadistica): historico completo de lo que ya se le pago al

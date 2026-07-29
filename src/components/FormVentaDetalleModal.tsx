@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw, Printer } from 'lucide-react';
 import { conTimeout } from '@/lib/supabase';
 import {
   fetchVentaDetalle,
@@ -486,9 +486,23 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                       )}
                       ({venta.transportadora})
                     </p>
-                    <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
-                      <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
-                    </button>
+                    {/* Pedido explicito del usuario 2026-07-29: en la vista del proveedor, "Actualizar
+                        estado" se reemplaza por "Imprimir guía" (comprobante propio, ver
+                        app/config/misDespacho/imprimir) -- el tracking automatico ya corre solo via
+                        cron (mipaquete-sync-tracking), el proveedor no necesita refrescarlo a mano.
+                        Vendedor/admin conservan el boton de siempre. */}
+                    {viewerEsProveedor ? (
+                      <button
+                        onClick={() => window.open(`/config/misDespacho/imprimir?ids=${orderId}`, '_blank')}
+                        className="flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-medium text-white"
+                      >
+                        <Printer className="h-3 w-3" /> Imprimir guía
+                      </button>
+                    ) : (
+                      <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
+                        <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
+                      </button>
+                    )}
                   </div>
                   {venta.deliveryRescheduleRequested && (
                     // Fase 2 del plan de reduccion de devoluciones: el cliente pidio reagendar la
