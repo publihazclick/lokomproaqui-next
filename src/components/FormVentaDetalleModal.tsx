@@ -54,6 +54,17 @@ import { useToast, Toast } from '@/components/Toast';
 // exitosa" (eso lo decide el proveedor generando la guia -- que con este cambio ya lo hace el
 // vendedor aca mismo -- y el tracking real via approve_order/reject_order automatico).
 //
+// NOTA 2026-07-28: el parrafo de arriba describe el flujo VIGENTE de nuevo. En el medio (Fase 3,
+// 2026-07-20) se habia dividido este mismo paso en 2 -- el vendedor solo confirmaba ciudad/
+// condiciones, y un PROVEEDOR distinto cotizaba y generaba la guia en su propio panel
+// (/config/misDespacho). Se revirtio a pedido explicito del usuario ("no se esta desplegando la
+// cotizacion... arreglalo"): el paso intermedio confundia mas de lo que aislaba, asi que el
+// vendedor vuelve a cotizar/elegir transportadora/generar guia todo junto (ver
+// autorizarDespachoVendedor). El codigo de Fase 3 para el proveedor (generarGuiaComoProveedor, mas
+// abajo) se dejo intacto como red de seguridad para cualquier pedido que haya quedado a medias
+// (condiciones confirmadas, sin guia) en el estado intermedio antes de este cambio -- no deberia
+// producirse mas para pedidos nuevos.
+//
 // Campos del original que NUNCA se guardaban de verdad (UsuariosService.update()/VentasService.update()
 // solo mapean status/tracking_number/withdrawn/freight_value/carrier) se omiten en vez de mostrar
 // inputs editables que no sirven para nada: numero de cedula del cliente, barrio/direccion editables,
@@ -208,14 +219,22 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
     }, 250);
   }
 
-  // Paso del vendedor (Fase 3): ya no cotiza -- solo confirma/guarda la ciudad destino real. Cotizar
-  // transportadora es trabajo del proveedor, que recien puede hacerlo con la wallet correcta una
-  // vez el vendedor confirma las condiciones de entrega.
+  // REVERTIDO 2026-07-28 (pedido explicito del usuario -- "arreglalo", esperaba ver la cotizacion
+  // de transportadoras apenas elige la ciudad): la separacion vendedor/proveedor de Fase 3 (guardar
+  // ciudad primero, cotizar despues en otro paso hecho por otra persona) generaba confusion real --
+  // el vendedor completaba "confirmar condiciones" y no pasaba nada visible. Ahora el vendedor
+  // cotiza en el mismo momento en que elige la ciudad, un solo paso de nuevo (ver
+  // autorizarDespachoVendedor mas abajo). El paso separado del proveedor (generarGuiaComoProveedor)
+  // se deja intacto como red de seguridad para pedidos viejos que ya quedaron a medias en el estado
+  // intermedio (condiciones confirmadas, sin guia) antes de este cambio.
   async function seleccionarCiudad(c: CiudadMipaquete) {
     setCiudadSeleccionada(c);
     setCiudadQuery(c.name);
     setSugerencias([]);
     await actualizarDestinoPedido(orderId, c.code);
+    setCotizando(true);
+    setCotizaciones(await cotizarFlete(orderId, c.code));
+    setCotizando(false);
   }
 
   // Fase 3 del plan de aislamiento proveedor<->vendedor: el flete recien se conoce cuando el
@@ -230,20 +249,49 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
   // contraentrega mientras las credenciales de Meta no existan), no bloquea nada.
   const confirmacionPendiente = venta?.confirmationStatus === 'pending' || venta?.confirmationStatus === 'invalid_number';
 
-  // Paso del VENDEDOR (Fase 3): confirma condiciones de entrega y ciudad destino -- ya NO cotiza ni
-  // cobra wallet ni genera guia aca, eso pasa a ser trabajo del proveedor una vez este confirma.
-  async function confirmarCondiciones() {
-    if (!ciudadSeleccionada || autorizando || confirmacionPendiente) return;
+  // REVERTIDO 2026-07-28: un solo paso de nuevo -- el vendedor confirma condiciones, cobra el flete
+  // de su propia billetera y genera la guia real, todo en el mismo click (mismo flujo de antes de
+  // Fase 3). Practicamente identico a generarGuiaComoProveedor de mas abajo (mismo cobro/guia/
+  // estado), pero primero guarda las condiciones de entrega -- se duplica en vez de componer las 2
+  // funciones porque generarGuiaComoProveedor corta temprano si `autorizando` ya es true, y ponerlo
+  // en true antes de llamarla la dejaria sin hacer nada.
+  async function autorizarDespachoVendedor() {
+    if (!ciudadSeleccionada || !fleteSeleccionado || autorizando || confirmacionPendiente) return;
+    if (saldoInsuficiente) {
+      setError(`Necesitas mínimo ${SALDO_MINIMO_DROPSHIPPING.toLocaleString('es-CO')} y ${totalAPagarWallet.toLocaleString('es-CO')} en tu billetera para cubrir el flete${seguroActivo ? ' + seguro' : ''}.`);
+      return;
+    }
     setAutorizando(true);
     setError('');
-    const ok = await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, seguroActivo);
-    setAutorizando(false);
-    if (!ok) {
+    const okCondiciones = await actualizarCondicionesEntrega(orderId, clientePago, envioIncluido, seguroActivo);
+    if (!okCondiciones) {
+      setAutorizando(false);
       setError('No pudimos guardar las condiciones de entrega, intenta de nuevo');
       return;
     }
-    setVenta((v) => (v ? { ...v, deliveryConditionsConfirmed: true, clientePago, envioIncluido } : v));
-    mostrar('Condiciones confirmadas -- el proveedor ya puede generar la guía');
+    const kind = seguroActivo ? 'flete_seguro_pedido' : 'flete_pedido';
+    const deb = await cobrarWalletPedidoSiNoCobrado(orderId, venta!.sellerId!, totalAPagarWallet, kind, true);
+    if (!deb.success) {
+      setAutorizando(false);
+      setError(deb.message || 'No pudimos cobrar el flete de tu billetera');
+      return;
+    }
+    if (!deb.alreadyCharged) setSaldo((s) => s - totalAPagarWallet);
+    await actualizarFleteYTransportadora(orderId, fleteSeleccionado.fleteTotal, fleteSeleccionado.nombre, fleteSeleccionado.imgTrasp);
+    const res = await generarGuiaEnvio(orderId, fleteSeleccionado.slug, fleteSeleccionado.nombre, fleteSeleccionado.imgTrasp);
+    if (!res.ok) {
+      setAutorizando(false);
+      setError(res.message || 'No se pudo generar la guía, intenta de nuevo');
+      return;
+    }
+    await marcarPedidoEnPreparacion(orderId);
+    setAutorizando(false);
+    setVenta((v) =>
+      v
+        ? { ...v, deliveryConditionsConfirmed: true, clientePago, envioIncluido, numeroGuia: res.guia || '', transportadora: fleteSeleccionado.nombre, transportadoraLogo: fleteSeleccionado.imgTrasp, estado: 6 }
+        : v,
+    );
+    mostrar('Guía generada, pedido enviado a despacho');
     onCambio();
   }
 
@@ -452,37 +500,66 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                   )}
                 </div>
               ) : viewerEsVendedor ? (
-                venta.deliveryConditionsConfirmed ? (
-                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-700">
-                    ✓ Condiciones de entrega confirmadas. Esperando que el proveedor genere la guía de envío.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-700">
-                        Ciudad destino <span className="text-red-500">*</span> (confirma la ciudad del pedido o busca otra)
-                      </label>
-                      <div className="relative">
-                        <input
-                          value={ciudadQuery}
-                          onChange={(e) => onCiudadInput(e.target.value)}
-                          placeholder="Buscar ciudad destino…"
-                          className={`w-full rounded border px-3 py-2 text-sm ${ciudadSeleccionada ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
-                        />
-                        {sugerencias.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg">
-                            {sugerencias.map((c, i) => (
-                              <div key={`${c.code}-${i}`} onMouseDown={() => seleccionarCiudad(c)} className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50">
-                                {c.name}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {ciudadSeleccionada && <p className="mt-1 text-xs text-green-600">✓ Ciudad confirmada: {ciudadSeleccionada.name}</p>}
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Ciudad destino <span className="text-red-500">*</span> (confirma la ciudad del pedido o busca otra)
+                    </label>
+                    <div className="relative">
+                      <input
+                        value={ciudadQuery}
+                        onChange={(e) => onCiudadInput(e.target.value)}
+                        placeholder="Buscar ciudad destino…"
+                        className={`w-full rounded border px-3 py-2 text-sm ${ciudadSeleccionada ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
+                      />
+                      {sugerencias.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded border border-gray-200 bg-white shadow-lg">
+                          {sugerencias.map((c, i) => (
+                            <div key={`${c.code}-${i}`} onMouseDown={() => seleccionarCiudad(c)} className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50">
+                              {c.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                    {ciudadSeleccionada && <p className="mt-1 text-xs text-green-600">✓ Ciudad confirmada: {ciudadSeleccionada.name}</p>}
+                  </div>
 
-                    <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3" style={{ borderColor: clientePago ? '#02a0e3' : '#e5e7eb', background: clientePago ? 'rgba(2,160,227,0.06)' : '#fff' }}>
+                  {ciudadSeleccionada && (
+                    <div>
+                      {cotizando && <p className="text-xs text-gray-500">Cotizando transportadoras…</p>}
+                      {!cotizando && cotizaciones.length > 0 && (
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-gray-700">Elige transportadora</label>
+                          <div className="space-y-1.5">
+                            {cotizaciones.map((c, i) => {
+                              const activa = fleteSeleccionado === c;
+                              return (
+                                <div
+                                  key={`${c.slug}-${i}`}
+                                  onClick={() => setFleteSeleccionado(c)}
+                                  className="flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-sm"
+                                  style={activa ? { borderColor: '#02a0e3', background: 'rgba(2,160,227,0.06)' } : { borderColor: '#e5e7eb' }}
+                                >
+                                  {c.imgTrasp && (
+                                    // eslint-disable-next-line @next/next/no-img-element -- logo de transportadora
+                                    <img src={c.imgTrasp} alt="" className="h-6 w-6 shrink-0 rounded bg-white object-contain" />
+                                  )}
+                                  <span className="min-w-0 flex-1 truncate">{c.nombre}</span>
+                                  <span className="shrink-0 font-medium">$ {c.fleteTotal.toLocaleString('es-CO')}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {!cotizando && cotizaciones.length === 0 && (
+                        <p className="text-xs text-gray-500">No hay transportadoras disponibles para esa ciudad, intenta con otra.</p>
+                      )}
+                    </div>
+                  )}
+
+                  <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3" style={{ borderColor: clientePago ? '#02a0e3' : '#e5e7eb', background: clientePago ? 'rgba(2,160,227,0.06)' : '#fff' }}>
                       <input type="checkbox" checked={clientePago} onChange={() => setClientePago((v) => !v)} className="mt-0.5" />
                       <div>
                         <p className="m-0 text-[13px] font-bold text-gray-800">💰 Mi cliente ya me pagó el producto</p>
@@ -568,17 +645,26 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                       </label>
                     )}
 
+                    {fleteSeleccionado && (
+                      <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs">
+                        <span className="text-gray-600">
+                          Se descontará de tu billetera (flete{seguroActivo ? ' + seguro' : ''}{clientePago ? ' + producto' : ''})
+                        </span>
+                        <span className={`font-bold ${saldoInsuficiente ? 'text-red-600' : 'text-gray-800'}`}>$ {totalAPagarWallet.toLocaleString('es-CO')}</span>
+                      </div>
+                    )}
+
                     {error && <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
 
                     {venta.estado === 0 && (
                       <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
                         <button
                           type="button"
-                          onClick={confirmarCondiciones}
-                          disabled={!ciudadSeleccionada || autorizando || confirmacionPendiente}
+                          onClick={autorizarDespachoVendedor}
+                          disabled={!ciudadSeleccionada || !fleteSeleccionado || autorizando || saldoInsuficiente || confirmacionPendiente}
                           className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                         >
-                          {autorizando ? 'Guardando…' : '✅ Confirmar condiciones de entrega'}
+                          {autorizando ? 'Generando guía…' : '✅ Autorizar y enviar a despacho'}
                         </button>
                         <button
                           type="button"
@@ -589,6 +675,12 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                           ❌ Rechazar pedido
                         </button>
                         {!ciudadSeleccionada && <p className="w-full text-xs text-gray-400">Confirma la ciudad destino para poder continuar.</p>}
+                        {ciudadSeleccionada && !fleteSeleccionado && !cotizando && cotizaciones.length > 0 && (
+                          <p className="w-full text-xs text-gray-400">Elige una transportadora para poder continuar.</p>
+                        )}
+                        {fleteSeleccionado && saldoInsuficiente && (
+                          <p className="w-full text-xs font-semibold text-red-600">No tienes saldo suficiente en tu billetera todavía.</p>
+                        )}
                         {ciudadSeleccionada && venta.confirmationStatus === 'pending' && (
                           // Fase 1d del plan de reduccion de devoluciones.
                           <p className="w-full text-xs font-semibold text-amber-600">
@@ -603,7 +695,6 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                       </div>
                     )}
                   </div>
-                )
               ) : viewerEsProveedor ? (
                 !venta.deliveryConditionsConfirmed ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700">
