@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Package, PackageX, Printer, Wallet, Truck } from 'lucide-react';
 import { fetchSaldoProveedor } from '@/lib/bank';
-import { fetchGuiasPorImprimir, fetchGuiasEnPreparacion } from '@/lib/misDespacho';
+import { fetchGuiasPorImprimir, fetchGuiasDespachadas } from '@/lib/misDespacho';
 import { fetchResumenInventarioProveedor } from '@/lib/productos';
 import { formatCOP } from '@/lib/cartStore';
 
@@ -48,7 +48,7 @@ export function ProveedorDashboard({ userId, nombre }: { userId: string; nombre:
   const [estado, setEstado] = useState<'cargando' | 'listo'>('cargando');
   const [saldo, setSaldo] = useState(0);
   const [porImprimir, setPorImprimir] = useState(0);
-  const [enPreparacion, setEnPreparacion] = useState(0);
+  const [despachadas, setDespachadas] = useState(0);
   const [inventario, setInventario] = useState({ totalProductos: 0, agotados: 0 });
 
   useEffect(() => {
@@ -56,13 +56,13 @@ export function ProveedorDashboard({ userId, nombre }: { userId: string; nombre:
     Promise.all([
       fetchSaldoProveedor(userId),
       fetchGuiasPorImprimir(userId),
-      fetchGuiasEnPreparacion(userId),
+      fetchGuiasDespachadas(userId),
       fetchResumenInventarioProveedor(userId),
-    ]).then(([s, imprimir, preparacion, res]) => {
+    ]).then(([s, imprimir, despachadasRes, res]) => {
       if (!activo) return;
       setSaldo(s);
       setPorImprimir(imprimir.data.length);
-      setEnPreparacion(preparacion.data.length);
+      setDespachadas(despachadasRes.data.length);
       setInventario(res);
       setEstado('listo');
     });
@@ -98,9 +98,9 @@ export function ProveedorDashboard({ userId, nombre }: { userId: string; nombre:
           />
           <TarjetaResumen
             Icon={Truck}
-            titulo="Guías en preparación"
-            valor={String(enPreparacion)}
-            detalle="Mis Órdenes"
+            titulo="Guías despachadas"
+            valor={String(despachadas)}
+            detalle="En camino al cliente"
             href="/config/misDespacho"
             color="#f59e0b"
           />

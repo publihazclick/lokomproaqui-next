@@ -82,18 +82,24 @@ export async function fetchReacaudoPendiente(profileId: string): Promise<number>
 }
 
 export const fetchGuiasDespachadas = (profileId: string) => fetchItemsPorEstado(profileId, ['dispatched']);
-export const fetchGuiasPorImprimir = (profileId: string) => fetchItemsPorEstado(profileId, ['success'], true);
+// Bug real corregido 2026-07-29 (pedido explicito del usuario): esto filtraba status='success' +
+// sin numero de guia -- una combinacion que NUNCA puede pasar de verdad en el flujo actual (un
+// pedido "success"/entregado siempre tiene guia, la genera el vendedor al autorizar ANTES de que
+// el pedido pueda avanzar). Por eso los pedidos recien autorizados (status='preparing', guia ya
+// generada) nunca aparecian aca -- caian en "En preparacion" en su lugar, sin que el proveedor
+// tuviera una pestaña clara de "esto ya esta listo, hay que imprimir/despachar". Ahora es la
+// pestaña de pedidos recien autorizados por el vendedor.
+export const fetchGuiasPorImprimir = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing']);
 export const fetchGuiasPagadas = (profileId: string) => fetchItemsPorEstado(profileId, ['success']);
 export const fetchGuiasEnDevolucion = (profileId: string) => fetchItemsPorEstado(profileId, ['rejected']);
-export const fetchGuiasEnPreparacion = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing']);
 
 // "Reacaudo pendiente" (2da estadistica de la captura de referencia): valor de los pedidos que
 // todavia estan en camino (ya despachados o en preparacion, sin resolver todavia) -- distinto de
 // "para pagar" (saldo YA en la billetera) porque este es dinero que el mensajero todavia va a
 // recaudar contra entrega, no algo que ya se le acredito al proveedor.
 export async function fetchReacaudoEnCamino(profileId: string): Promise<number> {
-  const [preparacion, despachadas] = await Promise.all([fetchGuiasEnPreparacion(profileId), fetchGuiasDespachadas(profileId)]);
-  return preparacion.total + despachadas.total;
+  const [porImprimir, despachadas] = await Promise.all([fetchGuiasPorImprimir(profileId), fetchGuiasDespachadas(profileId)]);
+  return porImprimir.total + despachadas.total;
 }
 
 // "Reacaudo total pagado" (3ra estadistica): historico completo de lo que ya se le pago al
