@@ -494,10 +494,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                         estado" se reemplaza por "Imprimir guía" (comprobante propio, ver
                         app/config/misDespacho/imprimir) -- el tracking automatico ya corre solo via
                         cron (mipaquete-sync-tracking), el proveedor no necesita refrescarlo a mano.
-                        El vendedor (2026-07-30, pedido explicito: "que el vendedor pueda imprimir las
-                        guias" -- ahora es el vendedor quien autoriza y genera la guia en un solo paso)
-                        conserva "Actualizar estado" Y gana el mismo boton de imprimir. Admin conserva
-                        solo el de siempre. */}
+                        Vendedor/admin conservan el boton de siempre. */}
                     {viewerEsProveedor ? (
                       <button
                         onClick={() => window.open(`/config/misDespacho/imprimir?ids=${orderId}`, '_blank')}
@@ -506,19 +503,9 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                         <Printer className="h-3 w-3" /> Imprimir guía
                       </button>
                     ) : (
-                      <>
-                        <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
-                          <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
-                        </button>
-                        {viewerEsVendedor && (
-                          <button
-                            onClick={() => window.open(`/config/misDespacho/imprimir?ids=${orderId}`, '_blank')}
-                            className="flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-medium text-white"
-                          >
-                            <Printer className="h-3 w-3" /> Imprimir guía
-                          </button>
-                        )}
-                      </>
+                      <button onClick={actualizarTracking} disabled={actualizandoTracking} className="flex items-center gap-1 rounded bg-[#0dcaf0] px-2 py-1 text-xs font-medium text-white disabled:opacity-60">
+                        <RefreshCw className="h-3 w-3" /> {actualizandoTracking ? 'Actualizando…' : 'Actualizar estado'}
+                      </button>
                     )}
                   </div>
                   {venta.deliveryRescheduleRequested && (

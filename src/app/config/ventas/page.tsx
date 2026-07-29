@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, RefreshCw, MessageCircle, Trash2, Gift, Eye, Printer } from 'lucide-react';
+import { Search, RefreshCw, MessageCircle, Trash2, Gift, Eye } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, fetchVendedores, type DataUserCompleto, type VendedorBasico } from '@/lib/usuarios';
 import { fetchVentas, refreshTracking, eliminarVenta, VENTA_ESTADOS, VENTA_ESTADO_LABEL, type VentaRow } from '@/lib/ventas';
@@ -156,20 +156,6 @@ export default function VentasPage() {
     });
   }
 
-  // Pedido explicito del usuario 2026-07-30 ("que el vendedor pueda imprimir las guias"): el
-  // vendedor autoriza y genera la guia real el mismo (autorizarDespachoVendedor), asi que tambien
-  // necesita poder imprimir el comprobante -- mismo comprobante/pagina ya construida para el
-  // proveedor en Mis Órdenes (ver app/config/misDespacho/imprimir), no es una pantalla nueva. Se
-  // reusa el mismo checkbox de la columna de seleccion que ya existia para "Eliminar".
-  function imprimirGuia(id: number) {
-    window.open(`/config/misDespacho/imprimir?ids=${id}`, '_blank');
-  }
-
-  function imprimirSeleccionadas() {
-    if (!seleccionadas.size) return;
-    window.open(`/config/misDespacho/imprimir?ids=${Array.from(seleccionadas).join(',')}`, '_blank');
-  }
-
   async function eliminarSeleccionadas() {
     if (!seleccionadas.size) return;
     if (!window.confirm('¿Deseas Eliminar Dato?')) return;
@@ -270,15 +256,6 @@ export default function VentasPage() {
         >
           <Trash2 className="h-5 w-5" />
         </button>
-        <button
-          type="button"
-          onClick={imprimirSeleccionadas}
-          disabled={seleccionadas.size === 0}
-          title="Imprimir guías seleccionadas"
-          className="rounded bg-gray-800 p-3 text-white disabled:opacity-60"
-        >
-          <Printer className="h-5 w-5" />
-        </button>
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -330,11 +307,6 @@ export default function VentasPage() {
                         {row.numeroGuia && (
                           <button type="button" onClick={() => enviarGuiaWhatsapp(row)} className="mt-1 block rounded bg-[#ffc107] px-2 py-1 text-xs font-medium text-gray-900">
                             Enviar Guia ( cliente )
-                          </button>
-                        )}
-                        {row.numeroGuia && (
-                          <button type="button" onClick={() => imprimirGuia(row.id)} className="mt-1 flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-xs font-medium text-white">
-                            <Printer className="h-3 w-3" /> Imprimir guía
                           </button>
                         )}
                       </>
