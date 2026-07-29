@@ -674,7 +674,7 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                             type="button"
                             onClick={autorizarDespachoVendedor}
                             disabled={!ciudadSeleccionada || !fleteSeleccionado || autorizando || saldoInsuficiente || confirmacionPendiente}
-                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                            className="rounded-lg bg-[#0177a8] px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
                           >
                             {autorizando ? 'Generando guía…' : '✅ Enviar Orden de Despacho'}
                           </button>
