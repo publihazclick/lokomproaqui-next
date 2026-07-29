@@ -168,3 +168,95 @@ body {
 .landing-price {
   animation: landing-price-shine 2.4s ease-in-out infinite;
 }
+
+/* Rediseño "cyberpunk 2026" de la landing (pedido explicito del usuario 2026-07-29). Paleta
+   NEON CIAN + AZUL DE MARCA a proposito, sin morado/fucsia -- el usuario ya establecio antes que
+   esa paleta especifica se asocia en su mercado con una plataforma de dropshipping que estafo
+   gente (ver memoria feedback_no_purple_fuchsia_scam), asi que el look "neon futurista" se logra
+   con cian electrico (#22d3ee) sobre el azul de marca de siempre en vez de morado.
+
+   landing-bg-glow: 2 manchas de luz que se mueven lento en el fondo oscuro del hero -- CSS puro,
+   sin canvas/particulas (mantiene la pagina liviana para trafico pago). */
+@keyframes landing-bg-glow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(4%, -3%) scale(1.15);
+  }
+}
+
+.landing-glow-blob {
+  animation: landing-bg-glow 10s ease-in-out infinite;
+}
+
+.landing-glow-blob.landing-glow-blob-2 {
+  animation-duration: 13s;
+  animation-direction: reverse;
+}
+
+/* Tarjetas "vidrio esmerilado" (glassmorphism) sobre el fondo oscuro del hero. */
+.landing-glass {
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+}
+
+/* Resplandor neon cian detras de la foto del producto, reemplaza .landing-glow (sombra azul plana)
+   en las secciones oscuras del rediseño. */
+.landing-glow-neon {
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25), 0 25px 70px -15px rgba(34, 211, 238, 0.35), 0 8px 25px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Pulso de sombra neon para el CTA principal -- version cian del ya existente .boton-pulso, pero
+   con doble anillo (cian + azul) para que se note el efecto "latido" incluso en pantallas chicas. */
+@keyframes landing-cta-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5), 0 0 30px 4px rgba(2, 160, 227, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(34, 211, 238, 0), 0 0 45px 10px rgba(2, 160, 227, 0.5);
+  }
+}
+
+.landing-cta-neon {
+  animation: landing-cta-pulse 2.2s ease-in-out infinite;
+}
+
+/* Texto del precio con resplandor neon (ademas del brillo de landing-price ya existente). */
+.landing-price-neon {
+  text-shadow: 0 0 18px rgba(34, 211, 238, 0.55), 0 0 40px rgba(2, 160, 227, 0.35);
+}
+
+/* Sello de garantia: el check se "dibuja" con stroke-dashoffset apenas entra en pantalla, en vez
+   de aparecer de golpe -- efecto sutil de sello siendo estampado. */
+@keyframes landing-seal-draw {
+  from {
+    stroke-dashoffset: 48;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.landing-seal-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: landing-seal-draw 0.8s 0.3s ease-out forwards;
+}
+
+@keyframes landing-seal-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(34, 211, 238, 0);
+  }
+}
+
+.landing-seal-ring {
+  animation: landing-seal-ring 1.8s ease-out infinite;
+}
