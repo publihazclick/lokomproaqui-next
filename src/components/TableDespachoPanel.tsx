@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, MessageCircle, Printer } from 'lucide-react';
+import { Eye, RefreshCw, Printer } from 'lucide-react';
 import type { ItemDespacho } from '@/lib/misDespacho';
 import { VENTA_ESTADO_LABEL } from '@/lib/ventas';
 
@@ -144,24 +144,22 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={imprimirSeleccionados}
+          disabled={seleccionados.size === 0}
+          className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
+        >
+          <Printer className="h-3.5 w-3.5" /> Imprimir guías seleccionadas
+        </button>
+        <button onClick={recargar} className="flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">
+          <RefreshCw className="h-3.5 w-3.5" /> Actualizar
+        </button>
         {mostrarTotal && (
           <p className="text-sm font-semibold text-gray-700">
             Total: <span className="text-[#0d6efd]">$ {total.toLocaleString('es-CO')} COP</span>
           </p>
         )}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={imprimirSeleccionados}
-            disabled={seleccionados.size === 0}
-            className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
-          >
-            <Printer className="h-3.5 w-3.5" /> Imprimir guías seleccionadas
-          </button>
-          <button onClick={recargar} className="flex items-center gap-1.5 rounded-lg bg-[#0d6efd] px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">
-            <RefreshCw className="h-3.5 w-3.5" /> Actualizar
-          </button>
-        </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
@@ -174,7 +172,7 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
               <th className="py-2 pr-3">Productos</th>
               <th className="py-2 pr-3">Fecha de orden</th>
               <th className="py-2 pr-3">Estado de la orden</th>
-              <th className="py-2 pr-3">Número del vendedor</th>
+              <th className="py-2 pr-3">Vendedor</th>
             </tr>
           </thead>
           <tbody>
@@ -201,7 +199,7 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
                     <span className="text-xs text-gray-400">Sin transportadora</span>
                   )}
                   {it.numeroGuia && (
-                    <button onClick={() => imprimirGuia(it.ventaId)} className="mt-1.5 flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-200">
+                    <button onClick={() => imprimirGuia(it.ventaId)} className="mt-1.5 flex items-center gap-1 rounded bg-[#0d6efd] px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90">
                       <Printer className="h-3 w-3" /> Imprimir guía
                     </button>
                   )}
@@ -219,15 +217,7 @@ export function TableDespachoPanel({ cargar, mostrarTotal, onVerVenta }: TableDe
                 <td className="py-2 pr-3 text-xs font-bold" style={{ color: COLOR_ESTADO[it.ventaEstado] }}>
                   {VENTA_ESTADO_LABEL[it.ventaEstado]}
                 </td>
-                <td className="py-2 pr-3">
-                  {it.vendedorTelefono ? (
-                    <a href={`https://wa.me/57${it.vendedorTelefono}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#128C4A]">
-                      <MessageCircle className="h-4 w-4 rounded-full bg-[#25D366] p-0.5 text-white" /> {it.vendedorTelefono}
-                    </a>
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </td>
+                <td className="py-2 pr-3 text-xs text-gray-700">{it.vendedorNombre || '—'}</td>
               </tr>
             ))}
           </tbody>

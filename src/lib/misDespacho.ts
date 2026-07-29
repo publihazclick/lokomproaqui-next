@@ -33,17 +33,21 @@ export interface ItemDespacho {
   telefonoCliente: string | null;
   nombreCliente: string | null;
   vendedorNombre: string | null;
-  vendedorTelefono: string | null;
 }
 
 // Pedido explicito del usuario 2026-07-29 (captura de referencia del panel viejo "Mis Despachos"):
-// se agregan products.code (para el filtro "Ref Producto") y el nombre/telefono del vendedor via
-// join a profiles (para la columna "Numero del vendedor" con icono de WhatsApp) -- ninguno de los
-// 2 se traia antes, solo era necesario para el flujo de generacion de guia del proveedor.
+// se agrega products.code (para el filtro "Ref Producto") y el nombre del vendedor via join a
+// profiles, para el filtro "Nombre del vendedor" -- NO su telefono. Mismo criterio de aislamiento
+// proveedor<->vendedor ya establecido en el resto del proyecto (ver fetchVentaDetalle,
+// incluirVendedor): el proveedor nunca debe poder contactar directo al vendedor y saltarse la
+// plataforma. El telefono se pidio explicitamente despues de que una primera version lo mostrara
+// con un boton de WhatsApp -- se corrige sacandolo del select por completo (no solo ocultandolo en
+// la UI), para que tampoco quede visible inspeccionando la respuesta de red con las herramientas
+// de desarrollador.
 async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSinGuia = false): Promise<{ data: ItemDespacho[]; total: number }> {
   let q = supabase
     .from('order_items')
-    .select('*, products!inner(name, code, owner_profile_id), orders!inner(*, profiles!orders_seller_id_fkey(full_name, phone))')
+    .select('*, products!inner(name, code, owner_profile_id), orders!inner(*, profiles!orders_seller_id_fkey(full_name))')
     .eq('products.owner_profile_id', profileId);
   if (statuses.length) q = q.in('orders.status', statuses);
   if (soloSinGuia) q = q.is('orders.tracking_number', null);
@@ -68,7 +72,6 @@ async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSi
     telefonoCliente: item.orders.buyer_phone,
     nombreCliente: item.orders.buyer_name,
     vendedorNombre: item.orders.profiles ? item.orders.profiles.full_name : null,
-    vendedorTelefono: item.orders.profiles ? item.orders.profiles.phone : null,
   }));
   const total = rows.reduce((sum, r) => sum + r.precioVendedor, 0);
   return { data: rows, total };
