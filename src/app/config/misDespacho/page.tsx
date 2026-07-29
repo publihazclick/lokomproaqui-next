@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import {
   fetchReacaudoPendiente,
+  fetchReacaudoEnCamino,
+  fetchReacaudoTotalPagado,
   fetchGuiasDespachadas,
   fetchGuiasPorImprimir,
   fetchGuiasPagadas,
@@ -34,6 +36,8 @@ export default function MisDespachoPage() {
   const [estado, setEstado] = useState<'revisando' | 'listo'>('revisando');
   const [dataUser, setDataUser] = useState<DataUserCompleto | null>(null);
   const [reacaudo, setReacaudo] = useState(0);
+  const [reacaudoEnCamino, setReacaudoEnCamino] = useState(0);
+  const [reacaudoPagado, setReacaudoPagado] = useState(0);
   const [tab, setTab] = useState<TabKey>('porImprimir');
   const [ventaAbierta, setVentaAbierta] = useState<number | null>(null);
 
@@ -47,6 +51,8 @@ export default function MisDespachoPage() {
       setDataUser(usuario);
       setEstado('listo');
       setReacaudo(await fetchReacaudoPendiente(usuario.id));
+      fetchReacaudoEnCamino(usuario.id).then(setReacaudoEnCamino);
+      fetchReacaudoTotalPagado(usuario.id).then(setReacaudoPagado);
     });
   }, []);
 
@@ -65,7 +71,23 @@ export default function MisDespachoPage() {
     <div className="mx-auto w-full max-w-[1320px] px-3 py-6">
       <div className="rounded-t-xl bg-[#0d6efd] px-4 py-3 text-white">
         <h4 className="text-lg font-bold">Estado de la venta</h4>
-        <p className="mt-1 text-sm opacity-90">Reacaudo pendiente para pagar: $ {reacaudo.toLocaleString('es-CO')} COP</p>
+        <div className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+          <p>
+            Reacaudo pendiente para pagar:
+            <br />
+            <span className="text-base font-bold text-red-300">$ {reacaudo.toLocaleString('es-CO')}</span>
+          </p>
+          <p>
+            Reacaudo pendiente:
+            <br />
+            <span className="text-base font-bold text-amber-300">$ {reacaudoEnCamino.toLocaleString('es-CO')}</span>
+          </p>
+          <p>
+            Reacaudo total pagado:
+            <br />
+            <span className="text-base font-bold text-green-300">$ {reacaudoPagado.toLocaleString('es-CO')}</span>
+          </p>
+        </div>
       </div>
       <div className="rounded-b-xl border border-t-0 border-gray-100 p-4 shadow-sm">
         <div className="flex flex-wrap gap-2 border-b border-gray-200">

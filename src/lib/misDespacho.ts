@@ -20,6 +20,7 @@ export interface ItemDespacho {
   id: number;
   ventaId: number;
   productoNombre: string;
+  productoCodigo: string | null;
   talla: string | null;
   color: string | null;
   cantidad: number;
@@ -31,12 +32,18 @@ export interface ItemDespacho {
   transportadoraLogo: string | null;
   telefonoCliente: string | null;
   nombreCliente: string | null;
+  vendedorNombre: string | null;
+  vendedorTelefono: string | null;
 }
 
+// Pedido explicito del usuario 2026-07-29 (captura de referencia del panel viejo "Mis Despachos"):
+// se agregan products.code (para el filtro "Ref Producto") y el nombre/telefono del vendedor via
+// join a profiles (para la columna "Numero del vendedor" con icono de WhatsApp) -- ninguno de los
+// 2 se traia antes, solo era necesario para el flujo de generacion de guia del proveedor.
 async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSinGuia = false): Promise<{ data: ItemDespacho[]; total: number }> {
   let q = supabase
     .from('order_items')
-    .select('*, products!inner(name, owner_profile_id), orders!inner(*)')
+    .select('*, products!inner(name, code, owner_profile_id), orders!inner(*, profiles!orders_seller_id_fkey(full_name, phone))')
     .eq('products.owner_profile_id', profileId);
   if (statuses.length) q = q.in('orders.status', statuses);
   if (soloSinGuia) q = q.is('orders.tracking_number', null);
@@ -48,6 +55,7 @@ async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSi
     id: item.id,
     ventaId: item.orders.id,
     productoNombre: item.products.name,
+    productoCodigo: item.products.code,
     talla: item.size,
     color: item.color,
     cantidad: item.quantity,
@@ -59,6 +67,8 @@ async function fetchItemsPorEstado(profileId: string, statuses: string[], soloSi
     transportadoraLogo: item.orders.carrier_logo_url,
     telefonoCliente: item.orders.buyer_phone,
     nombreCliente: item.orders.buyer_name,
+    vendedorNombre: item.orders.profiles ? item.orders.profiles.full_name : null,
+    vendedorTelefono: item.orders.profiles ? item.orders.profiles.phone : null,
   }));
   const total = rows.reduce((sum, r) => sum + r.precioVendedor, 0);
   return { data: rows, total };
@@ -76,3 +86,20 @@ export const fetchGuiasPorImprimir = (profileId: string) => fetchItemsPorEstado(
 export const fetchGuiasPagadas = (profileId: string) => fetchItemsPorEstado(profileId, ['success']);
 export const fetchGuiasEnDevolucion = (profileId: string) => fetchItemsPorEstado(profileId, ['rejected']);
 export const fetchGuiasEnPreparacion = (profileId: string) => fetchItemsPorEstado(profileId, ['preparing']);
+
+// "Reacaudo pendiente" (2da estadistica de la captura de referencia): valor de los pedidos que
+// todavia estan en camino (ya despachados o en preparacion, sin resolver todavia) -- distinto de
+// "para pagar" (saldo YA en la billetera) porque este es dinero que el mensajero todavia va a
+// recaudar contra entrega, no algo que ya se le acredito al proveedor.
+export async function fetchReacaudoEnCamino(profileId: string): Promise<number> {
+  const [preparacion, despachadas] = await Promise.all([fetchGuiasEnPreparacion(profileId), fetchGuiasDespachadas(profileId)]);
+  return preparacion.total + despachadas.total;
+}
+
+// "Reacaudo total pagado" (3ra estadistica): historico completo de lo que ya se le pago al
+// proveedor -- mismos items que la pestaña "Guías pagadas al proveedor", solo se reusa el total ya
+// calculado por fetchGuiasPagadas en vez de duplicar la consulta.
+export async function fetchReacaudoTotalPagado(profileId: string): Promise<number> {
+  const { total } = await fetchGuiasPagadas(profileId);
+  return total;
+}
