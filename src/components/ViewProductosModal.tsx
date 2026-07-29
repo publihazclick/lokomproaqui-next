@@ -212,7 +212,16 @@ export function ViewProductosModal({ producto, dataUser, initialView, onClose }:
     // conversion (/p/[id]/[telefono], ver ProductLandingClient.tsx) en vez de la vista de catalogo
     // normal -- pensada para recibir trafico de campañas pagas. El telefono sigue siendo el mismo
     // identificador de tienda/comision de siempre, solo cambia el destino del link.
-    const url = `${window.location.origin}/p/${producto.id}/${dataUser?.telefono || ''}`;
+    //
+    // Bug real corregido 2026-07-29: si el vendedor no tiene telefono guardado en su perfil (pasa
+    // con cuentas viejas, ver profiles.phone null), esto generaba "/p/11/" (segmento vacio) --
+    // Next.js lo redirige a "/p/11" sin telefono, que no matchea la ruta [id]/[telefono] y da 404.
+    // El link copiado quedaba roto sin ningun aviso ("no abre"). Se bloquea antes de copiar nada.
+    if (!dataUser?.telefono) {
+      mostrar('Agrega tu celular en tu perfil (Mi Cuenta) antes de compartir el link');
+      return;
+    }
+    const url = `${window.location.origin}/p/${producto.id}/${dataUser.telefono}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {}
