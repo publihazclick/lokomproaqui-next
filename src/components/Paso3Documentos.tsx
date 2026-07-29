@@ -56,8 +56,8 @@ export function Paso3Documentos({ profileId, onEstadoCambia }: Paso3DocumentosPr
       onEstadoCambia?.(documentosCompletos(actualizado));
       return actualizado;
     });
-    await actualizarPerfil(profileId, { [campo]: url });
-    mostrar('Documento guardado');
+    const res = await actualizarPerfil(profileId, { [campo]: url });
+    mostrar(res.success ? 'Documento guardado' : res.message || 'No pudimos guardar el documento, intenta de nuevo.');
   }
 
   if (!data) return null;

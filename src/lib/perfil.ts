@@ -104,7 +104,14 @@ export interface PerfilPatch {
   pdfCamaraComercioUrl?: string;
 }
 
-export async function actualizarPerfil(userId: string, patch: PerfilPatch): Promise<boolean> {
+// Bug real corregido 2026-07-29 (pedido explicito del usuario: "sale error de servidor al
+// cambiar datos"): esta funcion devolvia solo un boolean, descartando el mensaje real del error
+// (RLS, columna invalida, restriccion unica, sesion vencida, lo que sea) -- tanto el usuario como
+// quien investigara el reporte se quedaban sin saber que fallo de verdad, solo un generico "Error
+// de Servidor". Ahora devuelve el mensaje real cuando lo hay, y un try/catch cubre tambien
+// excepciones lanzadas por el cliente (ej. red caida a mitad de la llamada), que antes no se
+// atrapaban en ningun lado y podian dejar el boton "Guardar" colgado sin ningun aviso.
+export async function actualizarPerfil(userId: string, patch: PerfilPatch): Promise<{ success: boolean; message?: string }> {
   const dbPatch: Record<string, unknown> = {};
   if (patch.nombre !== undefined) dbPatch.full_name = patch.nombre;
   if (patch.apellido !== undefined) dbPatch.last_name = patch.apellido;
@@ -128,8 +135,19 @@ export async function actualizarPerfil(userId: string, patch: PerfilPatch): Prom
   if (patch.pdfCedulaUrl !== undefined) dbPatch.supplier_doc_cc_url = patch.pdfCedulaUrl;
   if (patch.pdfCamaraComercioUrl !== undefined) dbPatch.supplier_doc_comercio_url = patch.pdfCamaraComercioUrl;
 
-  const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
-  return !error;
+  try {
+    const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
+    if (!error) return { success: true };
+    // Se deja en consola para poder diagnosticar la proxima vez que pase, sin mostrarle al usuario
+    // el mensaje tecnico en ingles (mismo criterio ya establecido en otros proyectos: nunca pasar
+    // errores de libreria tal cual).
+    console.error('actualizarPerfil', error);
+    if (error.code === '23505') return { success: false, message: 'Ese nombre de tienda ya está en uso, elige otro.' };
+    return { success: false, message: 'No pudimos guardar los cambios, intenta de nuevo.' };
+  } catch (e) {
+    console.error('actualizarPerfil', e);
+    return { success: false, message: 'No pudimos conectar con el servidor, verifica tu internet e intenta de nuevo.' };
+  }
 }
 
 // Equivalente a UsuariosService.cambioPass: solo se puede cambiar la propia clave (ya logueado).

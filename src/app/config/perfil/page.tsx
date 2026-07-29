@@ -191,18 +191,18 @@ export default function PerfilPage() {
       return;
     }
     set('avatarUrl', url);
-    await actualizarPerfil(data.id, { avatarUrl: url });
-    mostrar('Exitoso');
+    const res = await actualizarPerfil(data.id, { avatarUrl: url });
+    mostrar(res.success ? 'Exitoso' : res.message || 'No pudimos guardar la foto, intenta de nuevo.');
   }
 
   async function actualizarDatos() {
     if (!data) return;
     if (nombreTiendaTomadoFlag) {
-      mostrar('Error tenemos problemas en el formulario por favor revisar gracias');
+      mostrar('Ese nombre de tienda ya está en uso, elige otro');
       return;
     }
     setGuardando(true);
-    const ok = await actualizarPerfil(data.id, {
+    const res = await actualizarPerfil(data.id, {
       nombre: data.nombre || '',
       apellido: data.apellido || '',
       nombreTienda: data.nombreTienda || '',
@@ -213,7 +213,7 @@ export default function PerfilPage() {
       colorTienda: data.colorTienda || '',
     });
     setGuardando(false);
-    mostrar(ok ? 'Actualizado' : 'Error de Servidor');
+    mostrar(res.success ? 'Actualizado' : res.message || 'No pudimos guardar los cambios, intenta de nuevo.');
   }
 
   async function actualizarClave() {
