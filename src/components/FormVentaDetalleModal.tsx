@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, RefreshCw, Printer } from 'lucide-react';
+import { X, RefreshCw, Printer, Tag } from 'lucide-react';
 import { conTimeout } from '@/lib/supabase';
 import {
   fetchVentaDetalle,
@@ -490,6 +490,20 @@ export function FormVentaDetalleModal({ orderId, esAdmin, esProveedor = false, o
                       )}
                       ({venta.transportadora})
                     </p>
+                    {/* Etiqueta oficial del transportador (PDF con codigo de barras) -- pedido
+                        explicito del usuario 2026-08-10. Distinta del "Imprimir guía" de abajo, que
+                        es el comprobante interno propio de LokomproAqui: el mensajero SI necesita
+                        esta etiqueta oficial para escanear el paquete. Puede faltar aunque ya haya
+                        numeroGuia (Mipaquete tarda un poco en generarla), por eso se oculta si no hay
+                        URL en vez de mostrar un boton roto. */}
+                    {venta.etiquetaUrl && (
+                      <button
+                        onClick={() => window.open(venta.etiquetaUrl!, '_blank')}
+                        className="flex items-center gap-1 rounded bg-[#198754] px-2 py-1 text-xs font-medium text-white"
+                      >
+                        <Tag className="h-3 w-3" /> Etiqueta oficial
+                      </button>
+                    )}
                     {/* Pedido explicito del usuario 2026-07-29: en la vista del proveedor, "Actualizar
                         estado" se reemplaza por "Imprimir guía" (comprobante propio, ver
                         app/config/misDespacho/imprimir) -- el tracking automatico ya corre solo via

@@ -594,6 +594,11 @@ export interface VentaDetalle {
   numeroGuia: string | null;
   transportadora: string | null;
   transportadoraLogo: string | null;
+  // Etiqueta oficial del transportador (PDF con codigo de barras) -- pedido explicito del usuario
+  // 2026-08-10, ver comentario en mipaquete-create-shipment/index.ts (fetchLabelUrl). Puede quedar
+  // null incluso con numeroGuia ya asignado si Mipaquete todavia no la generaba al momento de crear
+  // la guia (se reintenta 3 veces, pero no bloquea la respuesta si sigue sin llegar).
+  etiquetaUrl: string | null;
   precioTotal: number | null;
   gananciaTotal: number | null;
   vendedorNombre: string | null;
@@ -655,6 +660,7 @@ export async function fetchVentaDetalle(orderId: number, incluirVendedor: boolea
     numeroGuia: order.tracking_number,
     transportadora: order.carrier,
     transportadoraLogo: order.carrier_logo_url,
+    etiquetaUrl: order.mipaquete_label_url,
     precioTotal: order.price_total,
     gananciaTotal: order.earnings_total,
     vendedorNombre: order.profiles ? order.profiles.full_name : null,
