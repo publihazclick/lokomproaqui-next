@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Pencil, Trash2, Check, X, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
 import { fetchUsuariosAdmin, fetchRolesAsignables, actualizarUsuarioAdmin, revisarProveedor, type UsuarioAdminRow, type RolOpcion } from '@/lib/usuariosAdmin';
 import { MINIMO_PRODUCTOS_PROVEEDOR, type SupplierStatus } from '@/lib/proveedorEstado';
 import { FormUsuarioModal } from '@/components/FormUsuarioModal';
+import { PickupAddressModal } from '@/components/PickupAddressModal';
 import { useToast, Toast } from '@/components/Toast';
 
 const ESTADO_LABEL: Record<SupplierStatus, string> = {
@@ -44,6 +45,7 @@ export default function ProvedoresPage() {
   const [cargando, setCargando] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
+  const [editandoRecogida, setEditandoRecogida] = useState<UsuarioAdminRow | null>(null);
 
   const cargar = useCallback(async (page: number, reemplazar: boolean, search: string) => {
     const setLoader = page === 0 ? setCargando : setCargandoMas;
@@ -160,10 +162,13 @@ export default function ProvedoresPage() {
                   <tr key={u.id} className="border-b border-gray-100">
                     <td className="py-2 pr-3">
                       <div className="flex gap-1">
-                        <button onClick={() => setEditando(u.id)} className="rounded bg-[#0d6efd] px-2 py-1 text-xs text-white">
+                        <button onClick={() => setEditando(u.id)} className="rounded bg-[#0d6efd] px-2 py-1 text-xs text-white" title="Editar usuario">
                           <Pencil className="h-3 w-3" />
                         </button>
-                        <button onClick={() => desactivar(u.id)} className="rounded bg-[#dc3545] px-2 py-1 text-xs text-white">
+                        <button onClick={() => setEditandoRecogida(u)} className="rounded bg-[#02a0e3] px-2 py-1 text-xs text-white" title="Editar dirección de recogida (Mipaquete)">
+                          <MapPin className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => desactivar(u.id)} className="rounded bg-[#dc3545] px-2 py-1 text-xs text-white" title="Desactivar">
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
@@ -239,6 +244,14 @@ export default function ProvedoresPage() {
             setEditando(null);
             cargar(0, true, busqueda);
           }}
+        />
+      )}
+
+      {editandoRecogida && (
+        <PickupAddressModal
+          profileId={editandoRecogida.id}
+          nombreProveedor={editandoRecogida.nombre}
+          onClose={() => setEditandoRecogida(null)}
         />
       )}
     </div>
