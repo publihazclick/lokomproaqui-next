@@ -1,0 +1,33 @@
+# Configuracion de Netlify para lokomproaqui-next (Next.js 16).
+#
+# Este proyecto atiende 14 rutas del sitio (login, registro, info, portal, config/perfil,
+# config/productos, etc.). El resto del sitio lo sirve la app Angular, que le pasa el trafico
+# de esas rutas por proxy -- por eso este sitio tambien tiene que ser alcanzable por su propia
+# URL de Netlify, no solo por el dominio principal.
+#
+# El plugin de Next.js lo instala Netlify solo al detectar el framework; no hace falta
+# declararlo aqui. Con el, las paginas que necesitan servidor siguen funcionando:
+#   - /p/[id]/[telefono]  -> la landing de producto que arma el HTML en el servidor para que
+#     WhatsApp, Facebook e Instagram puedan leer la vista previa del link (no ejecutan JS).
+#     Si esta pagina se sirviera estatica, los links de las campañas pagas perderian foto,
+#     titulo y precio.
+#   - /config/perfil y /config/productos -> marcadas force-dynamic.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 16 necesita Node moderno. Se fija la version para que el build de Netlify no use
+  # una version vieja por defecto y falle con errores raros de sintaxis.
+  NODE_VERSION = "22"
+
+# Las tres variables NEXT_PUBLIC_* (URL de Supabase, clave anonima y clave del captcha de
+# Turnstile) se configuran en el panel de Netlify, no aqui: aunque son publicas por su
+# prefijo, no conviene versionarlas en el repositorio.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
