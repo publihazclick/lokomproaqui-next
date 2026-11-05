@@ -21,6 +21,7 @@ import {
   type CotizacionGuia,
   type PickupAddress,
 } from '@/lib/guias';
+import { EPAYCO_CONFIRMACION } from '@/lib/supabase';
 
 // Wizard del modulo "Generacion de Guias" (pedido explicito del usuario 2026-07-20): version
 // "para cualquiera" de DropshippingCheckoutModal.tsx -- mismo estilo visual (tarjetas redondeadas,
@@ -391,6 +392,7 @@ export function GuiaWizard({ dataUser, onClose, onGenerada }: GuiaWizardProps) {
       test: ESTADO_PRUEBA_PAGOS,
       lang: 'es',
       external: 'true',
+      confirmation: EPAYCO_CONFIRMACION,
       name_billing: [dataUser.nombre, dataUser.apellido].filter(Boolean).join(' '),
       email_billing: dataUser.email || '',
       mobilephone_billing: dataUser.telefono || '',

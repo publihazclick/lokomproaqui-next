@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { Wallet, X, Plus, Minus, Receipt } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, EPAYCO_CONFIRMACION } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import {
   getBalanceDropshipper,
@@ -111,6 +111,7 @@ export default function RechargePage() {
       test: ESTADO_PRUEBA_PAGOS,
       lang: 'es',
       external: 'true',
+      confirmation: EPAYCO_CONFIRMACION,
       name_billing: [dataUser.nombre, dataUser.apellido].filter(Boolean).join(' '),
       email_billing: dataUser.email || '',
       mobilephone_billing: dataUser.telefono || '',

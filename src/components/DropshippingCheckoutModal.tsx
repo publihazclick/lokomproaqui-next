@@ -25,6 +25,7 @@ import {
   type CiudadMipaquete,
   type CotizacionFlete,
 } from '@/lib/ventas';
+import { EPAYCO_CONFIRMACION } from '@/lib/supabase';
 
 // Port 1:1 desde src/app/components/dropshipping-checkout (Angular, 549 lineas .ts + 249 .html) --
 // checkout real de "Hacer Dropshipping"/"Pedir muestra": crea un pedido real (RPC create_order),
@@ -437,6 +438,7 @@ export function DropshippingCheckoutModal({
       test: ESTADO_PRUEBA_PAGOS,
       lang: 'es',
       external: 'true',
+      confirmation: EPAYCO_CONFIRMACION,
       name_billing: [dataUser.nombre, dataUser.apellido].filter(Boolean).join(' '),
       email_billing: dataUser.email || '',
       mobilephone_billing: dataUser.telefono || '',

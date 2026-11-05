@@ -9,6 +9,12 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
+// Adonde avisa ePayco que un pago se aprobo (Edge Function epayco-webhook). Se manda en cada cobro
+// (parametro `confirmation`) desde 2026-11-05: el comercio de ePayco es el mismo para todos los
+// proyectos del usuario, asi que no se puede depender de la URL fija del panel de ePayco; y al
+// mudar la base a kkolcfliybheakgnguga la direccion cambio.
+export const EPAYCO_CONFIRMACION = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/epayco-webhook`;
+
 // Blindaje real encontrado necesario 2026-07-16: usuarios reportaron ERR_CONNECTION_TIMED_OUT en
 // paginas que consultan Supabase en el servidor (info_text, testimonials, courses) -- confirmado
 // con curl contra produccion que esa consulta a veces tarda 15-20s+. En vez de depender solo del

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
-import { supabase } from '@/lib/supabase';
+import { supabase, EPAYCO_CONFIRMACION } from '@/lib/supabase';
 import { crearIntentoPago, fetchEstadoPago } from '@/lib/acelerador';
 import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
 
@@ -246,6 +246,7 @@ export function AceleradorCheckout({
         country: 'co',
         lang: 'esp',
         external: 'true',
+        confirmation: EPAYCO_CONFIRMACION,
         name_billing: `${usuario.nombre} ${usuario.apellido}`.trim(),
         email_billing: usuario.email,
         address_billing: usuario.ciudad || 'cucuta',
