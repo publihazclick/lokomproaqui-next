@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       // Fotos de perfil/banners subidas al bucket publico lokomproaqui-media.
-      { protocol: "https", hostname: "enajheqrfbglcpsqglnb.supabase.co", pathname: "/storage/v1/object/public/**" },
+      { protocol: "https", hostname: "kkolcfliybheakgnguga.supabase.co", pathname: "/storage/v1/object/public/**" },
       // products.image_url / categories.image_url viven en OTRO proyecto Supabase (bucket
       // imagenes-productos) -- confirmado con datos reales de produccion, no es un typo. Sin este
       // dominio, next/image rechaza todas las fotos de producto/categoria del catalogo.

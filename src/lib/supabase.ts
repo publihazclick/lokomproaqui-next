@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Mismo proyecto Supabase que el frontend Angular (enajheqrfbglcpsqglnb) -- backend
+// Mismo proyecto Supabase que el frontend Angular (kkolcfliybheakgnguga) -- backend
 // intacto durante toda la migracion. Sin storageKey custom a proposito: al convivir en
 // el mismo dominio (lokomproaqui.com) via rewrites, el JWT en localStorage se comparte
 // automaticamente con la app Angular (misma key por defecto de supabase-js).
