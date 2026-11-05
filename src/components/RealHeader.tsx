@@ -371,8 +371,10 @@ export function RealHeader() {
               visitante y despues saltaba al lado correcto. Pedido explicito del usuario 2026-07-19. */}
           {sesionResuelta && rol !== 'visitante' && (
             <Link href="/articulo" className="min-w-0 shrink">
+              {/* ?v=2 (2026-11-05): de sept. a nov. el dominio sirvio el logo NEGRO de Angular con cache de
+                  un año; el nombre nuevo obliga a los navegadores a bajar el de degradado de este proyecto. */}
               {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio, nunca la foto que el vendedor sube en su perfil */}
-              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
+              <img src="/assets/logo.svg?v=2" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
             </Link>
           )}
 
@@ -391,7 +393,7 @@ export function RealHeader() {
                 </Link>
                 <Link href="/info" className="min-w-0 shrink">
                   {/* eslint-disable-next-line @next/next/no-img-element -- logo fijo del sitio */}
-                  <img src="/assets/logo.svg" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
+                  <img src="/assets/logo.svg?v=2" alt="LokomproAqui" className="h-[60px] w-auto max-w-full sm:h-[100px]" />
                 </Link>
               </>
             ) : (
@@ -461,7 +463,7 @@ export function RealHeader() {
           <div className="flex items-center justify-between bg-[#02a0e3] px-4 py-3">
             <Link href={rol === 'visitante' ? '/info' : '/articulo'}>
               {/* eslint-disable-next-line @next/next/no-img-element -- logo, mismo dominio Angular */}
-              <img src="/assets/logo.svg" alt="LokomproAqui" className="h-9 w-auto rounded" />
+              <img src="/assets/logo.svg?v=2" alt="LokomproAqui" className="h-9 w-auto rounded" />
             </Link>
             <button type="button" onClick={() => setMenuAbierto(false)} className="rounded p-1 hover:bg-white/10" aria-label="Cerrar menú">
               <X className="h-5 w-5" />

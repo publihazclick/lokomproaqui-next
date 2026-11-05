@@ -146,7 +146,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Link href="/info" className="mb-8 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- servido por el proyecto Angular en el mismo dominio */}
-          <img src="/assets/logo.svg" alt="LokomproAqui" className="h-14 w-auto drop-shadow-md" />
+          <img src="/assets/logo.svg?v=2" alt="LokomproAqui" className="h-14 w-auto drop-shadow-md" />
         </Link>
 
         <div className="rounded-3xl bg-white p-8 shadow-2xl sm:p-10">

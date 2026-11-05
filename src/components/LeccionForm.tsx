@@ -3,37 +3,19 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { VIDEOS_URL, sesionParaVideos } from '@/lib/acelerador';
 
-// El cliente de Supabase (functions-js) oculta el mensaje real de la Edge Function detras de un
-// generico "Edge Function returned a non-2xx status code" -- el cuerpo real de la respuesta
-// queda en error.context (el Response crudo, todavia sin leer) y hay que parsearlo a mano.
-// Encontrado 2026-07-16 investigando un reporte real de un mentor al que no le dejaba subir
-// cursos: la funcion en si funcionaba bien (probado con una cuenta de prueba real), pero el
-// usuario solo veia el mensaje generico sin ninguna pista de la causa real (sesion vencida,
-// sin permiso, etc.) -- este helper hace que el motivo real siempre se vea.
+// Mensajes claros para los errores que devuelve el Worker de videos.
 const MENSAJES_CONOCIDOS: Record<string, string> = {
   'No autenticado': 'Tu sesión expiró. Cierra sesión, vuelve a entrar y prueba de nuevo.',
   'No autorizado': 'Tu cuenta no tiene permiso de mentor para subir cursos.',
   'path invalido': 'Ocurrió un error interno subiendo el video. Intenta de nuevo.',
 };
 
-async function mensajeRealDeErrorEdge(error: unknown, fallback: string): Promise<string> {
-  if (error instanceof FunctionsHttpError) {
-    try {
-      const body = await error.context.json();
-      if (body?.error) return MENSAJES_CONOCIDOS[body.error] || body.error;
-    } catch {
-      /* el cuerpo no era JSON */
-    }
-  }
-  return fallback;
-}
-
 const THUMB_BUCKET = 'lokomproaqui-media';
-// Mismo limite que en Angular: el proyecto de Supabase acepta hasta 500MB por archivo (ver
-// memoria lokomproaqui_project, arreglo de subida del mentor de hoy mismo).
+// Mismo limite que en Angular (era el tope de Supabase). R2 aceptaria mas, pero se mantiene
+// para que el curso quepa holgado en los 10 GB gratis de R2.
 const LIMITE_MB = 500;
 
 export interface Leccion {
@@ -91,15 +73,13 @@ function subirArchivoConProgreso(
   });
 }
 
-// Sube el video al bucket PRIVADO via URL de subida firmada (Edge Function
-// acelerador-signed-upload), no via XHR directo con el JWT del mentor. Motivo real (encontrado
-// y confirmado el 2026-07-15, ver memoria lokomproaqui-nextjs-migration): el servicio de
-// Storage de Supabase en este proyecto NO reconoce la sesion del usuario para buckets privados
-// (auth.uid()/auth.role() vuelven null ahi, aunque la MISMA sesion funciona perfecto via
-// /rest/v1/rpc -- confirmado con pruebas directas por curl). Una URL firmada evita el problema
-// por completo: la autorizacion real (solo mentores) queda del lado de la Edge Function
-// (que SI verifica bien la sesion), y la subida en si usa un token de un solo uso que no
-// depende de esa verificacion rota.
+// Sube el video a Cloudflare R2 por el Worker lokomproaqui-videos (desde 2026-11-05; antes iba al
+// bucket privado de Supabase, que dejaba la base fuera del plan gratis). El Worker verifica que
+// quien sube sea mentor con su sesion, igual que hacia la Edge Function acelerador-signed-upload.
+// Va por partes de 50 MB porque un Worker gratis no recibe mas de 100 MB por peticion; cada parte
+// se reintenta 3 veces para que un corte de wifi no obligue a empezar de cero.
+const PARTE_BYTES = 50 * 1024 * 1024;
+
 async function subirVideoConProgreso(
   file: File,
   onProgress: (pct: number) => void
@@ -107,39 +87,76 @@ async function subirVideoConProgreso(
   const ext = (file.name || 'mp4').split('.').pop();
   const path = `lecciones/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-  const { data: signData, error: signError } = await supabase.functions.invoke('acelerador-signed-upload', {
-    body: { path },
-  });
-  if (signError || !signData?.signedUrl) {
-    const message = await mensajeRealDeErrorEdge(signError, 'No se pudo iniciar la subida. Intenta de nuevo.');
-    return { success: false, message };
+  const sesion = await sesionParaVideos();
+  if (!sesion) return { success: false, message: MENSAJES_CONOCIDOS['No autenticado'] };
+
+  let inicio: { uploadId: string; e: number; s: string };
+  try {
+    const r = await fetch(`${VIDEOS_URL}/subir/iniciar`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${sesion}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ path, contentType: file.type || 'video/mp4' }),
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok || !data?.uploadId) {
+      const error = data?.error as string | undefined;
+      return { success: false, message: (error && MENSAJES_CONOCIDOS[error]) || error || 'No se pudo iniciar la subida. Intenta de nuevo.' };
+    }
+    inicio = data;
+  } catch {
+    return { success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' };
   }
 
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', signData.signedUrl);
-    xhr.setRequestHeader('apikey', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-    xhr.setRequestHeader('x-upsert', 'true');
-    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+  const firma = { path, uploadId: inicio.uploadId, e: inicio.e, s: inicio.s };
+  const total = Math.max(1, Math.ceil(file.size / PARTE_BYTES));
+  const partes: { partNumber: number; etag: string }[] = [];
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
+  for (let n = 1; n <= total; n++) {
+    const pedazo = file.slice((n - 1) * PARTE_BYTES, Math.min(n * PARTE_BYTES, file.size));
+    let etag: string | null = null;
+    for (let intento = 1; intento <= 3 && !etag; intento++) {
+      etag = await subirParte(firma, n, pedazo, (cargado) =>
+        onProgress(Math.min(99, Math.round((((n - 1) * PARTE_BYTES + cargado) / file.size) * 100)))
+      );
+    }
+    if (!etag) {
+      await fetch(`${VIDEOS_URL}/subir/cancelar`, { method: 'POST', body: JSON.stringify(firma) }).catch(() => {});
+      return { success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' };
+    }
+    partes.push({ partNumber: n, etag });
+  }
+
+  const fin = await fetch(`${VIDEOS_URL}/subir/terminar`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...firma, partes }),
+  }).catch(() => null);
+  if (!fin || !fin.ok) return { success: false, message: 'Error subiendo el video. Intenta de nuevo.' };
+  onProgress(100);
+  return { success: true, path };
+}
+
+// Una parte por XHR (fetch no da progreso de subida). Devuelve el etag o null si fallo.
+function subirParte(
+  firma: { path: string; uploadId: string; e: number; s: string },
+  n: number,
+  pedazo: Blob,
+  onCargado: (bytes: number) => void
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    const q = new URLSearchParams({ path: firma.path, uploadId: firma.uploadId, n: String(n), e: String(firma.e), s: firma.s });
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', `${VIDEOS_URL}/subir/parte?${q}`);
+    xhr.upload.onprogress = (ev) => onCargado(ev.loaded);
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve({ success: true, path });
-      } else {
-        let message = 'Error subiendo el video. Intenta de nuevo.';
-        try {
-          message = JSON.parse(xhr.responseText).message || message;
-        } catch {
-          /* respuesta no era JSON */
-        }
-        resolve({ success: false, message });
+      try {
+        resolve(xhr.status >= 200 && xhr.status < 300 ? JSON.parse(xhr.responseText).etag || null : null);
+      } catch {
+        resolve(null);
       }
     };
-    xhr.onerror = () => resolve({ success: false, message: 'Se perdió la conexión a internet. Revisa tu wifi/datos e intenta de nuevo.' });
-    xhr.send(file);
+    xhr.onerror = () => resolve(null);
+    xhr.send(pedazo);
   });
 }
 

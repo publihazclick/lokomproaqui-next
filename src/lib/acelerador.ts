@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 // Port 1:1 de AceleradorService (Angular) -- ya estaba bien implementado en Supabase (RPC
 // `acelerador_has_access`, tablas `acelerador_modules`/`acelerador_lessons`/`acelerador_payments`,
 // Edge Function `acelerador-signed-url`, ya desplegadas desde el panel del mentor de Fase 2), sin
-// bugs reales -- se porta directo.
+// bugs reales -- se porta directo. Los videos ya no salen de esa Edge Function: ver VIDEOS_URL.
 
 export interface Leccion {
   id: number;
@@ -63,10 +63,32 @@ export async function fetchEstadoPago(code: string): Promise<{ status: number } 
   return { status: data.status };
 }
 
+// Desde 2026-11-05 los videos del curso viven en Cloudflare R2, servidos por el Worker
+// `lokomproaqui-videos` (repo local C:\Users\MOINS\lokomproaqui-videos): en Supabase dejaban la
+// base por encima del limite gratis. El Worker hace la misma verificacion que la Edge Function
+// acelerador-signed-url (suscripcion vigente o mentor) con la sesion del que llama.
+export const VIDEOS_URL = 'https://lokomproaqui-videos.publihazclick-com.workers.dev';
+
+export async function sesionParaVideos(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? data.session.access_token : null;
+}
+
 export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ success: boolean; url?: string; message?: string }> {
-  const { data, error } = await supabase.functions.invoke('acelerador-signed-url', { body: { lesson_id: lessonId } });
-  if (error || !data || data.error) return { success: false, message: (data && data.error) || 'No pudimos cargar el video' };
-  return { success: true, url: data.url };
+  const sesion = await sesionParaVideos();
+  if (!sesion) return { success: false, message: 'Inicia sesión para ver el video' };
+  try {
+    const r = await fetch(`${VIDEOS_URL}/firmar`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${sesion}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ lesson_id: lessonId }),
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok || !data || !data.url) return { success: false, message: (data && data.error) || 'No pudimos cargar el video' };
+    return { success: true, url: data.url };
+  } catch {
+    return { success: false, message: 'No pudimos cargar el video' };
+  }
 }
 
 // Pedido explicito del usuario 2026-07-19: el rol "lider general" necesita un apartado que solo
