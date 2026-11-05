@@ -109,11 +109,13 @@ export default async function InfoPage() {
 
       <InfoMenuPills />
 
+      {/* bottom-24: en Netlify gratis el sello "Powered by Netlify" va abajo a la derecha, encima de
+          todo y sin forma de quitarlo (es condicion del plan); el boton se sube para que no lo tape. */}
       <a
         href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola, tengo dudas sobre LokomproAqui')}`}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(37,211,102,0.5)] transition hover:scale-105 sm:bottom-5 sm:right-5 sm:gap-2.5 sm:px-5 sm:py-4 sm:text-base"
+        className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(37,211,102,0.5)] transition hover:scale-105 sm:bottom-24 sm:right-5 sm:gap-2.5 sm:px-5 sm:py-4 sm:text-base"
       >
         <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" fill="currentColor" aria-hidden="true">
           <path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.34.663 4.523 1.812 6.377L4 29l7.823-1.771A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3Zm6.997 16.943c-.297.836-1.47 1.53-2.41 1.73-.64.135-1.475.243-4.29-.92-3.6-1.49-5.916-5.14-6.096-5.38-.173-.24-1.456-1.938-1.456-3.696 0-1.759.917-2.622 1.243-2.983.297-.328.65-.41.868-.41.218 0 .436.002.626.011.2.01.47-.076.735.561.297.716.998 2.474 1.086 2.653.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.378.469-.54.63-.18.18-.368.375-.158.735.21.36.933 1.542 2.003 2.497 1.376 1.228 2.535 1.608 2.895 1.788.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.088.986 2.448 1.166.36.18.6.27.69.42.09.15.09.87-.208 1.706Z" />
