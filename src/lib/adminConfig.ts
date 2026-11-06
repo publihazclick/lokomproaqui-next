@@ -165,11 +165,11 @@ export async function enviarPruebaCorreoBienvenida(email: string, rol: 'vendedor
 // Pedido explicito del usuario 2026-07-19: mismo patron que notificarRegistroWhatsapp, pero para
 // cuando alguien paga el curso Acelerador -- se llama justo cuando el polling de AceleradorCheckout
 // detecta el pago confirmado (status===2), antes de que se cierre el flujo.
-export async function notificarPagoAceleradorWhatsapp(datos: { nombre: string; telefono: string; email: string; montoUsd: number }): Promise<void> {
+export async function notificarPagoAceleradorWhatsapp(datos: { nombre: string; telefono: string; email: string; monto: string }): Promise<void> {
   const config = await fetchSiteConfig();
   const numero = (config.cdAcelerador || '').replace(/\D/g, '');
   if (!numero) return;
-  const mensaje = `Nuevo pago del curso Acelerador en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nCorreo: ${datos.email}\nMonto: $${datos.montoUsd} USD`;
+  const mensaje = `Nuevo pago del curso Acelerador en LokomproAqui:\nNombre: ${datos.nombre}\nTeléfono: ${datos.telefono}\nCorreo: ${datos.email}\nMonto: ${datos.monto}`;
   const url = `https://wa.me/57${numero}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
 }

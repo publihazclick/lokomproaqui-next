@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { supabase, EPAYCO_CONFIRMACION } from '@/lib/supabase';
-import { crearIntentoPago, fetchEstadoPago } from '@/lib/acelerador';
+import { crearIntentoPago, fetchEstadoPago, PRECIO_ACELERADOR_TEXTO } from '@/lib/acelerador';
 import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
 
 // Port de AceleradorCheckoutComponent (Angular) -- boton "Suscribirme" + flujo de pago del curso
@@ -13,7 +13,9 @@ import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
 
 const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
-const PRECIO_USD = 37;
+// Desde 2026-11-05 (pedido del usuario): pago UNICO de $1.600.000 COP, acceso de por vida (antes
+// $37 USD cada mes). El acceso de por vida lo da epayco-webhook al ver el monto real pagado.
+const PRECIO_COP = 1600000;
 
 declare global {
   interface Window {
@@ -37,7 +39,7 @@ interface DataUserPago {
 
 export function AceleradorCheckout({
   buttonClass = 'rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90',
-  buttonLabel = 'Suscribirme',
+  buttonLabel = 'Comprar curso',
   abrirCheckoutInicial = false,
   abrirTrigger = 0,
   onActivada,
@@ -207,7 +209,7 @@ export function AceleradorCheckout({
     if (procesandoPago) return;
     setProcesandoPago(true);
     const codigo = codigoPago();
-    const ok = await crearIntentoPago(usuario.id, PRECIO_USD, codigo);
+    const ok = await crearIntentoPago(usuario.id, PRECIO_COP, codigo);
     if (!ok) {
       setProcesandoPago(false);
       alert('No pudimos iniciar el pago, intenta de nuevo');
@@ -237,10 +239,10 @@ export function AceleradorCheckout({
     try {
       const handler = window.ePayco.checkout.configure({ key: KEY_EPAYCO, test: ESTADO_PRUEBA_PAGOS });
       handler.open({
-        name: 'Suscripcion Acelerador de Ventas',
+        name: 'Curso Acelerador de Ventas',
         invoice: codigo,
-        currency: 'usd',
-        amount: PRECIO_USD,
+        currency: 'cop',
+        amount: PRECIO_COP,
         tax_base: '0',
         tax: '0',
         country: 'co',
@@ -276,12 +278,12 @@ export function AceleradorCheckout({
           nombre: `${dataUser?.nombre || ''} ${dataUser?.apellido || ''}`.trim(),
           telefono: dataUser?.telefono || '',
           email: dataUser?.email || '',
-          montoUsd: PRECIO_USD,
+          monto: `${PRECIO_ACELERADOR_TEXTO} COP`,
         });
         if (pagoFueAnonimo) {
-          alert(`Suscripcion activada. Guardamos tu acceso con el correo ${dataUser?.email}. Para volver a entrar mas adelante desde otro dispositivo, usa "Olvide mi contrasena" en el login con ese mismo correo.`);
+          alert(`Curso activado. Guardamos tu acceso con el correo ${dataUser?.email}. Para volver a entrar mas adelante desde otro dispositivo, usa "Olvide mi contrasena" en el login con ese mismo correo.`);
         } else {
-          alert('Suscripcion activada');
+          alert('Curso activado');
         }
         onActivada();
       } else if (intentos > 60) {
@@ -305,7 +307,7 @@ export function AceleradorCheckout({
           <p className="font-semibold text-gray-800">
             Este contenido es parte del curso <span className="text-[#0177a8]">Acelerador de Ventas</span>
           </p>
-          <p className="mt-1 text-sm text-gray-500">Suscripción mensual de ${PRECIO_USD} USD para ver todas las clases.</p>
+          <p className="mt-1 text-sm text-gray-500">Pago único de {PRECIO_ACELERADOR_TEXTO} COP. Acceso de por vida a todas las clases.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             <button
               onClick={() => setMostrarConfirmacion(false)}
@@ -318,7 +320,7 @@ export function AceleradorCheckout({
               disabled={procesandoPago}
               className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
             >
-              {procesandoPago ? 'Procesando...' : `Sí, suscribirme por $${PRECIO_USD} USD/mes`}
+              {procesandoPago ? 'Procesando...' : `Sí, pagar ${PRECIO_ACELERADOR_TEXTO} COP`}
             </button>
           </div>
         </div>

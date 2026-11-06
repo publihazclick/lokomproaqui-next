@@ -5,6 +5,10 @@ import { supabase } from './supabase';
 // Edge Function `acelerador-signed-url`, ya desplegadas desde el panel del mentor de Fase 2), sin
 // bugs reales -- se porta directo. Los videos ya no salen de esa Edge Function: ver VIDEOS_URL.
 
+// Precio del curso como se muestra en /info, /acelerador y el checkout (2026-11-05: pago unico,
+// acceso de por vida). El monto que se cobra esta en AceleradorCheckout (PRECIO_COP).
+export const PRECIO_ACELERADOR_TEXTO = '$1.600.000';
+
 export interface Leccion {
   id: number;
   moduleId: number;
@@ -96,7 +100,8 @@ export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ succes
 // personalizado -- distinto de "Referidos", que muestra vendedores en general sin importar si
 // pagaron el curso o no.
 //
-// El pago de $37 USD es en realidad una RENOVACION de 30 dias (no un pago unico de por vida) -- ver
+// Hasta 2026-11-05 el pago ($37 USD) era una RENOVACION de 30 dias; desde ahi es un pago unico de
+// $1.600.000 COP que da 100 años (de por vida) por la misma via -- ver
 // acelerador_subscriptions.current_period_end, ya calculado por acelerador_extend_subscription()
 // (llamado desde el webhook de ePayco en cada pago confirmado). No hace falta ninguna columna
 // nueva, "activo" vs "vencido" ya existe: current_period_end > ahora.

@@ -6,6 +6,7 @@ import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
 import { InfoMenuPills } from '@/components/InfoMenuPills';
 import { SessionRedirect } from '@/components/SessionRedirect';
+import { PRECIO_ACELERADOR_TEXTO } from '@/lib/acelerador';
 import styles from './info.module.css';
 
 export const metadata = {
@@ -159,11 +160,11 @@ export default async function InfoPage() {
 
                   <div className={styles.cursoAdPriceRow}>
                     <span className={styles.cursoAdPrice}>
-                      Tan solo <strong>$37 USD</strong>
-                      <span className={styles.cursoAdPriceSuffix}>/mes</span>
+                      <strong>{PRECIO_ACELERADOR_TEXTO} COP</strong>
+                      <span className={styles.cursoAdPriceSuffix}> pago único</span>
                     </span>
                     <Link href="/acelerador?checkout=1" className={styles.cursoAdCta}>
-                      Suscribirme
+                      Comprar curso
                     </Link>
                   </div>
                 </div>
