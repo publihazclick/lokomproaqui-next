@@ -54,7 +54,7 @@ export function InfoMenuPills() {
             <span className={EMOJI_CLASS}>🧠</span>
             <span className={LABEL_CLASS}>Mentoría 1 a 1</span>
           </div>
-          <Link href="/tutoriales" className={`${CARD_CLASS} col-span-2 sm:col-span-1`}>
+          <Link href="/tutoriales" className={`${CARD_CLASS} col-span-2`}>
             <span className={EMOJI_CLASS}>📚</span>
             <span className={LABEL_CLASS}>Academia Gratis</span>
           </Link>

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { Store } from 'lucide-react';
 import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 
@@ -18,6 +19,12 @@ export const revalidate = 5;
 interface Supplier {
   id: string;
   avatar_url: string | null;
+}
+
+// Revision 2026-11-05: los logos subidos antes de la mudanza a la base nueva (kkolcf...) quedaron
+// apuntando a la base vieja, que ya no responde -- se tratan igual que "sin logo".
+function logoValido(url: string | null): boolean {
+  return !!url && !url.includes('enajheqrfbglcpsqglnb');
 }
 
 export default async function InfoSupplierPage() {
@@ -71,13 +78,19 @@ export default async function InfoSupplierPage() {
               className="group overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
             >
               <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-50">
-                <Image
-                  src={item.avatar_url ?? '/assets/producto.jpg'}
-                  alt=""
-                  fill
-                  sizes="(max-width: 640px) 50vw, 25vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
+                {logoValido(item.avatar_url) ? (
+                  <Image
+                    src={item.avatar_url!}
+                    alt=""
+                    fill
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#e0f4fd] to-[#f4faff]">
+                    <Store className="h-1/3 w-1/3 text-[#02a0e3]" strokeWidth={1.5} />
+                  </div>
+                )}
               </div>
             </div>
           ))}

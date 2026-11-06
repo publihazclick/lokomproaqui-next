@@ -161,7 +161,7 @@ export default async function InfoPage() {
                   <div className={styles.cursoAdPriceRow}>
                     <span className={styles.cursoAdPrice}>
                       <strong>{PRECIO_ACELERADOR_TEXTO} COP</strong>
-                      <span className={styles.cursoAdPriceSuffix}> pago único</span>
+                      <span className={styles.cursoAdPriceSuffix}>pago único</span>
                     </span>
                     <Link href="/acelerador?checkout=1" className={styles.cursoAdCta}>
                       Comprar curso
@@ -213,6 +213,7 @@ export default async function InfoPage() {
           <section className={styles.seccionDosCajas}>
             <div className={styles.caja}>
               <div className={styles.contenidoCaja}>
+                <h2 className={styles.quehacemosTitulo}>Dos formas de ganar</h2>
                 <div className={styles.quehacemosCards}>
                   <div className={styles.quehacemosCard}>
                     <span className={styles.quehacemosCardEmoji}>🛍️</span>
@@ -323,7 +324,7 @@ export default async function InfoPage() {
               <h3 className={styles.registroBoxTitle}>Contactar Asesor</h3>
               <p className={styles.registroBoxSubtitle}>La información que necesitas a un click</p>
               <a href={`https://wa.me/57${numeroWhatsapp}?text=${encodeURIComponent('Hola Servicio al cliente')}`} target="_blank" rel="noreferrer" className={styles.registroBoxButton}>
-                Registrarme →
+                Escribir al asesor →
               </a>
               <br />
               <Image

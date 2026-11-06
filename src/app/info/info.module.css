@@ -130,11 +130,11 @@
 }
 
 .somosTuMejorAliadoSpan {
-  font: 400 36px/1.2 'Axiforma', sans-serif;
+  font: 400 36px/1.2 'Poppins', sans-serif;
 }
 
 .somosTuMejorAliadoSpan2 {
-  font: 700 40px/1.2 'Axiforma', sans-serif;
+  font: 700 40px/1.2 'Poppins', sans-serif;
 }
 
 .compraVendeDesc {
@@ -145,7 +145,7 @@
 }
 
 .frame33 {
-  background: linear-gradient(90deg, #38bdf8, #7dd3fc);
+  background: #ffffff;
   padding: 12px 28px;
   border-radius: 999px;
   box-shadow: 0 10px 24px rgba(2, 160, 227, 0.35);
@@ -164,8 +164,8 @@
 }
 
 .registrateGratis {
-  font: 400 24px 'Roboto', sans-serif;
-  color: #ffffff;
+  font: 700 20px 'Poppins', sans-serif;
+  color: #0177a8;
 }
 
 .frame41 {
@@ -201,7 +201,7 @@
   }
 
   .registrateGratis {
-    font-size: 20px;
+    font-size: 18px;
   }
 }
 
@@ -268,9 +268,25 @@
   line-height: 1.45;
 }
 
+/* Revision visual 2026-11-05: antes en computador iban en fila, bajitas, y dejaban media seccion
+   vacia al lado de la lista de la derecha; ahora van una debajo de otra, mas grandes, con titulo. */
+.quehacemosTitulo {
+  margin: 0 0 18px;
+  font: 700 26px/1.25 'Poppins', sans-serif;
+  color: #1e293b;
+}
+
 @media (min-width: 769px) {
-  .quehacemosCards {
-    flex-direction: row;
+  .quehacemosCard {
+    padding: 28px;
+  }
+
+  .quehacemosCard h4 {
+    font-size: 1.3rem;
+  }
+
+  .quehacemosCard p {
+    font-size: 1rem;
   }
 }
 
@@ -461,6 +477,12 @@
    de otra. Separacion chica solo entre cajas apiladas (selector de hermano, no toca la primera ni
    agrega margen sobrante al final) -- pedido explicito del usuario. En desktop (3 columnas en la
    misma fila) esta regla no aplica porque no son hermanos verticales visibles. */
+@media (min-width: 769px) {
+  .registroBoxSubtitle {
+    min-height: 3.4em;
+  }
+}
+
 @media (max-width: 768px) {
   .colSm4 + .colSm4 {
     margin-top: 14px;
@@ -698,6 +720,7 @@
 }
 
 .cursoAdPriceRow {
+  margin-top: 16px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -717,6 +740,7 @@
    texto alrededor (1.15rem), se pierde entre el resto de la tarjeta. Ahora es claramente el
    elemento mas grande de la fila. */
 .cursoAdPrice strong {
+  white-space: nowrap;
   font-size: 2.4rem;
   font-weight: 800;
   color: #fff;
@@ -789,6 +813,12 @@
   .cursoAdPriceRow {
     flex-direction: column;
     align-items: center;
+  }
+
+  .cursoAdPrice {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
   }
 
   .cursoAdPrice strong {

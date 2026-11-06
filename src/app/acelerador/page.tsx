@@ -88,10 +88,10 @@ function AceleradorPageInterna() {
             {/* Antes esta pagina no mostraba ningun precio -- el boton solo decia "Pagar
                 Suscripcion" sin monto. Pedido explicito del usuario: precio bien notorio en TODO
                 lugar donde se muestra el curso. */}
-            <div className="mx-auto mb-5 inline-flex flex-col items-center rounded-3xl border border-[#02a0e3]/15 bg-gradient-to-br from-[#f0f9ff] to-white px-10 py-6 shadow-sm">
+            <div className="mx-auto mb-5 inline-flex max-w-full flex-col items-center rounded-3xl border border-[#02a0e3]/15 bg-gradient-to-br from-[#f0f9ff] to-white px-6 py-5 shadow-sm sm:px-10 sm:py-6">
               <span className="text-xs font-bold uppercase tracking-wide text-gray-400">Acceso completo al curso</span>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-5xl font-extrabold text-[#0177a8]">{PRECIO_ACELERADOR_TEXTO}</span>
+                <span className="text-4xl font-extrabold text-[#0177a8] sm:text-5xl">{PRECIO_ACELERADOR_TEXTO}</span>
                 <span className="text-xl font-bold text-[#0177a8]">COP</span>
               </div>
               <span className="mt-0.5 text-sm font-semibold text-gray-500">pago único · acceso de por vida</span>
@@ -118,7 +118,7 @@ function AceleradorPageInterna() {
                       key={l.id}
                       type="button"
                       onClick={() => setAbrirPagoTrigger((n) => n + 1)}
-                      className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 text-left shadow-sm transition hover:shadow-lg"
+                      className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 text-left shadow-sm transition hover:shadow-lg sm:[&:last-child:nth-child(odd)]:col-span-2 sm:[&:last-child:nth-child(odd)]:w-[calc(50%-12px)] sm:[&:last-child:nth-child(odd)]:justify-self-center"
                     >
                       {l.thumbnailUrl ? (
                         <div className="relative aspect-video w-full bg-black">
@@ -174,7 +174,7 @@ function AceleradorPageInterna() {
                   <Link
                     key={l.id}
                     href={`/acelerador/leccion/${l.id}`}
-                    className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-lg sm:[&:last-child:nth-child(odd)]:col-span-2 sm:[&:last-child:nth-child(odd)]:w-[calc(50%-12px)] sm:[&:last-child:nth-child(odd)]:justify-self-center"
                   >
                     {l.thumbnailUrl ? (
                       <div className="relative aspect-video w-full bg-black">
