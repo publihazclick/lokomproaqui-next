@@ -8,10 +8,10 @@ import { fechaMedium } from '@/lib/format';
 
 // 08-11-2026, pedido del usuario: que quien compró el curso no pueda darle el acceso fácil a otra
 // persona. Cada aparato nuevo necesita un código de 6 números que llega por WhatsApp (lo manda el
-// panel del gamer, que se apaga de 12 de la noche a 7:45 a. m.) y vence en 5 minutos. Máximo 2
+// panel del gamer, que se apaga de 12 de la noche a 7:45 a. m.) y vence en 2 minutos (corto a propósito: compartirlo es tedioso). Máximo 2
 // aparatos: con 2, hay que elegir cuál quitar (3 cambios cada 30 días).
 
-const VENCE_SEG = 300;
+const VENCE_SEG = 120;
 
 function deNoche(): boolean {
   const h = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));

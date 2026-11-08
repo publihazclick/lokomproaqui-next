@@ -97,7 +97,7 @@ export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ succes
 
 // ─── Que el curso no se pueda compartir (08-11-2026, curso-anticompartir.sql) ─────────────────
 // Cada aparato nuevo necesita un código de 6 números que llega por WhatsApp (lo manda el panel del
-// gamer) y vence en 5 minutos; máximo 2 aparatos por cuenta; un solo video a la vez.
+// gamer) y vence en 2 minutos; máximo 2 aparatos por cuenta; un solo video a la vez.
 
 // Identificador de este navegador (no es secreto: si se borra, el aparato cuenta como nuevo).
 export function idAparato(): string {
