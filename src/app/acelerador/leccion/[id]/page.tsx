@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Eye, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -61,8 +61,26 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
     });
   }, [estado, leccionId]);
 
+  // 08-11-2026: el link del video dura 20 min y va amarrado a la red de quien lo pidio (worker
+  // lokomproaqui-videos). Si vence o cambia la red, se pide otro y la clase sigue donde iba.
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const reintentosRef = useRef(0);
+  async function renovarVideo() {
+    const v = videoRef.current;
+    if (!v || reintentosRef.current >= 3) return;
+    reintentosRef.current++;
+    const t = v.currentTime, seguia = !v.paused || v.seeking;
+    const res = await fetchUrlFirmadaLeccion(leccionId);
+    if (!res.success || !res.url) return;
+    v.src = res.url;
+    v.addEventListener('loadedmetadata', () => { v.currentTime = t; if (seguia) v.play().catch(() => {}); }, { once: true });
+  }
+  useEffect(() => { reintentosRef.current = 0; }, [videoUrl]);
+
+  // Marca de agua con nombre y telefono: cambia de lugar cada 7 s para que no se pueda tapar en
+  // una grabacion de pantalla; si alguien la comparte, se sabe de quien es la copia.
   useEffect(() => {
-    const interval = setInterval(() => setMarcaAgua({ top: 10 + Math.random() * 70, left: 10 + Math.random() * 70 }), 25000);
+    const interval = setInterval(() => setMarcaAgua({ top: 8 + Math.random() * 75, left: 5 + Math.random() * 60 }), 7000);
     return () => clearInterval(interval);
   }, []);
 
@@ -132,6 +150,10 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
           <div className="relative mt-4" onContextMenu={(e) => e.preventDefault()}>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption -- leccion del curso, sin subtitulos en el original */}
             <video
+              ref={videoRef}
+              onError={() => renovarVideo()}
+              onPlaying={() => { reintentosRef.current = 0; }}
+              onDragStart={(e) => e.preventDefault()}
               src={videoUrl}
               poster={leccionActual?.thumbnailUrl || undefined}
               controls
@@ -139,7 +161,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
               disablePictureInPicture
               className="max-h-[70vh] w-full rounded-lg bg-black object-contain"
             />
-            <div className="pointer-events-none absolute rounded bg-black/40 px-2 py-1 text-xs text-white/70" style={{ top: `${marcaAgua.top}%`, left: `${marcaAgua.left}%` }}>
+            <div className="pointer-events-none absolute select-none rounded bg-black/30 px-2 py-1 text-xs font-semibold text-white/60 transition-all duration-1000 sm:text-sm" style={{ top: `${marcaAgua.top}%`, left: `${marcaAgua.left}%` }}>
               {dataUser.nombre} {dataUser.apellido} · {dataUser.telefono}
             </div>
           </div>
