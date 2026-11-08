@@ -56,7 +56,7 @@ function CopiarDato({ etiqueta, valor, copiar = true }: { etiqueta: string; valo
 const AVISO_PERSONAL = (
   <>
     Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
-    sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
+    sobre el video sale tu nombre y teléfono. Si compartes el acceso con otra u otras personas, se cancela sin devolución.
   </>
 );
 
