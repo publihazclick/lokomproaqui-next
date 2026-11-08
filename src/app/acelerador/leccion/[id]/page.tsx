@@ -61,7 +61,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
     });
   }, [estado, leccionId]);
 
-  // 08-11-2026: el link del video dura 20 min y va amarrado a la red de quien lo pidio (worker
+  // 08-11-2026: el link del video dura 1 hora y va amarrado a la red de quien lo pidio (worker
   // lokomproaqui-videos). Si vence o cambia la red, se pide otro y la clase sigue donde iba.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const reintentosRef = useRef(0);
