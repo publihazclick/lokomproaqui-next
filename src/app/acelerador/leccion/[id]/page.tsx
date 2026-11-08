@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Eye, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
-import { fetchModulosConLecciones, tieneAccesoAcelerador, fetchUrlFirmadaLeccion, formatDuracion, type ModuloConLecciones, type Leccion } from '@/lib/acelerador';
+import { fetchModulosConLecciones, tieneAccesoAcelerador, fetchUrlFirmadaLeccion, formatDuracion, estadoAparato, latidoVideo, type EstadoAparato, type ModuloConLecciones, type Leccion } from '@/lib/acelerador';
+import { AparatoVerificacion } from '@/components/AparatoVerificacion';
 
 // Port de AceleradorPlayerComponent (Angular, "/acelerador/leccion/:id", protegido por
 // AceleradorGuard) -- reproductor con sidebar de todo el curso + Siguiente/Anterior. El video
 // nunca llega con una URL publica (URL firmada de corta duracion via Edge Function
 // acelerador-signed-url, ya desplegada). La marca de agua (nombre+telefono, jitter cada 25s) y el
 // bloqueo de clic derecho son disuasivos, no proteccion real -- mismo alcance que el original.
+// 08-11-2026: aparato registrado con código por WhatsApp + un solo video a la vez (ver lib/acelerador).
 
 export default function AceleradorPlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -46,8 +48,16 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
     });
   }, []);
 
+  // 08-11-2026: antes del video, este aparato tiene que estar registrado (código por WhatsApp).
+  const [aparato, setAparato] = useState<EstadoAparato | null>(null);
   useEffect(() => {
-    if (estado !== 'listo' || !leccionId) return;
+    if (estado !== 'listo') return;
+    estadoAparato().then(setAparato);
+  }, [estado]);
+  const aparatoOk = aparato?.estado === 'ok';
+
+  useEffect(() => {
+    if (estado !== 'listo' || !leccionId || !aparatoOk) return;
     setCargandoVideo(true);
     setErrorVideo(null);
     setVideoUrl(null);
@@ -59,7 +69,27 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
       }
       setVideoUrl(res.url || null);
     });
-  }, [estado, leccionId]);
+  }, [estado, leccionId, aparatoOk]);
+
+  // Un solo video a la vez: al dar play este aparato toma la cuenta; cada 15 s se revisa si otro
+  // aparato la tomó (entonces este se detiene y avisa).
+  const [enOtroLado, setEnOtroLado] = useState(false);
+  async function alDarPlay() {
+    setEnOtroLado(false);
+    await latidoVideo(leccionId, true);
+  }
+  useEffect(() => {
+    if (!videoUrl) return;
+    const t = setInterval(async () => {
+      const v = videoRef.current;
+      if (!v || v.paused) return;
+      if ((await latidoVideo(leccionId, false)) === 'otro') {
+        v.pause();
+        setEnOtroLado(true);
+      }
+    }, 15000);
+    return () => clearInterval(t);
+  }, [videoUrl, leccionId]);
 
   // 08-11-2026: el link del video dura 1 hora y va amarrado a la red de quien lo pidio (worker
   // lokomproaqui-videos). Si vence o cambia la red, se pide otro y la clase sigue donde iba.
@@ -143,8 +173,16 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
         {leccionActual && <h2 className="mt-1 text-xl font-bold text-gray-800">{leccionActual.titulo}</h2>}
         {leccionActual?.descripcion && <p className="mt-1 text-sm text-gray-600">{leccionActual.descripcion}</p>}
 
-        {cargandoVideo && <p className="mt-4 text-center text-gray-500">Cargando video...</p>}
-        {errorVideo && <p className="mt-4 rounded bg-red-50 p-3 text-center text-sm text-red-700">{errorVideo}</p>}
+        {!aparato && <p className="mt-4 text-center text-gray-500">Cargando video...</p>}
+        {aparato && !aparatoOk && <AparatoVerificacion estado={aparato} onListo={() => estadoAparato().then(setAparato)} />}
+        {aparatoOk && cargandoVideo && <p className="mt-4 text-center text-gray-500">Cargando video...</p>}
+        {aparatoOk && errorVideo && <p className="mt-4 rounded bg-red-50 p-3 text-center text-sm text-red-700">{errorVideo}</p>}
+        {enOtroLado && (
+          <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-center text-sm text-amber-900">
+            <p className="font-semibold">Tu cuenta se está viendo en otro aparato.</p>
+            <p className="mt-1">El curso se puede ver en un solo lugar a la vez. Si eres tú, dale play aquí y el otro se detiene.</p>
+          </div>
+        )}
 
         {videoUrl && (
           <div className="relative mt-4" onContextMenu={(e) => e.preventDefault()}>
@@ -153,6 +191,7 @@ export default function AceleradorPlayerPage({ params }: { params: Promise<{ id:
               ref={videoRef}
               onError={() => renovarVideo()}
               onPlaying={() => { reintentosRef.current = 0; }}
+              onPlay={() => alDarPlay()}
               onDragStart={(e) => e.preventDefault()}
               src={videoUrl}
               poster={leccionActual?.thumbnailUrl || undefined}

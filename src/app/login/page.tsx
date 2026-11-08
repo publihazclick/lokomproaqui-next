@@ -111,7 +111,14 @@ export default function LoginPage() {
         { data: null } as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout
         8000,
       );
-      redirigirSegunRol((profile?.roles as unknown as { name: string } | null)?.name);
+      const rol = (profile?.roles as unknown as { name: string } | null)?.name;
+      // 08-11-2026: quien compró el curso Acelerador solo puede tener UNA sesión abierta: al entrar
+      // aquí se cierran las de los otros aparatos (así prestar la clave saca al dueño cada vez).
+      if (rol !== 'mentor') {
+        const { data: tieneCurso } = await conTimeout(supabase.rpc('acelerador_has_access', { p_profile_id: data.user.id }), { data: false } as any, 5000); // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout
+        if (tieneCurso === true) await conTimeout(supabase.auth.signOut({ scope: 'others' }), { error: null } as any, 5000); // eslint-disable-line @typescript-eslint/no-explicit-any -- solo el fallback de timeout
+      }
+      redirigirSegunRol(rol);
     } catch {
       setError('Ocurrió un error al iniciar sesión, intenta de nuevo.');
     } finally {

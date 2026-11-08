@@ -85,7 +85,7 @@ export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ succes
     const r = await fetch(`${VIDEOS_URL}/firmar`, {
       method: 'POST',
       headers: { authorization: `Bearer ${sesion}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ lesson_id: lessonId }),
+      body: JSON.stringify({ lesson_id: lessonId, device_id: idAparato() }),
     });
     const data = await r.json().catch(() => null);
     if (!r.ok || !data || !data.url) return { success: false, message: (data && data.error) || 'No pudimos cargar el video' };
@@ -93,6 +93,95 @@ export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ succes
   } catch {
     return { success: false, message: 'No pudimos cargar el video' };
   }
+}
+
+// ─── Que el curso no se pueda compartir (08-11-2026, curso-anticompartir.sql) ─────────────────
+// Cada aparato nuevo necesita un código de 6 números que llega por WhatsApp (lo manda el panel del
+// gamer) y vence en 5 minutos; máximo 2 aparatos por cuenta; un solo video a la vez.
+
+// Identificador de este navegador (no es secreto: si se borra, el aparato cuenta como nuevo).
+export function idAparato(): string {
+  try {
+    let id = localStorage.getItem('lk_aparato');
+    if (!id || id.length < 16) {
+      id = crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('lk_aparato', id);
+    }
+    return id;
+  } catch {
+    return 'sin-almacenamiento-' + navigator.userAgent.length;
+  }
+}
+
+// Nombre que entiende el comprador al elegir cuál aparato quitar: "Celular Android", "Computador Windows"...
+export function nombreAparato(): string {
+  const ua = navigator.userAgent;
+  const nav = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'navegador';
+  const tipo = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Celular Android' : 'Tablet Android')
+    : /Windows/.test(ua) ? 'Computador Windows' : /Mac OS X/.test(ua) ? 'Computador Mac' : /Linux/.test(ua) ? 'Computador Linux' : 'Aparato';
+  return `${tipo} (${nav})`;
+}
+
+export interface AparatoRegistrado {
+  id: number;
+  nombre: string | null;
+  creado: string;
+  ultimo_uso: string;
+}
+
+export interface EstadoAparato {
+  estado: 'ok' | 'nuevo' | 'lleno' | 'bloqueado' | 'sin_acceso' | 'error';
+  telefono?: string | null;
+  cambios_restantes?: number;
+  aparatos?: AparatoRegistrado[];
+}
+
+export async function estadoAparato(): Promise<EstadoAparato> {
+  const { data, error } = await supabase.rpc('acelerador_dispositivo_estado', { p_device: idAparato() });
+  if (error || !data) return { estado: 'error' };
+  return data as EstadoAparato;
+}
+
+export async function pedirCodigoAparato(reemplaza?: number): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc('acelerador_pedir_codigo', { p_device: idAparato(), p_nombre: nombreAparato(), p_reemplaza: reemplaza ?? null });
+  if (error || !data) return { ok: false, error: 'No pudimos pedir el código, intenta de nuevo' };
+  return data.ok ? { ok: true } : { ok: false, error: data.error };
+}
+
+export async function verificarCodigoAparato(codigo: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc('acelerador_verificar_codigo', { p_device: idAparato(), p_codigo: codigo });
+  if (error || !data) return { ok: false, error: 'No pudimos revisar el código, intenta de nuevo' };
+  return data.ok ? { ok: true } : { ok: false, error: data.error };
+}
+
+// Un solo video a la vez: tomar=true al dar play; los latidos responden 'otro' si otro aparato tomó la cuenta.
+export async function latidoVideo(lessonId: number, tomar: boolean): Promise<'ok' | 'otro'> {
+  const { data, error } = await supabase.rpc('acelerador_latido', { p_device: idAparato(), p_lesson: lessonId, p_tomar: tomar });
+  if (error) return 'ok'; // si falla la red no se corta la clase
+  return data === 'otro' ? 'otro' : 'ok';
+}
+
+// Panel "Miembros Acelerador": aparatos, ciudades, bloquear y reiniciar aparatos.
+export interface SeguridadMiembro {
+  bloqueado: boolean;
+  aparatos: { nombre: string | null; creado: string; ultimo_uso: string }[];
+  ciudades: { ciudad: string; ultima: string; veces: number }[];
+}
+
+export async function fetchSeguridadMiembro(profileId: string): Promise<SeguridadMiembro | null> {
+  const { data, error } = await supabase.rpc('acelerador_admin_miembro', { p_profile: profileId });
+  if (error || !data) return null;
+  return data as SeguridadMiembro;
+}
+
+export async function bloquearMiembro(profileId: string, bloquear: boolean): Promise<boolean> {
+  const { error } = await supabase.rpc('acelerador_admin_bloquear', { p_profile: profileId, p_bloquear: bloquear });
+  return !error;
+}
+
+export async function reiniciarAparatosMiembro(profileId: string): Promise<boolean> {
+  const { error } = await supabase.rpc('acelerador_admin_reiniciar_aparatos', { p_profile: profileId });
+  return !error;
 }
 
 // Pedido explicito del usuario 2026-07-19: el rol "lider general" necesita un apartado que solo

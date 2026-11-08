@@ -10,6 +10,7 @@ import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
 // Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador. Mismo
 // mecanismo ya usado en DropshippingCheckoutModal: widget de ePayco via next/script + polling de
 // confirmacion. Pagos en modo real (confirmado por el usuario 2026-07-15).
+// 08-11-2026: aviso de acceso personal antes de pagar (curso-anticompartir.sql).
 
 const ESTADO_PRUEBA_PAGOS = false;
 const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
@@ -323,6 +324,10 @@ export function AceleradorCheckout({
               {procesandoPago ? 'Procesando...' : `Sí, pagar ${PRECIO_ACELERADOR_TEXTO} COP`}
             </button>
           </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
+            sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
+          </p>
         </div>
       ) : !mostrarFormAnon ? (
         <button onClick={onClickPrincipal} disabled={procesandoPago} className={`${buttonClass} disabled:opacity-60`}>
@@ -370,6 +375,10 @@ export function AceleradorCheckout({
           >
             {procesandoCuenta || procesandoPago ? 'Procesando...' : 'Continuar al pago'}
           </button>
+          <p className="mt-3 text-center text-xs text-gray-500">
+            Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
+            sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
+          </p>
         </div>
       )}
     </div>

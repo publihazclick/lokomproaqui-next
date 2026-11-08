@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
-import { fetchMiembrosAcelerador, type MiembroAcelerador } from '@/lib/acelerador';
+import { fetchMiembrosAcelerador, fetchSeguridadMiembro, bloquearMiembro, reiniciarAparatosMiembro, type MiembroAcelerador, type SeguridadMiembro } from '@/lib/acelerador';
 import { fechaMedium } from '@/lib/format';
 
 // Pedido explicito del usuario 2026-07-19: apartado exclusivo para el rol "lider general" (y
 // administradores) -- lista SOLO a quienes ya pagaron el curso Acelerador al menos una vez
 // (acelerador_subscriptions), separados en Activos/Vencidos para hacer seguimiento personalizado.
 // Distinto de /config/referidos, que muestra vendedores en general sin importar si pagaron el curso.
+// 08-11-2026: boton Seguridad por miembro -- aparatos registrados, ciudades de los ultimos 30 dias,
+// bloquear/desbloquear el acceso y reiniciar aparatos (curso-anticompartir.sql).
 const TABS: { key: 'todos' | 'activos' | 'vencidos'; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'activos', label: 'Activos' },
@@ -27,6 +29,21 @@ export default function AceleradorMiembrosPage() {
   const [notEmptyPost, setNotEmptyPost] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [cargandoMas, setCargandoMas] = useState(false);
+  const [seguridad, setSeguridad] = useState<{ miembro: MiembroAcelerador; datos: SeguridadMiembro | null } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  async function abrirSeguridad(m: MiembroAcelerador) {
+    setSeguridad({ miembro: m, datos: null });
+    setSeguridad({ miembro: m, datos: await fetchSeguridadMiembro(m.profileId) });
+  }
+
+  async function accionSeguridad(fn: () => Promise<boolean>) {
+    if (!seguridad) return;
+    setOcupado(true);
+    await fn();
+    setSeguridad({ miembro: seguridad.miembro, datos: await fetchSeguridadMiembro(seguridad.miembro.profileId) });
+    setOcupado(false);
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
@@ -169,6 +186,13 @@ export default function AceleradorMiembrosPage() {
                     >
                       Contactar
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirSeguridad(m)}
+                      className="ml-2 rounded bg-gray-800 px-2.5 py-1.5 text-xs font-medium text-white"
+                    >
+                      Seguridad
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -184,6 +208,51 @@ export default function AceleradorMiembrosPage() {
           <button onClick={verMas} disabled={cargandoMas} className="text-sm font-medium text-[#0066FF] hover:underline disabled:opacity-60">
             {cargandoMas ? 'Cargando…' : 'Ver más'}
           </button>
+        </div>
+      )}
+      {seguridad && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-3" onClick={() => setSeguridad(null)}>
+          <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h4 className="text-base font-bold text-gray-900">Seguridad del curso</h4>
+            <p className="text-sm text-gray-600">{seguridad.miembro.nombre} · {seguridad.miembro.telefono}</p>
+            {!seguridad.datos ? (
+              <p className="py-6 text-center text-sm text-gray-500">Cargando…</p>
+            ) : (
+              <>
+                <p className={`mt-3 rounded px-3 py-2 text-sm font-semibold ${seguridad.datos.bloqueado ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                  {seguridad.datos.bloqueado ? 'Acceso BLOQUEADO' : 'Acceso activo'}
+                </p>
+                <p className="mt-4 text-sm font-semibold text-gray-800">Aparatos registrados ({seguridad.datos.aparatos.length} de 2)</p>
+                {seguridad.datos.aparatos.length === 0 && <p className="text-xs text-gray-500">Ninguno todavía.</p>}
+                {seguridad.datos.aparatos.map((a, i) => (
+                  <p key={i} className="text-xs text-gray-600">• {a.nombre || 'Aparato'} — desde {fechaMedium(a.creado)}, último uso {fechaMedium(a.ultimo_uso)}</p>
+                ))}
+                <p className="mt-4 text-sm font-semibold text-gray-800">Ciudades desde donde vio clases (30 días)</p>
+                {seguridad.datos.ciudades.length === 0 && <p className="text-xs text-gray-500">Ninguna todavía.</p>}
+                {seguridad.datos.ciudades.map((c, i) => (
+                  <p key={i} className="text-xs text-gray-600">• {c.ciudad} — {c.veces} vez(ces), última {fechaMedium(c.ultima)}</p>
+                ))}
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button
+                    disabled={ocupado}
+                    onClick={() => accionSeguridad(() => bloquearMiembro(seguridad.miembro.profileId, !seguridad.datos!.bloqueado))}
+                    className={`rounded px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 ${seguridad.datos.bloqueado ? 'bg-green-600' : 'bg-red-600'}`}
+                  >
+                    {seguridad.datos.bloqueado ? 'Desbloquear acceso' : 'Bloquear acceso'}
+                  </button>
+                  <button
+                    disabled={ocupado}
+                    onClick={() => accionSeguridad(() => reiniciarAparatosMiembro(seguridad.miembro.profileId))}
+                    className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-60"
+                  >
+                    Reiniciar aparatos
+                  </button>
+                  <button onClick={() => setSeguridad(null)} className="ml-auto rounded px-3 py-2 text-xs text-gray-500">Cerrar</button>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">Reiniciar aparatos: borra sus 2 aparatos; la próxima vez confirma con código por WhatsApp.</p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
