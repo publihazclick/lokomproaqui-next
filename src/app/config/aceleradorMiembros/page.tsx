@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto } from '@/lib/usuarios';
-import { fetchMiembrosAcelerador, fetchSeguridadMiembro, bloquearMiembro, reiniciarAparatosMiembro, type MiembroAcelerador, type SeguridadMiembro } from '@/lib/acelerador';
+import { fetchMiembrosAcelerador, fetchSeguridadMiembro, bloquearMiembro, reiniciarAparatosMiembro, fetchPagosPendientes, resolverPagoCurso, type MiembroAcelerador, type SeguridadMiembro, type PagoPendiente } from '@/lib/acelerador';
 import { fechaMedium } from '@/lib/format';
 
 // Pedido explicito del usuario 2026-07-19: apartado exclusivo para el rol "lider general" (y
@@ -13,6 +13,8 @@ import { fechaMedium } from '@/lib/format';
 // Distinto de /config/referidos, que muestra vendedores en general sin importar si pagaron el curso.
 // 08-11-2026: boton Seguridad por miembro -- aparatos registrados, ciudades de los ultimos 30 dias,
 // bloquear/desbloquear el acceso y reiniciar aparatos (curso-anticompartir.sql).
+// 08-11-2026: "Pagos por revisar" -- comprobantes de transferencia (curso-transferencia.sql); lo normal es aprobar por
+// WhatsApp ("pago 48213 si cayó"), esto sirve igual si el gamer está apagado.
 const TABS: { key: 'todos' | 'activos' | 'vencidos'; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'activos', label: 'Activos' },
@@ -31,6 +33,16 @@ export default function AceleradorMiembrosPage() {
   const [cargandoMas, setCargandoMas] = useState(false);
   const [seguridad, setSeguridad] = useState<{ miembro: MiembroAcelerador; datos: SeguridadMiembro | null } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [pagos, setPagos] = useState<PagoPendiente[]>([]);
+  const [verFoto, setVerFoto] = useState<string | null>(null);
+
+  async function resolverPago(ref: string, aprobar: boolean) {
+    if (!confirm(aprobar ? `¿Confirmas que el pago ${ref} SÍ llegó? Se activa el curso.` : `¿Confirmas que el pago ${ref} NO llegó?`)) return;
+    setOcupado(true);
+    await resolverPagoCurso(ref, aprobar);
+    setPagos(await fetchPagosPendientes());
+    setOcupado(false);
+  }
 
   async function abrirSeguridad(m: MiembroAcelerador) {
     setSeguridad({ miembro: m, datos: null });
@@ -58,6 +70,7 @@ export default function AceleradorMiembrosPage() {
       }
       setEstado('listo');
       cargar(tab, 0, true, '');
+      setPagos(await fetchPagosPendientes());
       // eslint-disable-next-line react-hooks/exhaustive-deps
     });
   }, []);
@@ -118,6 +131,39 @@ export default function AceleradorMiembrosPage() {
         <h4 className="text-lg font-bold text-gray-900">Miembros Acelerador</h4>
         <p className="mt-1 text-xs text-gray-500">Solo usuarios que ya pagaron el curso al menos una vez.</p>
       </div>
+
+      {pagos.length > 0 && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <h5 className="text-sm font-bold text-amber-900">Pagos por revisar ({pagos.length})</h5>
+          <p className="text-xs text-amber-800">Revisa en Bancolombia que la transferencia haya llegado. También puedes responder por WhatsApp &quot;pago REFERENCIA si cayó&quot;.</p>
+          <div className="mt-3 space-y-2">
+            {pagos.map((p) => (
+              <div key={p.referencia} className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-3">
+                {p.comprobante && (
+                  <button type="button" onClick={() => setVerFoto(p.comprobante)} className="shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- comprobante en data URL */}
+                    <img src={p.comprobante} alt="Comprobante" className="h-16 w-16 rounded object-cover" />
+                  </button>
+                )}
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="font-bold text-gray-900">Ref. {p.referencia}</p>
+                  <p className="text-gray-700">{p.nombre} · {p.telefono} · {p.ciudad}</p>
+                  <p className="text-xs text-gray-500">{fechaMedium(p.creado)}</p>
+                </div>
+                <button disabled={ocupado} onClick={() => resolverPago(p.referencia, true)} className="rounded bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Sí llegó</button>
+                <button disabled={ocupado} onClick={() => resolverPago(p.referencia, false)} className="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-60">No llegó</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {verFoto && (
+        <div className="fixed inset-0 z-[1001] flex items-center justify-center bg-black/80 p-3" onClick={() => setVerFoto(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- comprobante en data URL */}
+          <img src={verFoto} alt="Comprobante" className="max-h-[90vh] max-w-full rounded" />
+        </div>
+      )}
 
       <div className="mt-4 flex gap-1 border-b border-gray-200">
         {TABS.map((t) => (

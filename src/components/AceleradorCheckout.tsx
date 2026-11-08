@@ -1,32 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Script from 'next/script';
-import { supabase, EPAYCO_CONFIRMACION } from '@/lib/supabase';
-import { crearIntentoPago, fetchEstadoPago, PRECIO_ACELERADOR_TEXTO } from '@/lib/acelerador';
-import { notificarPagoAceleradorWhatsapp } from '@/lib/adminConfig';
+import { Copy, Check, Upload, Clock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { fetchEstadoPago, PRECIO_ACELERADOR_TEXTO, CUENTA_PAGO_CURSO, fotoComprobante, enviarComprobantePago } from '@/lib/acelerador';
 
 // Port de AceleradorCheckoutComponent (Angular) -- boton "Suscribirme" + flujo de pago del curso
-// Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador. Mismo
-// mecanismo ya usado en DropshippingCheckoutModal: widget de ePayco via next/script + polling de
-// confirmacion. Pagos en modo real (confirmado por el usuario 2026-07-15).
+// Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador.
 // 08-11-2026: aviso de acceso personal antes de pagar (curso-anticompartir.sql).
-
-const ESTADO_PRUEBA_PAGOS = false;
-const KEY_EPAYCO = '62977a30b1a19dcd0728f6b639b33fb0';
-// Desde 2026-11-05 (pedido del usuario): pago UNICO de $1.600.000 COP, acceso de por vida (antes
-// $37 USD cada mes). El acceso de por vida lo da epayco-webhook al ver el monto real pagado.
-const PRECIO_COP = 1600000;
-
-declare global {
-  interface Window {
-    ePayco?: { checkout: { configure: (opts: { key: string; test: boolean }) => { open: (obj: Record<string, unknown>) => void } } };
-  }
-}
-
-function codigoPago(): string {
-  return 'SUB-' + (Date.now().toString(20).substring(2, 5) + Math.random().toString(20).substring(2, 5)).toUpperCase();
-}
+// 08-11-2026 (pedido del usuario, "para evitar costos"): ya NO se cobra por ePayco. Se paga por
+// transferencia a Bancolombia, el comprador sube la foto del comprobante aqui mismo, el panel del
+// gamer se la manda al dueño por WhatsApp con una referencia de 5 numeros y, cuando el dueño
+// responde que el pago cayo, el acceso se activa solo (curso-transferencia.sql). Esta pantalla
+// revisa cada 10 s y abre el curso apenas queda activo.
 
 interface DataUserPago {
   id: string;
@@ -37,6 +23,33 @@ interface DataUserPago {
   documento: string;
   ciudad: string;
 }
+
+function CopiarDato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  const [copiado, setCopiado] = useState(false);
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-gray-100 py-1.5 last:border-0">
+      <span className="text-xs text-gray-500">{etiqueta}</span>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard?.writeText(valor).catch(() => {});
+          setCopiado(true);
+          setTimeout(() => setCopiado(false), 1500);
+        }}
+        className="flex items-center gap-1 text-sm font-bold text-gray-900"
+      >
+        {valor} {copiado ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 text-gray-400" />}
+      </button>
+    </div>
+  );
+}
+
+const AVISO_PERSONAL = (
+  <>
+    Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
+    sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
+  </>
+);
 
 export function AceleradorCheckout({
   buttonClass = 'rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90',
@@ -49,30 +62,26 @@ export function AceleradorCheckout({
   buttonLabel?: string;
   abrirCheckoutInicial?: boolean;
   // Se incrementa desde afuera (ej. al hacer click en una tarjeta de leccion de la vitrina) para
-  // abrir el mismo flujo de pago sin montar una segunda instancia (evita duplicar el script de
-  // ePayco y el polling). El primer valor (montaje) se ignora, solo importan los cambios.
+  // abrir el mismo flujo de pago sin montar una segunda instancia. El primer valor (montaje) se
+  // ignora, solo importan los cambios.
   abrirTrigger?: number;
   onActivada: () => void;
 }) {
   const [dataUser, setDataUser] = useState<DataUserPago | null>(null);
   const [sesionResuelta, setSesionResuelta] = useState(false);
-  const [mostrarFormAnon, setMostrarFormAnon] = useState(false);
-  // Pedido explicito del usuario 2026-07-22: un usuario logueado (sin sesion tambien, tras llenar
-  // el formulario anonimo mas abajo) ya llega directo a abrir el cobro real de ePayco con un solo
-  // click en cualquier miniatura de leccion -- se agrega este paso explicito para que nadie dispare
-  // un intento de cobro sin confirmar antes que quiere suscribirse.
-  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
-  const [procesandoCuenta, setProcesandoCuenta] = useState(false);
-  const [procesandoPago, setProcesandoPago] = useState(false);
+  // paso: boton -> (sin sesion) datos -> transferencia (cuenta + comprobante) -> esperando
+  const [paso, setPaso] = useState<'boton' | 'datos' | 'transferencia' | 'esperando'>('boton');
+  const [procesando, setProcesando] = useState(false);
   const [pagoFueAnonimo, setPagoFueAnonimo] = useState(false);
-  const [anonData, setAnonData] = useState({ nombre: '', email: '', telefono: '', documento: '', ciudad: '' });
+  const [anonData, setAnonData] = useState({ nombre: '', email: '', telefono: '', documento: '', ciudad: '', clave: '' });
+  const [foto, setFoto] = useState<string | null>(null);
+  const [leyendoFoto, setLeyendoFoto] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [referencia, setReferencia] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abrioInicialRef = useRef(false);
 
-  // Consulta la sesion REAL en el momento en que se llama (nunca un valor cacheado de antes) --
-  // devuelve el usuario logueado con su perfil, o null si de verdad no hay sesion en ESTE instante.
-  // Se usa tanto al montar (para pintar sesionResuelta/dataUser en pantalla) como, mas importante,
-  // dentro de onClickPrincipal en el momento exacto del click (ver comentario ahi abajo).
+  // Consulta la sesion REAL en el momento en que se llama (nunca un valor cacheado de antes).
   async function resolverDataUserEnVivo(): Promise<DataUserPago | null> {
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) return null;
@@ -92,18 +101,39 @@ export function AceleradorCheckout({
     };
   }
 
+  // Si ya mando un comprobante que sigue sin revisar, se muestra la espera (no se le pide otro).
+  async function pagoPendiente(userId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('acelerador_payments')
+      .select('referencia, status, created_at')
+      .eq('profile_id', userId)
+      .eq('metodo', 'transferencia')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data && data.status === 0 && data.referencia ? data.referencia : null;
+  }
+
   useEffect(() => {
-    resolverDataUserEnVivo().then((usuario) => {
+    resolverDataUserEnVivo().then(async (usuario) => {
       setDataUser(usuario);
       setSesionResuelta(true);
+      if (usuario) {
+        const ref = await pagoPendiente(usuario.id);
+        if (ref) {
+          setReferencia(ref);
+          setPaso('esperando');
+          iniciarPolling(ref);
+        }
+      }
     });
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ?checkout=1 llega desde el boton "Suscribirme" de la vitrina principal (/info): abre el pago
-  // (o el formulario anonimo) de una vez en vez de solo mostrar la vitrina.
+  // ?checkout=1 llega desde el boton "Suscribirme" de la vitrina principal (/info).
   useEffect(() => {
     if (abrirCheckoutInicial && sesionResuelta && !abrioInicialRef.current) {
       abrioInicialRef.current = true;
@@ -121,264 +151,194 @@ export function AceleradorCheckout({
     }
     if (sesionResuelta) {
       onClickPrincipal();
-      // El boton que disparo esto pudo estar mas abajo en la pagina (tarjeta de leccion en la
-      // vitrina) -- sin esto el formulario/boton de pago cambia de estado fuera de la vista.
       containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abrirTrigger]);
 
-  // Punto critico (pedido explicito del usuario 2026-07-22, "no puede haber margen de error"): NO
-  // decide segun el `dataUser` que ya este en el estado -- ese valor se llena de forma asincrona al
-  // montar la pagina, y si el usuario hace click ANTES de que esa consulta inicial termine (ej.
-  // pestaña nueva recien abierta desde el banner de /articulo, click rapido en una miniatura),
-  // `dataUser` todavia esta en null aunque el usuario SI tenga sesion real -- eso mandaba al
-  // formulario de "completa tus datos" a un usuario logueado, pareciendo que lo habiamos
-  // deslogueado. Se vuelve a consultar la sesion en vivo en el instante exacto del click, sin
-  // ninguna ventana de tiempo donde se pueda confundir "todavia no se sabe" con "no hay sesion".
+  // Se vuelve a consultar la sesion en vivo en el instante del click (pedido del usuario 2026-07-22:
+  // nunca confundir "todavia no se sabe" con "no hay sesion").
   async function onClickPrincipal() {
-    if (procesandoPago) return;
+    if (paso === 'esperando') return;
     const usuario = dataUser || (await resolverDataUserEnVivo());
     if (usuario) {
       if (!dataUser) setDataUser(usuario);
-      setMostrarConfirmacion(true);
+      setPaso('transferencia');
     } else {
-      setMostrarFormAnon(true);
+      setPaso('datos');
     }
   }
 
-  function confirmarSuscripcion() {
-    if (!dataUser) return;
-    setMostrarConfirmacion(false);
-    suscribirme(dataUser);
-  }
+  const soloLetras = (v: string) => (v || '').replace(/[^a-zA-ZÀ-ÿñÑ\s]/g, '');
+  const soloNumeros = (v: string) => (v || '').replace(/[^0-9]/g, '');
+  const emailValido = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(anonData.email || '');
+  const formularioValido = () =>
+    !!(anonData.nombre && anonData.telefono.length >= 10 && anonData.documento && anonData.ciudad && anonData.clave.length >= 6) && emailValido();
 
-  function soloLetras(valor: string): string {
-    return (valor || '').replace(/[^a-zA-ZÀ-ÿñÑ\s]/g, '');
-  }
-
-  function soloNumeros(valor: string): string {
-    return (valor || '').replace(/[^0-9]/g, '');
-  }
-
-  function emailValido(): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(anonData.email || '');
-  }
-
-  function formularioValido(): boolean {
-    return !!(anonData.nombre && anonData.telefono && anonData.documento && anonData.ciudad) && emailValido();
-  }
-
-  async function pagarAnonimo() {
-    if (procesandoCuenta || procesandoPago) return;
+  // Sin sesion: crea la cuenta con la contraseña que la persona elige (antes era una clave al azar
+  // y no podia volver a entrar desde otro aparato).
+  async function crearCuenta() {
+    if (procesando) return;
     if (!formularioValido()) {
-      alert('Completa todos los campos correctamente para continuar');
+      setError('Completa todos los campos (la contraseña con mínimo 6 caracteres)');
       return;
     }
-    setProcesandoCuenta(true);
-    const claveTemp = codigoPago() + codigoPago().toLowerCase();
-    const { data, error } = await supabase.auth.signUp({
+    setProcesando(true);
+    setError(null);
+    const { data, error: e } = await supabase.auth.signUp({
       email: anonData.email.trim(),
-      password: claveTemp,
+      password: anonData.clave,
       options: { data: { full_name: anonData.nombre, phone: anonData.telefono } },
     });
-    if (error || !data.user) {
-      setProcesandoCuenta(false);
-      alert('No pudimos continuar, intenta de nuevo');
+    if (e || !data.user) {
+      setProcesando(false);
+      setError(/registered|already/i.test(e?.message || '') ? 'Ese correo ya tiene cuenta. Entra con tu correo y contraseña y vuelve aquí.' : 'No pudimos continuar, intenta de nuevo');
       return;
     }
-    if (!data.session) await supabase.auth.signInWithPassword({ email: anonData.email.trim(), password: claveTemp });
-    await supabase.from('profiles').update({ document_id: anonData.documento, city: anonData.ciudad }).eq('id', data.user.id);
-
-    const nuevoDataUser: DataUserPago = {
-      id: data.user.id,
-      nombre: anonData.nombre,
-      apellido: '',
-      email: anonData.email.trim(),
-      telefono: anonData.telefono,
-      documento: anonData.documento,
-      ciudad: anonData.ciudad,
-    };
-    setDataUser(nuevoDataUser);
+    if (!data.session) await supabase.auth.signInWithPassword({ email: anonData.email.trim(), password: anonData.clave });
+    await supabase.from('profiles').update({ document_id: anonData.documento, city: anonData.ciudad, phone: anonData.telefono }).eq('id', data.user.id);
+    setDataUser({ id: data.user.id, nombre: anonData.nombre, apellido: '', email: anonData.email.trim(), telefono: anonData.telefono, documento: anonData.documento, ciudad: anonData.ciudad });
     setPagoFueAnonimo(true);
-    setProcesandoCuenta(false);
-    setMostrarFormAnon(false);
-    suscribirme(nuevoDataUser);
+    setProcesando(false);
+    setPaso('transferencia');
   }
 
-  async function suscribirme(usuario: DataUserPago) {
-    if (procesandoPago) return;
-    setProcesandoPago(true);
-    const codigo = codigoPago();
-    const ok = await crearIntentoPago(usuario.id, PRECIO_COP, codigo);
-    if (!ok) {
-      setProcesandoPago(false);
-      alert('No pudimos iniciar el pago, intenta de nuevo');
-      return;
-    }
-    abrirEpayco(usuario, codigo);
-    iniciarPolling(codigo);
-  }
-
-  // Reintenta hasta ~3s (afterInteractive deberia dejar window.ePayco listo mucho antes, pero en
-  // una conexion muy lenta el script puede seguir en camino justo cuando el usuario hace click) en
-  // vez de fallar de una con el primer click de la sesion.
-  async function esperarEpayco(intentos = 15): Promise<boolean> {
-    for (let i = 0; i < intentos; i++) {
-      if (window.ePayco) return true;
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    return !!window.ePayco;
-  }
-
-  async function abrirEpayco(usuario: DataUserPago, codigo: string) {
-    if (!(await esperarEpayco()) || !window.ePayco) {
-      setProcesandoPago(false);
-      alert('Error en el proceso de pago');
-      return;
-    }
+  async function elegirFoto(archivo: File | undefined) {
+    if (!archivo) return;
+    setLeyendoFoto(true);
+    setError(null);
     try {
-      const handler = window.ePayco.checkout.configure({ key: KEY_EPAYCO, test: ESTADO_PRUEBA_PAGOS });
-      handler.open({
-        name: 'Curso Acelerador de Ventas',
-        invoice: codigo,
-        currency: 'cop',
-        amount: PRECIO_COP,
-        tax_base: '0',
-        tax: '0',
-        country: 'co',
-        lang: 'esp',
-        external: 'true',
-        confirmation: EPAYCO_CONFIRMACION,
-        name_billing: `${usuario.nombre} ${usuario.apellido}`.trim(),
-        email_billing: usuario.email,
-        address_billing: usuario.ciudad || 'cucuta',
-        mobilephone_billing: usuario.telefono,
-        number_doc_billing: usuario.documento,
-      });
+      setFoto(await fotoComprobante(archivo));
     } catch {
-      setProcesandoPago(false);
-      alert('Error en el proceso de pago');
+      setError('No pudimos leer esa imagen. Toma una captura de pantalla del comprobante y súbela.');
     }
+    setLeyendoFoto(false);
   }
 
-  function iniciarPolling(codigo: string) {
+  async function enviar() {
+    if (!foto || procesando) {
+      if (!foto) setError('Sube la foto del comprobante de pago');
+      return;
+    }
+    setProcesando(true);
+    setError(null);
+    const r = await enviarComprobantePago(foto);
+    setProcesando(false);
+    if (!r.ok || !r.referencia) {
+      setError(r.error || 'No pudimos enviar el comprobante');
+      return;
+    }
+    setReferencia(r.referencia);
+    setPaso('esperando');
+    iniciarPolling(r.referencia);
+  }
+
+  // Revisa cada 10 s (hasta 3 horas con la pagina abierta) si el dueño ya confirmo el pago.
+  function iniciarPolling(ref: string) {
     if (pollingRef.current) clearInterval(pollingRef.current);
     let intentos = 0;
     pollingRef.current = setInterval(async () => {
       intentos++;
-      const res = await fetchEstadoPago(codigo);
+      const res = await fetchEstadoPago('TR-' + ref);
       if (res && res.status === 2) {
         clearInterval(pollingRef.current!);
         pollingRef.current = null;
-        setProcesandoPago(false);
-        // Pedido explicito del usuario 2026-07-19: abre WhatsApp (pestaña nueva) con un aviso
-        // pre-armado hacia el numero configurado en /config/configuracion -- no interrumpe el
-        // flujo normal de abajo, las dos cosas pasan juntas.
-        notificarPagoAceleradorWhatsapp({
-          nombre: `${dataUser?.nombre || ''} ${dataUser?.apellido || ''}`.trim(),
-          telefono: dataUser?.telefono || '',
-          email: dataUser?.email || '',
-          monto: `${PRECIO_ACELERADOR_TEXTO} COP`,
-        });
-        if (pagoFueAnonimo) {
-          alert(`Curso activado. Guardamos tu acceso con el correo ${dataUser?.email}. Para volver a entrar mas adelante desde otro dispositivo, usa "Olvide mi contrasena" en el login con ese mismo correo.`);
-        } else {
-          alert('Curso activado');
-        }
+        alert(
+          pagoFueAnonimo
+            ? `¡Pago confirmado! Tu curso quedó activo. Para entrar desde otro aparato usa tu correo ${dataUser?.email || ''} y la contraseña que creaste.`
+            : '¡Pago confirmado! Tu curso quedó activo.',
+        );
         onActivada();
-      } else if (intentos > 60) {
+      } else if (res && res.status === 1) {
         clearInterval(pollingRef.current!);
         pollingRef.current = null;
-        setProcesandoPago(false);
+        setReferencia(null);
+        setFoto(null);
+        setPaso('transferencia');
+        setError(`No encontramos el pago con la referencia ${ref}. Revisa la transferencia y vuelve a subir el comprobante, o escríbenos.`);
+      } else if (intentos > 1080) {
+        clearInterval(pollingRef.current!);
+        pollingRef.current = null;
       }
-    }, 4000);
+    }, 10000);
   }
 
   return (
     <div ref={containerRef}>
-      {/* afterInteractive (no lazyOnload): este widget se puede disparar apenas el usuario llega a
-          la pagina (boton principal o cualquier tarjeta de leccion) -- lazyOnload lo pospone hasta
-          que el navegador queda inactivo despues de cargar TODA la pagina, lo que hacia que el
-          primer click, en cualquiera de esos puntos, se sintiera lento/colgado esperando a que
-          window.ePayco existiera. */}
-      <Script src="https://checkout.epayco.co/checkout.js" strategy="afterInteractive" />
-      {mostrarConfirmacion ? (
-        <div className="mx-auto max-w-md rounded-2xl border border-[#02a0e3]/20 bg-white p-5 text-center shadow-md">
-          <p className="font-semibold text-gray-800">
-            Este contenido es parte del curso <span className="text-[#0177a8]">Acelerador de Ventas</span>
-          </p>
-          <p className="mt-1 text-sm text-gray-500">Pago único de {PRECIO_ACELERADOR_TEXTO} COP. Acceso de por vida a todas las clases.</p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <button
-              onClick={() => setMostrarConfirmacion(false)}
-              className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmarSuscripcion}
-              disabled={procesandoPago}
-              className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
-            >
-              {procesandoPago ? 'Procesando...' : `Sí, pagar ${PRECIO_ACELERADOR_TEXTO} COP`}
-            </button>
-          </div>
-          <p className="mt-3 text-xs text-gray-500">
-            Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
-            sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
-          </p>
-        </div>
-      ) : !mostrarFormAnon ? (
-        <button onClick={onClickPrincipal} disabled={procesandoPago} className={`${buttonClass} disabled:opacity-60`}>
-          {procesandoPago ? 'Procesando...' : buttonLabel}
+      {paso === 'boton' && (
+        <button onClick={onClickPrincipal} className={buttonClass}>
+          {buttonLabel}
         </button>
-      ) : (
+      )}
+
+      {paso === 'datos' && (
         <div className="mx-auto max-w-md text-left">
           <h5 className="mb-3 text-center font-semibold text-gray-800">Completa tus datos para continuar</h5>
-          <input
-            value={anonData.nombre}
-            onChange={(e) => setAnonData({ ...anonData, nombre: soloLetras(e.target.value) })}
-            placeholder="Nombre completo *"
-            className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <input
-            type="email"
-            value={anonData.email}
-            onChange={(e) => setAnonData({ ...anonData, email: e.target.value })}
-            placeholder="Correo electronico (ej: nombre@correo.com) *"
-            className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <input
-            type="tel"
-            value={anonData.telefono}
-            onChange={(e) => setAnonData({ ...anonData, telefono: soloNumeros(e.target.value) })}
-            placeholder="Telefono / WhatsApp *"
-            className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <input
-            value={anonData.documento}
-            onChange={(e) => setAnonData({ ...anonData, documento: soloNumeros(e.target.value) })}
-            placeholder="Numero de documento *"
-            className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <input
-            value={anonData.ciudad}
-            onChange={(e) => setAnonData({ ...anonData, ciudad: soloLetras(e.target.value) })}
-            placeholder="Ciudad *"
-            className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button
-            onClick={pagarAnonimo}
-            disabled={procesandoCuenta || procesandoPago || !formularioValido()}
-            className="w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {procesandoCuenta || procesandoPago ? 'Procesando...' : 'Continuar al pago'}
+          <input value={anonData.nombre} onChange={(e) => setAnonData({ ...anonData, nombre: soloLetras(e.target.value) })} placeholder="Nombre completo *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <input type="email" value={anonData.email} onChange={(e) => setAnonData({ ...anonData, email: e.target.value })} placeholder="Correo electronico (ej: nombre@correo.com) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <input type="tel" value={anonData.telefono} onChange={(e) => setAnonData({ ...anonData, telefono: soloNumeros(e.target.value).slice(0, 10) })} placeholder="Celular con WhatsApp (10 números) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <input value={anonData.documento} onChange={(e) => setAnonData({ ...anonData, documento: soloNumeros(e.target.value) })} placeholder="Numero de documento *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <input value={anonData.ciudad} onChange={(e) => setAnonData({ ...anonData, ciudad: soloLetras(e.target.value) })} placeholder="Ciudad *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <input type="password" value={anonData.clave} onChange={(e) => setAnonData({ ...anonData, clave: e.target.value })} placeholder="Crea una contraseña (mínimo 6) *" autoComplete="new-password" className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <button onClick={crearCuenta} disabled={procesando || !formularioValido()} className="w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
+            {procesando ? 'Procesando...' : 'Continuar al pago'}
           </button>
-          <p className="mt-3 text-center text-xs text-gray-500">
-            Al pagar aceptas que tu acceso es <b>personal</b>: se ve en máximo 2 aparatos, cada aparato se confirma con un código por WhatsApp y
-            sobre el video sale tu nombre y teléfono. Si se comparte el acceso, se cancela sin devolución.
+          <p className="mt-2 text-center text-xs text-gray-500">Con tu correo y esta contraseña entras al curso. Al celular te llegan los códigos para confirmar cada aparato.</p>
+          {error && <p className="mt-2 rounded bg-red-50 p-2 text-center text-sm text-red-700">{error}</p>}
+        </div>
+      )}
+
+      {paso === 'transferencia' && (
+        <div className="mx-auto max-w-md rounded-2xl border border-[#02a0e3]/20 bg-white p-5 text-left shadow-md">
+          <p className="text-center font-semibold text-gray-800">
+            Curso <span className="text-[#0177a8]">Acelerador de Ventas</span> — pago único de {PRECIO_ACELERADOR_TEXTO} COP
           </p>
+          <p className="mt-1 text-center text-sm text-gray-500">Acceso de por vida a todas las clases.</p>
+
+          <p className="mt-4 text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
+          <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1">
+            <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} />
+            <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} />
+            <CopiarDato etiqueta="Número de cuenta" valor={CUENTA_PAGO_CURSO.numero} />
+            <CopiarDato etiqueta="A nombre de" valor={CUENTA_PAGO_CURSO.titular} />
+            <CopiarDato etiqueta="Cédula" valor={CUENTA_PAGO_CURSO.cedula} />
+          </div>
+
+          <p className="mt-4 text-sm font-semibold text-gray-800">2. Sube la foto o captura del comprobante de pago:</p>
+          <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 text-center text-sm text-gray-600 hover:border-[#02a0e3]">
+            {foto ? (
+              // eslint-disable-next-line @next/next/no-img-element -- vista previa local (data URL), no pasa por next/image
+              <img src={foto} alt="Comprobante" className="max-h-56 rounded object-contain" />
+            ) : (
+              <>
+                <Upload className="mb-1 h-6 w-6 text-gray-400" />
+                {leyendoFoto ? 'Leyendo la foto…' : 'Toca aquí para subir el comprobante'}
+              </>
+            )}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => elegirFoto(e.target.files?.[0])} />
+          </label>
+          {foto && <p className="mt-1 text-center text-xs text-gray-500">¿No es esa? Toca la foto para cambiarla.</p>}
+
+          <button onClick={enviar} disabled={procesando || leyendoFoto || !foto} className="mt-4 w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
+            {procesando ? 'Enviando…' : 'Enviar comprobante'}
+          </button>
+          <button onClick={() => { setPaso('boton'); setError(null); }} className="mt-2 w-full text-sm text-gray-500">
+            Cancelar
+          </button>
+          {error && <p className="mt-2 rounded bg-red-50 p-2 text-center text-sm text-red-700">{error}</p>}
+          <p className="mt-3 text-xs text-gray-500">{AVISO_PERSONAL}</p>
+        </div>
+      )}
+
+      {paso === 'esperando' && (
+        <div className="mx-auto max-w-md rounded-2xl border border-green-200 bg-green-50 p-5 text-center shadow-sm">
+          <Clock className="mx-auto h-8 w-8 text-green-700" />
+          <p className="mt-2 font-bold text-green-800">¡Recibimos tu comprobante!</p>
+          <p className="mt-1 text-sm text-green-800">
+            Tu referencia es <b className="text-lg">{referencia}</b>. Estamos revisando que el pago haya llegado; apenas se confirme tu curso se activa
+            solo y te avisamos por WhatsApp.
+          </p>
+          <p className="mt-2 text-xs text-green-700">Puedes dejar esta página abierta: el curso se abre solo cuando quede activo.</p>
         </div>
       )}
     </div>

@@ -95,6 +95,67 @@ export async function fetchUrlFirmadaLeccion(lessonId: number): Promise<{ succes
   }
 }
 
+// ─── Pago por transferencia (08-11-2026, curso-transferencia.sql) ─────────────────────────────
+// Ya no se cobra por ePayco: el comprador transfiere a esta cuenta, sube la foto del comprobante y
+// el dueño la aprueba por WhatsApp (o en Miembros Acelerador → Pagos por revisar).
+export const CUENTA_PAGO_CURSO = {
+  banco: 'Bancolombia',
+  tipo: 'Cuenta de ahorros',
+  numero: '82494071386',
+  titular: 'HARLEY VERA',
+  cedula: '1093767815',
+};
+
+// Achica la foto en el navegador (máx. 1400 px, JPEG) para que llegue rápido por WhatsApp.
+export async function fotoComprobante(archivo: File): Promise<string> {
+  const url = URL.createObjectURL(archivo);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, mal) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => mal(new Error('No se pudo leer la imagen'));
+      i.src = url;
+    });
+    const escala = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const lienzo = document.createElement('canvas');
+    lienzo.width = Math.round(img.naturalWidth * escala);
+    lienzo.height = Math.round(img.naturalHeight * escala);
+    const ctx = lienzo.getContext('2d')!;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+    ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+    return lienzo.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function enviarComprobantePago(imagen: string): Promise<{ ok: boolean; referencia?: string; code?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('acelerador_enviar_comprobante', { p_imagen: imagen });
+  if (error || !data) return { ok: false, error: 'No pudimos enviar el comprobante, intenta de nuevo' };
+  return data.ok ? { ok: true, referencia: data.referencia, code: data.code } : { ok: false, error: data.error };
+}
+
+export interface PagoPendiente {
+  referencia: string;
+  creado: string;
+  comprobante: string | null;
+  nombre: string;
+  telefono: string | null;
+  ciudad: string | null;
+}
+
+export async function fetchPagosPendientes(): Promise<PagoPendiente[]> {
+  const { data, error } = await supabase.rpc('acelerador_admin_pagos_pendientes');
+  if (error || !data) return [];
+  return data as PagoPendiente[];
+}
+
+export async function resolverPagoCurso(referencia: string, aprobar: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('acelerador_admin_resolver_pago', { p_referencia: referencia, p_aprobar: aprobar });
+  return !error && !!data && !!data.ok;
+}
+
 // ─── Que el curso no se pueda compartir (08-11-2026, curso-anticompartir.sql) ─────────────────
 // Cada aparato nuevo necesita un código de 6 números que llega por WhatsApp (lo manda el panel del
 // gamer) y vence en 2 minutos; máximo 2 aparatos por cuenta; un solo video a la vez.
