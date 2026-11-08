@@ -24,8 +24,17 @@ interface DataUserPago {
   ciudad: string;
 }
 
-function CopiarDato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+// copiar=false: solo se muestra (banco y tipo de cuenta no se copian, pedido del usuario 08-11)
+function CopiarDato({ etiqueta, valor, copiar = true }: { etiqueta: string; valor: string; copiar?: boolean }) {
   const [copiado, setCopiado] = useState(false);
+  if (!copiar) {
+    return (
+      <div className="flex items-center justify-between gap-2 border-b border-gray-100 py-1.5 last:border-0">
+        <span className="text-xs text-gray-500">{etiqueta}</span>
+        <span className="text-sm font-bold text-gray-900">{valor}</span>
+      </div>
+    );
+  }
   return (
     <div className="flex items-center justify-between gap-2 border-b border-gray-100 py-1.5 last:border-0">
       <span className="text-xs text-gray-500">{etiqueta}</span>
@@ -279,8 +288,8 @@ export function AceleradorCheckout({
     <>
             <p className="text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
             <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1">
-              <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} />
-              <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} />
+              <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} copiar={false} />
+              <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} copiar={false} />
               <CopiarDato etiqueta="Número de cuenta" valor={CUENTA_PAGO_CURSO.numero} />
               <CopiarDato etiqueta="A nombre de" valor={CUENTA_PAGO_CURSO.titular} />
               <CopiarDato etiqueta="Cédula" valor={CUENTA_PAGO_CURSO.cedula} />
