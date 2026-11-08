@@ -273,11 +273,11 @@ export function AceleradorCheckout({
     }, 10000);
   }
 
-  // Cuenta para transferir + foto del comprobante: va en el mismo formulario de datos (pedido del usuario 08-11) y,
-  // si ya tiene sesion, solo esto.
-  const cuentaYComprobante = (
+  // Formulario en el orden del pago (pedido del usuario 08-11): primero la cuenta (para poder transferir), luego los
+  // datos y al final el comprobante junto al boton de enviar. Si ya tiene sesion: cuenta + comprobante.
+  const bloqueCuenta = (
     <>
-            <p className="mt-4 text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
+            <p className="text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
             <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1">
               <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} />
               <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} />
@@ -285,8 +285,12 @@ export function AceleradorCheckout({
               <CopiarDato etiqueta="A nombre de" valor={CUENTA_PAGO_CURSO.titular} />
               <CopiarDato etiqueta="Cédula" valor={CUENTA_PAGO_CURSO.cedula} />
             </div>
+    </>
+  );
 
-            <p className="mt-4 text-sm font-semibold text-gray-800">2. Sube la foto o captura del comprobante de pago:</p>
+  const bloqueComprobante = (n: number) => (
+    <>
+            <p className="mt-4 text-sm font-semibold text-gray-800">{n}. Sube la foto o captura del comprobante de pago:</p>
             <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 text-center text-sm text-gray-600 hover:border-[#02a0e3]">
               {foto ? (
                 // eslint-disable-next-line @next/next/no-img-element -- vista previa local (data URL), no pasa por next/image
@@ -313,15 +317,16 @@ export function AceleradorCheckout({
 
       {paso === 'datos' && (
         <div className="mx-auto max-w-md text-left">
-          <h5 className="mb-3 text-center font-semibold text-gray-800">Completa tus datos y sube tu comprobante de pago</h5>
+          {bloqueCuenta}
+          <p className="mb-2 mt-4 text-sm font-semibold text-gray-800">2. Completa tus datos:</p>
           <input value={anonData.nombre} onChange={(e) => setAnonData({ ...anonData, nombre: soloLetras(e.target.value) })} placeholder="Nombre completo *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input type="email" value={anonData.email} onChange={(e) => setAnonData({ ...anonData, email: e.target.value })} placeholder="Correo electronico (ej: nombre@correo.com) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input type="tel" value={anonData.telefono} onChange={(e) => setAnonData({ ...anonData, telefono: soloNumeros(e.target.value).slice(0, 10) })} placeholder="Celular con WhatsApp (10 números) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input value={anonData.documento} onChange={(e) => setAnonData({ ...anonData, documento: soloNumeros(e.target.value) })} placeholder="Numero de documento *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input value={anonData.ciudad} onChange={(e) => setAnonData({ ...anonData, ciudad: soloLetras(e.target.value) })} placeholder="Ciudad *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input type="password" value={anonData.clave} onChange={(e) => setAnonData({ ...anonData, clave: e.target.value })} placeholder="Crea una contraseña (mínimo 6) *" autoComplete="new-password" className="mb-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-          <p className="mb-2 text-xs text-gray-500">Con tu correo y esta contraseña entras al curso. Al celular te llegan los códigos para confirmar cada aparato.</p>
-          {cuentaYComprobante}
+          <p className="text-xs text-gray-500">Con tu correo y esta contraseña entras al curso. Al celular te llegan los códigos para confirmar cada aparato.</p>
+          {bloqueComprobante(3)}
           <button onClick={crearCuentaYEnviar} disabled={procesando || leyendoFoto || !formularioValido() || !foto} className="mt-4 w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
             {procesando ? 'Enviando...' : 'Enviar comprobante'}
           </button>
@@ -335,9 +340,10 @@ export function AceleradorCheckout({
           <p className="text-center font-semibold text-gray-800">
             Curso <span className="text-[#0177a8]">Acelerador de Ventas</span> — pago único de {PRECIO_ACELERADOR_TEXTO} COP
           </p>
-          <p className="mt-1 text-center text-sm text-gray-500">Acceso de por vida a todas las clases.</p>
+          <p className="mb-4 mt-1 text-center text-sm text-gray-500">Acceso de por vida a todas las clases.</p>
 
-          {cuentaYComprobante}
+          {bloqueCuenta}
+          {bloqueComprobante(2)}
 
           <button onClick={enviar} disabled={procesando || leyendoFoto || !foto} className="mt-4 w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
             {procesando ? 'Enviando…' : 'Enviar comprobante'}
