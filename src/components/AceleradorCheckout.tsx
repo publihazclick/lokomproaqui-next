@@ -177,11 +177,11 @@ export function AceleradorCheckout({
 
   // Sin sesion: crea la cuenta con la contraseña que la persona elige (antes era una clave al azar
   // y no podia volver a entrar desde otro aparato).
-  async function crearCuenta() {
-    if (procesando) return;
+  async function crearCuenta(): Promise<boolean> {
+    if (procesando) return false;
     if (!formularioValido()) {
       setError('Completa todos los campos (la contraseña con mínimo 6 caracteres)');
-      return;
+      return false;
     }
     setProcesando(true);
     setError(null);
@@ -193,14 +193,24 @@ export function AceleradorCheckout({
     if (e || !data.user) {
       setProcesando(false);
       setError(/registered|already/i.test(e?.message || '') ? 'Ese correo ya tiene cuenta. Entra con tu correo y contraseña y vuelve aquí.' : 'No pudimos continuar, intenta de nuevo');
-      return;
+      return false;
     }
     if (!data.session) await supabase.auth.signInWithPassword({ email: anonData.email.trim(), password: anonData.clave });
     await supabase.from('profiles').update({ document_id: anonData.documento, city: anonData.ciudad, phone: anonData.telefono }).eq('id', data.user.id);
     setDataUser({ id: data.user.id, nombre: anonData.nombre, apellido: '', email: anonData.email.trim(), telefono: anonData.telefono, documento: anonData.documento, ciudad: anonData.ciudad });
     setPagoFueAnonimo(true);
     setProcesando(false);
-    setPaso('transferencia');
+    return true;
+  }
+
+  async function crearCuentaYEnviar() {
+    if (!foto) {
+      setError('Sube la foto del comprobante de pago');
+      return;
+    }
+    // si ya creo la cuenta en un intento anterior (fallo el envio), no se vuelve a crear
+    if (!dataUser && !(await crearCuenta())) return;
+    await enviar();
   }
 
   async function elegirFoto(archivo: File | undefined) {
@@ -263,6 +273,36 @@ export function AceleradorCheckout({
     }, 10000);
   }
 
+  // Cuenta para transferir + foto del comprobante: va en el mismo formulario de datos (pedido del usuario 08-11) y,
+  // si ya tiene sesion, solo esto.
+  const cuentaYComprobante = (
+    <>
+            <p className="mt-4 text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
+            <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1">
+              <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} />
+              <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} />
+              <CopiarDato etiqueta="Número de cuenta" valor={CUENTA_PAGO_CURSO.numero} />
+              <CopiarDato etiqueta="A nombre de" valor={CUENTA_PAGO_CURSO.titular} />
+              <CopiarDato etiqueta="Cédula" valor={CUENTA_PAGO_CURSO.cedula} />
+            </div>
+
+            <p className="mt-4 text-sm font-semibold text-gray-800">2. Sube la foto o captura del comprobante de pago:</p>
+            <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 text-center text-sm text-gray-600 hover:border-[#02a0e3]">
+              {foto ? (
+                // eslint-disable-next-line @next/next/no-img-element -- vista previa local (data URL), no pasa por next/image
+                <img src={foto} alt="Comprobante" className="max-h-56 rounded object-contain" />
+              ) : (
+                <>
+                  <Upload className="mb-1 h-6 w-6 text-gray-400" />
+                  {leyendoFoto ? 'Leyendo la foto…' : 'Toca aquí para subir el comprobante'}
+                </>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => elegirFoto(e.target.files?.[0])} />
+            </label>
+            {foto && <p className="mt-1 text-center text-xs text-gray-500">¿No es esa? Toca la foto para cambiarla.</p>}
+    </>
+  );
+
   return (
     <div ref={containerRef}>
       {paso === 'boton' && (
@@ -273,18 +313,20 @@ export function AceleradorCheckout({
 
       {paso === 'datos' && (
         <div className="mx-auto max-w-md text-left">
-          <h5 className="mb-3 text-center font-semibold text-gray-800">Completa tus datos para continuar</h5>
+          <h5 className="mb-3 text-center font-semibold text-gray-800">Completa tus datos y sube tu comprobante de pago</h5>
           <input value={anonData.nombre} onChange={(e) => setAnonData({ ...anonData, nombre: soloLetras(e.target.value) })} placeholder="Nombre completo *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input type="email" value={anonData.email} onChange={(e) => setAnonData({ ...anonData, email: e.target.value })} placeholder="Correo electronico (ej: nombre@correo.com) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input type="tel" value={anonData.telefono} onChange={(e) => setAnonData({ ...anonData, telefono: soloNumeros(e.target.value).slice(0, 10) })} placeholder="Celular con WhatsApp (10 números) *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input value={anonData.documento} onChange={(e) => setAnonData({ ...anonData, documento: soloNumeros(e.target.value) })} placeholder="Numero de documento *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
           <input value={anonData.ciudad} onChange={(e) => setAnonData({ ...anonData, ciudad: soloLetras(e.target.value) })} placeholder="Ciudad *" className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-          <input type="password" value={anonData.clave} onChange={(e) => setAnonData({ ...anonData, clave: e.target.value })} placeholder="Crea una contraseña (mínimo 6) *" autoComplete="new-password" className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-          <button onClick={crearCuenta} disabled={procesando || !formularioValido()} className="w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
-            {procesando ? 'Procesando...' : 'Continuar al pago'}
+          <input type="password" value={anonData.clave} onChange={(e) => setAnonData({ ...anonData, clave: e.target.value })} placeholder="Crea una contraseña (mínimo 6) *" autoComplete="new-password" className="mb-1 w-full rounded border border-gray-300 px-3 py-2 text-sm" />
+          <p className="mb-2 text-xs text-gray-500">Con tu correo y esta contraseña entras al curso. Al celular te llegan los códigos para confirmar cada aparato.</p>
+          {cuentaYComprobante}
+          <button onClick={crearCuentaYEnviar} disabled={procesando || leyendoFoto || !formularioValido() || !foto} className="mt-4 w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
+            {procesando ? 'Enviando...' : 'Enviar comprobante'}
           </button>
-          <p className="mt-2 text-center text-xs text-gray-500">Con tu correo y esta contraseña entras al curso. Al celular te llegan los códigos para confirmar cada aparato.</p>
           {error && <p className="mt-2 rounded bg-red-50 p-2 text-center text-sm text-red-700">{error}</p>}
+          <p className="mt-3 text-xs text-gray-500">{AVISO_PERSONAL}</p>
         </div>
       )}
 
@@ -295,29 +337,7 @@ export function AceleradorCheckout({
           </p>
           <p className="mt-1 text-center text-sm text-gray-500">Acceso de por vida a todas las clases.</p>
 
-          <p className="mt-4 text-sm font-semibold text-gray-800">1. Transfiere {PRECIO_ACELERADOR_TEXTO} a esta cuenta:</p>
-          <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1">
-            <CopiarDato etiqueta="Banco" valor={CUENTA_PAGO_CURSO.banco} />
-            <CopiarDato etiqueta="Tipo" valor={CUENTA_PAGO_CURSO.tipo} />
-            <CopiarDato etiqueta="Número de cuenta" valor={CUENTA_PAGO_CURSO.numero} />
-            <CopiarDato etiqueta="A nombre de" valor={CUENTA_PAGO_CURSO.titular} />
-            <CopiarDato etiqueta="Cédula" valor={CUENTA_PAGO_CURSO.cedula} />
-          </div>
-
-          <p className="mt-4 text-sm font-semibold text-gray-800">2. Sube la foto o captura del comprobante de pago:</p>
-          <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-4 text-center text-sm text-gray-600 hover:border-[#02a0e3]">
-            {foto ? (
-              // eslint-disable-next-line @next/next/no-img-element -- vista previa local (data URL), no pasa por next/image
-              <img src={foto} alt="Comprobante" className="max-h-56 rounded object-contain" />
-            ) : (
-              <>
-                <Upload className="mb-1 h-6 w-6 text-gray-400" />
-                {leyendoFoto ? 'Leyendo la foto…' : 'Toca aquí para subir el comprobante'}
-              </>
-            )}
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => elegirFoto(e.target.files?.[0])} />
-          </label>
-          {foto && <p className="mt-1 text-center text-xs text-gray-500">¿No es esa? Toca la foto para cambiarla.</p>}
+          {cuentaYComprobante}
 
           <button onClick={enviar} disabled={procesando || leyendoFoto || !foto} className="mt-4 w-full rounded-full bg-green-600 px-6 py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60">
             {procesando ? 'Enviando…' : 'Enviar comprobante'}
