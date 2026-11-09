@@ -130,10 +130,20 @@ export async function fotoComprobante(archivo: File): Promise<string> {
   }
 }
 
+// 09-11-2026: hasta 3 intentos si falla la red; el error real queda en la consola para poder revisarlo.
 export async function enviarComprobantePago(imagen: string): Promise<{ ok: boolean; referencia?: string; code?: string; error?: string }> {
-  const { data, error } = await supabase.rpc('acelerador_enviar_comprobante', { p_imagen: imagen });
-  if (error || !data) return { ok: false, error: 'No pudimos enviar el comprobante, intenta de nuevo' };
-  return data.ok ? { ok: true, referencia: data.referencia, code: data.code } : { ok: false, error: data.error };
+  let ultimo = '';
+  for (let i = 0; i < 3; i++) {
+    const { data, error } = await supabase.rpc('acelerador_enviar_comprobante', { p_imagen: imagen });
+    if (!error && data) return data.ok ? { ok: true, referencia: data.referencia, code: data.code } : { ok: false, error: data.error };
+    ultimo = error?.message || 'sin respuesta';
+    console.error('[comprobante] intento', i + 1, ultimo);
+    if (/permission denied|jwt|not authorized/i.test(ultimo)) break;   // sin sesión: reintentar no sirve
+    await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+  }
+  return { ok: false, error: /permission denied|jwt|not authorized/i.test(ultimo)
+    ? 'Tu sesión se cerró. Entra con tu correo y contraseña y vuelve a subir el comprobante.'
+    : 'No pudimos enviar el comprobante. Revisa tu internet e intenta de nuevo.' };
 }
 
 export interface PagoPendiente {

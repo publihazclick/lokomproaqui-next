@@ -194,22 +194,43 @@ export function AceleradorCheckout({
     }
     setProcesando(true);
     setError(null);
+    // origen 'acelerador': la base confirma el correo al instante (curso-comprobante-sesion.sql, 09-11-2026).
+    // Antes la cuenta quedaba "sin confirmar", sin sesión, y el comprobante fallaba SIEMPRE.
     const { data, error: e } = await supabase.auth.signUp({
       email: anonData.email.trim(),
       password: anonData.clave,
-      options: { data: { full_name: anonData.nombre, phone: anonData.telefono } },
+      options: { data: { full_name: anonData.nombre, phone: anonData.telefono, origen: 'acelerador' } },
     });
     if (e || !data.user) {
       setProcesando(false);
       setError(/registered|already/i.test(e?.message || '') ? 'Ese correo ya tiene cuenta. Entra con tu correo y contraseña y vuelve aquí.' : 'No pudimos continuar, intenta de nuevo');
       return false;
     }
-    if (!data.session) await supabase.auth.signInWithPassword({ email: anonData.email.trim(), password: anonData.clave });
+    if (!data.session && !(await asegurarSesion())) {
+      setProcesando(false);
+      setError('Ese correo ya estaba registrado con otra contraseña. Entra con tu correo y contraseña y vuelve aquí.');
+      return false;
+    }
     await supabase.from('profiles').update({ document_id: anonData.documento, city: anonData.ciudad, phone: anonData.telefono }).eq('id', data.user.id);
     setDataUser({ id: data.user.id, nombre: anonData.nombre, apellido: '', email: anonData.email.trim(), telefono: anonData.telefono, documento: anonData.documento, ciudad: anonData.ciudad });
     setPagoFueAnonimo(true);
     setProcesando(false);
     return true;
+  }
+
+  // 09-11-2026: el comprobante solo se puede guardar con sesión abierta. Si no hay, vuelve a entrar con el correo y
+  // la contraseña que la persona acaba de escribir (3 intentos, por si la red falla).
+  async function asegurarSesion(): Promise<boolean> {
+    for (let i = 0; i < 3; i++) {
+      const { data: s } = await supabase.auth.getSession();
+      if (s.session) return true;
+      if (!anonData.email || !anonData.clave) return false;
+      const { data, error: e } = await supabase.auth.signInWithPassword({ email: anonData.email.trim(), password: anonData.clave });
+      if (data.session) return true;
+      if (e && /invalid login|credentials/i.test(e.message)) return false;   // contraseña distinta: no insistir
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+    return false;
   }
 
   async function crearCuentaYEnviar() {
@@ -241,6 +262,11 @@ export function AceleradorCheckout({
     }
     setProcesando(true);
     setError(null);
+    if (!(await asegurarSesion())) {
+      setProcesando(false);
+      setError('Tu sesión se cerró. Entra con tu correo y contraseña y vuelve a subir el comprobante.');
+      return;
+    }
     const r = await enviarComprobantePago(foto);
     setProcesando(false);
     if (!r.ok || !r.referencia) {
