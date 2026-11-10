@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Copy, Check, Upload, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { fetchEstadoPago, PRECIO_ACELERADOR_TEXTO, CUENTA_PAGO_CURSO, fotoComprobante, enviarComprobantePago } from '@/lib/acelerador';
+import { fetchEstadoPago, PRECIO_ACELERADOR_TEXTO, PRECIO_ACELERADOR_ANTES_TEXTO, DESCUENTO_ACELERADOR_TEXTO, CUENTA_PAGO_CURSO, fotoComprobante, enviarComprobantePago } from '@/lib/acelerador';
 
 // Port de AceleradorCheckoutComponent (Angular) -- boton "Suscribirme" + flujo de pago del curso
 // Acelerador de Ventas, reusable en /info (ya portado, solo linkea aca) y /acelerador.
@@ -374,6 +374,10 @@ export function AceleradorCheckout({
         <div className="mx-auto max-w-md rounded-2xl border border-[#02a0e3]/20 bg-white p-5 text-left shadow-md">
           <p className="text-center font-semibold text-gray-800">
             Curso <span className="text-[#0177a8]">Acelerador de Ventas</span> — pago único de {PRECIO_ACELERADOR_TEXTO} COP
+          </p>
+          {/* 10-11-2026: recordar aquí también que el precio ya trae el 50 % de descuento */}
+          <p className="mt-1 text-center text-sm font-semibold text-[#15803d]">
+            🔥 Ya tiene el {DESCUENTO_ACELERADOR_TEXTO} de descuento (precio normal <span className="line-through decoration-[#dc2626]">{PRECIO_ACELERADOR_ANTES_TEXTO}</span>)
           </p>
           <p className="mb-4 mt-1 text-center text-sm text-gray-500">Acceso de por vida a todas las clases.</p>
 

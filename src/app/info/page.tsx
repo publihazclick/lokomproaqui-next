@@ -7,7 +7,7 @@ import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
 import { InfoVideoGanchoLocal } from '@/components/InfoVideoGanchoLocal';
 import { InfoMenuPills } from '@/components/InfoMenuPills';
 import { SessionRedirect } from '@/components/SessionRedirect';
-import { PRECIO_ACELERADOR_TEXTO } from '@/lib/acelerador';
+import { PRECIO_ACELERADOR_TEXTO, PRECIO_ACELERADOR_ANTES_TEXTO, DESCUENTO_ACELERADOR_TEXTO } from '@/lib/acelerador';
 import styles from './info.module.css';
 
 export const metadata = {
@@ -160,6 +160,11 @@ export default async function InfoPage() {
 
                   <div className={styles.cursoAdPriceRow}>
                     <span className={styles.cursoAdPrice}>
+                      {/* 10-11-2026: el precio ya trae el 50 % de descuento (precio normal tachado) */}
+                      <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#dc2626' }}>
+                        🔥 {DESCUENTO_ACELERADOR_TEXTO} de descuento ya aplicado ·{' '}
+                        <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{PRECIO_ACELERADOR_ANTES_TEXTO}</span>
+                      </span>
                       <strong>{PRECIO_ACELERADOR_TEXTO} COP</strong>
                       <span className={styles.cursoAdPriceSuffix}>pago único</span>
                     </span>

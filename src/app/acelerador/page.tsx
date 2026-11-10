@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { PlayCircle, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
-import { fetchModulosConLecciones, tieneAccesoAcelerador, formatDuracion, PRECIO_ACELERADOR_TEXTO, type ModuloConLecciones } from '@/lib/acelerador';
+import { fetchModulosConLecciones, tieneAccesoAcelerador, formatDuracion, PRECIO_ACELERADOR_TEXTO, PRECIO_ACELERADOR_ANTES_TEXTO, DESCUENTO_ACELERADOR_TEXTO, type ModuloConLecciones } from '@/lib/acelerador';
 import { abrirWhatsappMentoria } from '@/lib/adminConfig';
 import { AceleradorCheckout } from '@/components/AceleradorCheckout';
 import { AceleradorVideoGancho } from '@/components/AceleradorVideoGancho';
@@ -108,11 +108,20 @@ function AceleradorPageInterna() {
                 Suscripcion" sin monto. Pedido explicito del usuario: precio bien notorio en TODO
                 lugar donde se muestra el curso. */}
             <div className="mx-auto mb-5 inline-flex max-w-full flex-col items-center rounded-3xl border border-[#02a0e3]/15 bg-gradient-to-br from-[#f0f9ff] to-white px-6 py-5 shadow-sm sm:px-10 sm:py-6">
+              {/* 10-11-2026 (pedido del usuario): que se entienda que el precio YA tiene el 50 % de descuento aplicado:
+                  cinta roja arriba, precio normal tachado, precio final grande y "ahorras" en verde. */}
+              <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#dc2626] px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm sm:text-sm">
+                🔥 {DESCUENTO_ACELERADOR_TEXTO} de descuento ya aplicado
+              </span>
               <span className="text-xs font-bold uppercase tracking-wide text-gray-400">Acceso completo al curso</span>
-              <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="mt-1 text-base font-semibold text-gray-400">
+                Precio normal <span className="line-through decoration-[#dc2626] decoration-2">{PRECIO_ACELERADOR_ANTES_TEXTO} COP</span>
+              </span>
+              <div className="mt-0.5 flex items-baseline gap-1.5">
                 <span className="text-4xl font-extrabold text-[#0177a8] sm:text-5xl">{PRECIO_ACELERADOR_TEXTO}</span>
                 <span className="text-xl font-bold text-[#0177a8]">COP</span>
               </div>
+              <span className="mt-1 text-sm font-bold text-[#15803d]">Pagas solo la mitad · ahorras {PRECIO_ACELERADOR_TEXTO} COP</span>
               <span className="mt-0.5 text-sm font-semibold text-gray-500">pago único · acceso de por vida</span>
             </div>
             <div>

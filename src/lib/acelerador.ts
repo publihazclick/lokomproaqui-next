@@ -8,6 +8,10 @@ import { supabase } from './supabase';
 // Precio del curso como se muestra en /info, /acelerador y el checkout (2026-11-05: pago unico,
 // acceso de por vida). El monto que se cobra esta en AceleradorCheckout (PRECIO_COP).
 export const PRECIO_ACELERADOR_TEXTO = '$1.600.000';
+// 10-11-2026 (pedido del usuario): que se entienda que $1.600.000 YA tiene aplicado el 50 % de descuento.
+// Precio normal = el doble; se muestra tachado al lado. El cobro NO cambia (sigue siendo PRECIO_ACELERADOR_TEXTO).
+export const PRECIO_ACELERADOR_ANTES_TEXTO = '$3.200.000';
+export const DESCUENTO_ACELERADOR_TEXTO = '50 %';
 
 export interface Leccion {
   id: number;
