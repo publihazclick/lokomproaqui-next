@@ -27,7 +27,9 @@ export function AceleradorVideoGancho({ onQuieroEntrar }: { onQuieroEntrar: () =
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-[340px]">
+    // En computador el ancho sale del ALTO de la pantalla (9:16): en un portátil 1366x768 queda
+    // ~280 px y se ve entero sin bajar; en pantallas altas llega al tope de 340 px.
+    <div className="relative mx-auto w-full max-w-[340px] lg:w-[clamp(260px,calc((100svh_-_270px)*9/16),340px)]">
       {/* Brillo azul de marca detrás del video (nada de morado/fucsia: regla del negocio) */}
       <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-[#02a0e3]/35 to-[#0177a8]/10 blur-2xl" aria-hidden="true" />
       <div className="relative aspect-[9/16] w-full overflow-hidden rounded-3xl bg-black shadow-2xl ring-1 ring-black/10">

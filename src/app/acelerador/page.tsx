@@ -89,15 +89,21 @@ function AceleradorPageInterna() {
               la prueba (resultados reales de campañas), después el precio y el pago. En celular
               queda video -> precio -> botón; en computador, video a la izquierda y precio a la
               derecha, todo visible sin bajar. Este es el único video de la vitrina (el 16-07 se
-              habían quitado los 2 videos gancho viejos de YouTube; este lo reemplaza). */}
-          <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14">
-            <div className="w-full lg:w-[380px]">
-              <p className="mx-auto mb-4 max-w-[380px] text-center text-lg font-extrabold text-gray-800 sm:text-xl">
+              habían quitado los 2 videos gancho viejos de YouTube; este lo reemplaza).
+              Revisado en iPhone/Android/laptop 1366x768/PC 1920: en computador el título va al lado
+              del precio (no encima del video) y el video se ajusta al alto de la pantalla, para
+              que en un portátil se vea completo sin bajar. */}
+          <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-16">
+            <div className="w-full lg:w-auto">
+              <p className="mx-auto mb-4 max-w-[380px] text-center text-lg font-extrabold text-gray-800 sm:text-xl lg:hidden">
                 Mira por qué somos los mejores en <span className="text-[#0177a8]">campañas que venden</span>
               </p>
               <AceleradorVideoGancho onQuieroEntrar={() => setAbrirPagoTrigger((n) => n + 1)} />
             </div>
           <div className="text-center">
+            <p className="mx-auto mb-6 hidden max-w-[440px] text-3xl font-extrabold leading-tight text-gray-800 lg:block">
+              Mira por qué somos los mejores en <span className="text-[#0177a8]">campañas que venden</span>
+            </p>
             {/* Antes esta pagina no mostraba ningun precio -- el boton solo decia "Pagar
                 Suscripcion" sin monto. Pedido explicito del usuario: precio bien notorio en TODO
                 lugar donde se muestra el curso. */}
