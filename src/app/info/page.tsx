@@ -158,13 +158,16 @@ export default async function InfoPage() {
                     </li>
                   </ul>
 
+                  {/* 10-11-2026: el precio ya trae el 50 % de descuento -- etiqueta blanca (se lee sobre el azul)
+                      encima del precio, con el precio normal tachado */}
+                  <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 14px', borderRadius: 9999, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,.12)', fontSize: 14, fontWeight: 800 }}>
+                    <span style={{ color: '#dc2626' }}>🔥 {DESCUENTO_ACELERADOR_TEXTO} de descuento ya aplicado</span>
+                    <span style={{ color: '#6b7280', fontWeight: 600 }}>
+                      Precio normal <span style={{ textDecoration: 'line-through', textDecorationColor: '#dc2626', textDecorationThickness: 2 }}>{PRECIO_ACELERADOR_ANTES_TEXTO}</span>
+                    </span>
+                  </div>
                   <div className={styles.cursoAdPriceRow}>
                     <span className={styles.cursoAdPrice}>
-                      {/* 10-11-2026: el precio ya trae el 50 % de descuento (precio normal tachado) */}
-                      <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#dc2626' }}>
-                        🔥 {DESCUENTO_ACELERADOR_TEXTO} de descuento ya aplicado ·{' '}
-                        <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{PRECIO_ACELERADOR_ANTES_TEXTO}</span>
-                      </span>
                       <strong>{PRECIO_ACELERADOR_TEXTO} COP</strong>
                       <span className={styles.cursoAdPriceSuffix}>pago único</span>
                     </span>
