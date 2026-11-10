@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { supabase, conTimeout } from '@/lib/supabase';
 import { ContadorShipping } from '@/components/ContadorShipping';
 import { InfoCursoAdVideo } from '@/components/InfoCursoAdVideo';
+import { InfoVideoGanchoLocal } from '@/components/InfoVideoGanchoLocal';
 import { InfoMenuPills } from '@/components/InfoMenuPills';
 import { SessionRedirect } from '@/components/SessionRedirect';
 import { PRECIO_ACELERADOR_TEXTO } from '@/lib/acelerador';
@@ -58,7 +59,6 @@ export default async function InfoPage() {
   const infoText = (config?.info_text ?? {}) as Record<string, string>;
   const numeroWhatsapp = infoText.clInformacion || '3506700802';
   const video1 = extraerIdYoutube(infoText.aceleradorVideoGancho1);
-  const video2 = extraerIdYoutube(infoText.aceleradorVideoGancho2);
 
   return (
     <div className={styles.infoPage}>
@@ -136,9 +136,9 @@ export default async function InfoPage() {
               <div className={styles.cursoAdInner}>
                 <div className={styles.cursoAdVideos}>
                   <InfoCursoAdVideo youtubeId={video1} label="Video 1 del curso Acelerador de Ventas" mediaClass={styles.cursoAdMedia} glowClass={styles.cursoAdGlow} ratioClass={styles.cursoAdRatio} thumbClass={styles.cursoAdThumb} playClass={styles.cursoAdPlay} playTriangleClass={styles.cursoAdPlayTriangle} />
-                  {video2 && (
-                    <InfoCursoAdVideo youtubeId={video2} label="Video 2 del curso Acelerador de Ventas" mediaClass={styles.cursoAdMedia} glowClass={styles.cursoAdGlow} ratioClass={styles.cursoAdRatio} thumbClass={styles.cursoAdThumb} playClass={styles.cursoAdPlay} playTriangleClass={styles.cursoAdPlayTriangle} />
-                  )}
+                  {/* 10-11-2026 (pedido del usuario): el video 2 de YouTube (aceleradorVideoGancho2
+                      en site_config) se quitó y en su lugar va el video gancho de /acelerador. */}
+                  <InfoVideoGanchoLocal label="Video: por qué somos los mejores en campañas" mediaClass={styles.cursoAdMedia} glowClass={styles.cursoAdGlow} ratioClass={styles.cursoAdRatio} thumbClass={styles.cursoAdThumb} playClass={styles.cursoAdPlay} playTriangleClass={styles.cursoAdPlayTriangle} />
                 </div>
 
                 <div className={styles.cursoAdBody}>
