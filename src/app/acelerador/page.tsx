@@ -10,6 +10,7 @@ import { fetchDataUserCompleto, type DataUserCompleto } from '@/lib/usuarios';
 import { fetchModulosConLecciones, tieneAccesoAcelerador, formatDuracion, PRECIO_ACELERADOR_TEXTO, type ModuloConLecciones } from '@/lib/acelerador';
 import { abrirWhatsappMentoria } from '@/lib/adminConfig';
 import { AceleradorCheckout } from '@/components/AceleradorCheckout';
+import { AceleradorVideoGancho } from '@/components/AceleradorVideoGancho';
 
 // Port de AceleradorComponent (Angular, "/acelerador") -- vitrina de venta del curso (sin
 // suscripcion vigente) o "Mi Curso" (con suscripcion vigente). AceleradorService ya estaba bien
@@ -84,6 +85,18 @@ function AceleradorPageInterna() {
 
       {!tieneAcceso ? (
         <div className="mt-6">
+          {/* 10-11-2026 (pedido del usuario): video gancho ARRIBA, antes del precio -- primero
+              la prueba (resultados reales de campañas), después el precio y el pago. En celular
+              queda video -> precio -> botón; en computador, video a la izquierda y precio a la
+              derecha, todo visible sin bajar. Este es el único video de la vitrina (el 16-07 se
+              habían quitado los 2 videos gancho viejos de YouTube; este lo reemplaza). */}
+          <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14">
+            <div className="w-full lg:w-[380px]">
+              <p className="mx-auto mb-4 max-w-[380px] text-center text-lg font-extrabold text-gray-800 sm:text-xl">
+                Mira por qué somos los mejores en <span className="text-[#0177a8]">campañas que venden</span>
+              </p>
+              <AceleradorVideoGancho onQuieroEntrar={() => setAbrirPagoTrigger((n) => n + 1)} />
+            </div>
           <div className="text-center">
             {/* Antes esta pagina no mostraba ningun precio -- el boton solo decia "Pagar
                 Suscripcion" sin monto. Pedido explicito del usuario: precio bien notorio en TODO
@@ -104,6 +117,7 @@ function AceleradorPageInterna() {
                 onActivada={onSuscripcionActivada}
               />
             </div>
+          </div>
           </div>
 
           <div className="mt-8">

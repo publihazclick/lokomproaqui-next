@@ -46,3 +46,6 @@ mk_session.js
 shot.js
 sweep.js
 qa-*.json
+
+# Local Netlify folder
+.netlify
